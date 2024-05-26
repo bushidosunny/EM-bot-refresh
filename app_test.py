@@ -75,8 +75,90 @@ def main():
     input_container.float(float_css_helper(bottom="50px"))
     with input_container:
         user_question = st.text_input("How may I help you?", key="widget", on_change=clear_text)
+        
+        #function buttons
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            button1 = st.button("Disposition Analysis")
+
+        with col2:
+            button2 = st.button("Create Procedure Checklist")
+
+        with col3:  
+            button3 = st.button('Create Medical note')            
+
+        with col4:
+            button4 = st.button("Patient Eductation Handout")
+              
+        # process buttons
+        if button3:
+            # create medical note from this case when Button 1 is clicked
+            user_question = """Write a structured clinical note of THIS PATIENT discussed. Do not provide a generic example note. Include good medical decision making.
+            fill in any missing "Physical Examination" information with most likley information. Do not put in laboratory results or imaging results unless they were provided. Any missing information needed, place triple asteriks (***) in the location. structure the note based on the specified format provided by triple backticks.
+
+            ```
+            Chief Complaint:
+            History of Present Illness:
+            Past Medical History:
+            Medications:
+            Physical Examination:
+            Laboratory Results:
+            Imaging:
+            Assessment:
+            Differential Diagnoses:
+            Plan:
+            Disposition:
+            ```"""            
+
+        if button1: 
+            # Disposition decision helper, safer for home? 
+            user_question = f"Analyze the patient's current condition. Assess for safe discharge or if the patient should be admitted. Provide reasons for or against. If it is not clear provide things to consider. Be concise with structured short bullet points"
+
+        if button2:
+            # Create Procedure Checklis
+            user_question = f"Create a procedure checklist of the mostlikly procedure that will be done in the emergency department for this patient. T2. Clear procedural instructions. 3. Possible patient complications to look out for. 4. highlight education points for the patient. Use the following format ```1. Supplies   2. Precedure Instructions  3. Possible Complications 4. Patient Education of the Procedure"
+
+        if button4:
+            # create Patient Eductation Handout
+            user_question = """You are an emergency medicine specialist tasked with providing patient education materials. Based on the clinical details provided, generate an easy-to-understand patient education note in the specified language. covering the following:
+            ```Diagnoses: List the key medical conditions discussed with the patient
+
+            Treatment Plan: Explain the treatments or interventions recommended 
+
+            Discharge Instructions: Outline any instructions for care after discharge
+
+            Topics Covered: Summarize the major concepts you reviewed with the patient, such as:
+            - Diagnosis details and pathophysiology
+            - Medication instructions (dosage, route, side effects)
+            - Warning signs/symptoms to watch for  
+            - Activity modifications or precautions
+            - Follow-up care instructions
+
+            Plan Outline: 
+            - Describe any plans for reinforcing or following up on the education provided
+            - Note if family members or interpreters were involved 
+            - Indicate any barriers addressed (e.g. health literacy, language)
+
+            Structure the patient education note using the following template format:
+
+            Diagnoses:
+            [List diagnoses discussed]
+
+            Treatment Plan:  
+            [Explain treatments/interventions]
+
+            Discharge Instructions:
+            [Outline post-discharge care instructions]
+
+            Topics Covered:
+            [Summarize key concepts reviewed]
+
+            Plan Outline:
+            [Note reinforcement plans, barriers addressed, interpreters used]
+
+            Please provide the education note only in the specified patient language. If any critical information is missing to comprehensively create the note, please let me know.```""" + f"\n the patient's instructions needs to be in {st.session_state.patient_language}"
             
-    
+
     #process input container
     if user_question:
         handle_userinput(user_question)
@@ -91,94 +173,17 @@ def main():
         
 
     with st.sidebar:
-        st.header("FUNCTIONS")
+        st.header("Other Stuff")
 
-        # Procedure Checklist
-        if st.button(f"Create Procedure Checklist"):
-            with st.spinner("Processing"):
-                
-                user_question = f"Create a procedure checklist of the mostlikly procedure that will be done in the emergency department for this patient. T2. Clear procedural instructions. 3. Possible patient complications to look out for. 4. highlight education points for the patient. Use the following format ```1. Supplies   2. Precedure Instructions  3. Possible Complications 4. Patient Education of the Procedure"
-                handle_userinput(user_question)
-        
-        # Disposition Help
-        if st.button(f"Disposition Analysis"):
-            with st.spinner("Processing"):
-                
-                user_question = f"Analyze the patient's current condition. Assess for safe discharge or if the patient should be admitted. Provide reasons for or against. If it is not clear provide things to consider. Be concise with structured short bullet points"
-                handle_userinput(user_question)
-
-        # Create Medical Note        
-        if st.button("Create Medical Note"):
-            with st.spinner("Processing"):
-                
-                user_question = """Write an actual emergency medicine medical note for this patient based on the information we discussed, include good medical decision making.
-                fill in any missing "Physical Examination" information with most likley information. Do not put in laboratory results or imaging results unless they were provided. Any missing information needed, place triple asteriks (***) in the location. structure the note based on the structure provided by triple backticks.
-
-                ```
-                Chief Complaint:
-                History of Present Illness:
-                Past Medical History:
-                Medications:
-                Physical Examination:
-                Laboratory Results:
-                Imaging:
-                Assessment:
-                Differential Diagnoses:
-                Plan:
-                Disposition:
-                ```"""    
-                
-                handle_userinput(user_question)   
+           
   
         # Patient Education
-        st.subheader("Patient Eductation Handout")   
-        patient_language = "English"
-        patient_language = st.text_input(f"Patient's Instructions are in {patient_language}, type a different language below", key="widget4", on_change=clear_text)
-        if st.button(f"Create {patient_language} Eductation Handout"):
-            with st.spinner("Processing"):
-                
-                user_question = """You are an emergency medicine specialist tasked with providing patient education materials. Based on the clinical details provided, generate an easy-to-understand patient education note in the specified language. covering the following:
-                ```Diagnoses: List the key medical conditions discussed with the patient
-
-                Treatment Plan: Explain the treatments or interventions recommended 
-
-                Discharge Instructions: Outline any instructions for care after discharge
-
-                Topics Covered: Summarize the major concepts you reviewed with the patient, such as:
-                - Diagnosis details and pathophysiology
-                - Medication instructions (dosage, route, side effects)
-                - Warning signs/symptoms to watch for  
-                - Activity modifications or precautions
-                - Follow-up care instructions
-
-                Plan Outline: 
-                - Describe any plans for reinforcing or following up on the education provided
-                - Note if family members or interpreters were involved 
-                - Indicate any barriers addressed (e.g. health literacy, language)
-
-                Structure the patient education note using the following template format:
-
-                Diagnoses:
-                [List diagnoses discussed]
-
-                Treatment Plan:  
-                [Explain treatments/interventions]
-
-                Discharge Instructions:
-                [Outline post-discharge care instructions]
-
-                Topics Covered:
-                [Summarize key concepts reviewed]
-
-                Plan Outline:
-                [Note reinforcement plans, barriers addressed, interpreters used]
-
-                Please provide the education note only in the specified patient language. If any critical information is missing to comprehensively create the note, please let me know.```""" + f"\n the patient's instructions needs to be in {patient_language}"
-                handle_userinput(user_question)
-
-
-
-
+        st.session_state.patient_language = "English"
+        #st.subheader(f"Patient's Language")   
+        patient_language = st.text_input("Input Patient's language if not English", key="widget4", on_change=clear_text)
+        if patient_language:
+            st.write(f"Patient's language is now {patient_language}")
+            st.session_state.patient_language = patient_language
         #note_check = st.text_input("Maximize you note for legal defensibility. Paste your note here and hit 'Enter'", key="widget3", on_change=clear_text)
         st.subheader("Optimize Your Note For Legal Protection")
         note_check = st.text_area("Paste your note here and hit 'Ctrl+Enter'", height=200)
