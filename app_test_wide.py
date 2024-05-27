@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+diagnosis = ""
+
 api_key = os.getenv("OPENAI_API_KEY")
 
 client = OpenAI(api_key=api_key)
@@ -18,6 +20,7 @@ thread = client.beta.threads.create()
 def clear_text():
     st.session_state["user_question"] = st.session_state["widget"]
     st.session_state["widget"] = ""
+
 
 @st.cache_data
 def handle_userinput(user_question):
@@ -65,6 +68,8 @@ def main():
         st.session_state.chat_history = []
     if "user_question" not in st.session_state:
         st.session_state["user_question"] = ""
+    if "diagnosis" not in st.session_state:
+        st.session_state.diagnosis = ""
 
     st.header("EM Resident Assistant 🤖")
 
@@ -82,7 +87,7 @@ def main():
             button1 = st.button("Disposition Analysis")
 
         with col2:
-            button2 = st.button("Recommended Procedure Checklist")
+            button2 = st.button("Procedure Checklist")
 
         with col3:  
             button3 = st.button('Create Medical Note')            
@@ -178,12 +183,26 @@ def main():
         
 
     with st.sidebar:
-        st.header("Other Stuff")
+        #working diagnosis
+        st.write('The working diagosis:')
+        diagnosis_placeholder = st.empty()
+        diagnosis = st.text_input("Input the working diagnosis", key="widget6",)
+        diagnosis_placeholder.code(f"{diagnosis}")
+        
+        st.sidebar.divider()
 
+        #Procedure Guide
         ed_procedure = st.text_input("Procedure Instructions", key="widget5", on_change=clear_text)
+        
         if ed_procedure:
             st.write(f'Your procedure is {ed_procedure}')   
-  
+        
+        button5 = st.button("Recommended Procedure Checklist")
+        if button5:
+            st.session_state["user_question"] = f"Create a procedure checklist of the mostlikly procedure that will be done in the emergency department for this patient. T2. Clear procedural instructions. 3. Possible patient complications to look out for. 4. highlight education points for the patient. Use the following format ```1. Supplies   2. Precedure Instructions  3. Possible Complications 4. Patient Education of the Procedure"
+
+
+
         # Patient Education
         st.session_state.patient_language = "English"
         #st.subheader(f"Patient's Language")   

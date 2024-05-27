@@ -14,6 +14,11 @@ css = '''
   padding: 0 1.5rem;
   color: #fff;
 }
+[data-testid="stSidebar"]{
+  min-width: 200px;
+  max-width: 800px;
+}
+</style>
 '''
 
 bot_template = '''
