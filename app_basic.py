@@ -85,7 +85,7 @@ def main():
     # Side bar
     with st.sidebar:
         st.markdown("<h1 style='text-align: center;'>EMA 🤖</h1>", unsafe_allow_html=True)
-                tab1, tab2,= st.tabs(["Functions", "Note Analysis"])
+        tab1, tab2,= st.tabs(["Functions", "Note Analysis"])
         with tab1:
             st.subheader('Process Management')
 
