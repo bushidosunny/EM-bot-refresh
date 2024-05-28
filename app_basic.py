@@ -105,11 +105,10 @@ def main():
                 button3 = st.button('📃Create Medical Note')
             with col2:
                 button4 = st.button("📃Patient Education Note")
-                patient_laguage = st.text_input("")
+                patient_laguage = st.text_input("Type language if not English")
                 if patient_language:
                     st.write(f'Patient language is in {patient_language}')
-                else:
-                    st.write(f'Patient language is currently English')
+                
             
             st.divider()
 
