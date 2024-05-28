@@ -84,6 +84,7 @@ def main():
 
     # Side bar
     with st.sidebar:
+        st.markdown("<h1 style='text-align: center;'>EMA - Emergency Medicine Assistant 🤖🩺</h1>", unsafe_allow_html=True)
         st.header('EMA🤖')
         tab1, tab2,= st.tabs(["Functions", "Note Analysis"])
         with tab1:
