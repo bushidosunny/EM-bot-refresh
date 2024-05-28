@@ -10,7 +10,7 @@ load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 resident_assistant ="asst_Pau6T5mMH3cZBnEePso5kFuJ"
 legal_attorney = "asst_ZI3rML4v8eG1vhQ3Fis5ikOd"
-language = "english"
+patient_language = "english"
 
 client = OpenAI(api_key=api_key)
 
