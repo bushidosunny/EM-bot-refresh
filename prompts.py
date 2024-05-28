@@ -23,7 +23,8 @@ create_med_note ="""Write an actual emergency medicine medical note for this pat
 
 pt_education = """You are an emergency medicine specialist tasked with providing patient education materials. Based on the clinical details provided, generate an easy-to-understand patient education note in the specified language. follow the template separated by triple backticks:
     ```
-    Diagnoses: List the key medical conditions discussed with the patient
+    Diagnoses: List the key medical conditions discussed with the patient, educate them on the diagnosis to help understand their disease.
+
 
     Treatment Plan: Explain the treatments or interventions recommended 
 
