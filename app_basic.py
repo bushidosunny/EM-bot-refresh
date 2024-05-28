@@ -48,7 +48,7 @@ def handle_userinput(user_question):
         st.write_stream(generate_response_stream(stream))
 
 @st.cache_data
-def handle_user_legal_input(user_question):    
+def handle_user_legal_input(legal_question):    
 
     # append user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": user_question})
@@ -61,7 +61,7 @@ def handle_user_legal_input(user_question):
 
     with client.beta.threads.runs.stream(
         thread_id=st.session_state.thread_id,
-        assistant_id=resident_assistant
+        assistant_id=legal_attorney
     ) as stream:
         assistant_response = "".join(generate_response_stream(stream))
         st.session_state.chat_history.append({"role": "assistant", "content": assistant_response})  # Add assistant response to chat history
@@ -76,6 +76,8 @@ def main():
         st.session_state.chat_history = []
     if "user_question" not in st.session_state:
         st.session_state["user_question"] = ""
+    if "legal_question" not in .st.session_state:
+        st.session_state["legal_question"] = ""
     
 
     st.header("EMA - Emergency Medicine Assistant 🤖🩺")
@@ -161,7 +163,7 @@ def main():
                 st.session_state["user_question"] = summarize_note + f' here is the note separated by triple backticks```{note_check}```'           
             if button8:
                 # Create Procedure Checklis
-                st.session_state["user_question"] = optimize_legal_note + f' here is the note separated by triple backticks```{note_check}```'
+                st.session_state["legal_question"] = optimize_legal_note + f' here is the note separated by triple backticks```{note_check}```'
             
 
     # Display input container
@@ -180,6 +182,8 @@ def main():
         #handle_userinput(user_question)
     if st.session_state["user_question"]:
         handle_userinput(st.session_state["user_question"])
+    if st.session_state["legal_question"]:
+        handel_user_legal_input(st.session_state["legal_question"])
 
     # Display chat history in the chat_container
     chat_container = st.container()
