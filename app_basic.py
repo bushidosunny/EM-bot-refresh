@@ -183,7 +183,7 @@ def main():
     if st.session_state["user_question"]:
         handle_userinput(st.session_state["user_question"])
     if st.session_state["legal_question"]:
-        handel_user_legal_input(st.session_state["legal_question"])
+        handle_user_legal_input(st.session_state["legal_question"])
 
     # Display chat history in the chat_container
     chat_container = st.container()
