@@ -81,6 +81,7 @@ def main():
 
     # Side bar
     with st.sidebar:
+        st.header("EMA🤖"
         tab1, tab2,= st.tabs(["Functions", "Note Analysis"])
         with tab1:
             st.subheader('Process Management')
