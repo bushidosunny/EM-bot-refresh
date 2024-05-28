@@ -51,12 +51,12 @@ def handle_userinput(user_question):
 def handle_user_legal_input(legal_question):    
 
     # append user message to chat history
-    st.session_state.chat_history.append({"role": "user", "content": user_question})
+    st.session_state.chat_history.append({"role": "user", "content": legal_question})
         
     message = client.beta.threads.messages.create(
         thread_id=st.session_state.thread_id,
         role="user",
-        content=user_question
+        content=legal_question
     )
 
     with client.beta.threads.runs.stream(
