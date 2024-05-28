@@ -1,5 +1,3 @@
-patient_language = "English"
-note_check = ""
 
 create_med_note ="""Write an actual emergency medicine medical note for this patient based on the information we discussed, include good medical decision making under 'Assessment' and 'Differnetial Diagnosis'.
                 fill in any missing "Physical Examination" information with most likley information. Do not put in laboratory results or imaging results unless they were provided. Any missing information needed, place triple asteriks (***) in the location. structure the note based on the structure provided by triple backticks.
