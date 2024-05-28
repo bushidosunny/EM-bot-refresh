@@ -1,6 +1,13 @@
 
-create_med_note ="""Write an actual emergency medicine medical note for this patient based on the information we discussed, include good medical decision making under 'Assessment' and 'Differnetial Diagnosis'.
-                fill in any missing "Physical Examination" information with most likley information. Do not put in laboratory results or imaging results unless they were provided. Any missing information needed, place triple asteriks (***) in the location. structure the note based on the structure provided by triple backticks.
+create_med_note ="""Write an emergency medicine medical note for the patient encounter we discussed, incorporating the following guidelines:
+Include sections for Chief Complaint, History of Present Illness, Past Medical History, Medications, Allergies, Social History, Family History, Review of Systems, Physical Exam, Assessment, Differential Diagnosis, Plan, and Disposition.
+Under the "Assessment" and "Differential Diagnosis" sections, provide well-reasoned medical decision making based on the available information.
+For any Review of Systems or Physical Exam findings not explicitly mentioned, assume the expected findings are negative and include them in the note accordingly.
+Do not include any laboratory results or imaging findings unless they were specifically provided during our discussion.
+If any additional information is required but was not provided, insert triple asterisks (***) in the appropriate location within the note.
+Write the note using standard medical terminology and abbreviations, and format it in a clear, organized manner consistent with emergency department documentation practices.
+Ensure the note is comprehensive yet concise, focusing on the most pertinent information for the patient's presentation and management.
+Please generate the emergency medicine medical note based on the patient case we discussed, adhering to these instructions.place triple asteriks (***) in the location. structure the note based on the structure provided by triple backticks.
 
                 ```
                 Chief Complaint:
