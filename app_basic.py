@@ -76,7 +76,7 @@ def main():
         st.session_state.chat_history = []
     if "user_question" not in st.session_state:
         st.session_state["user_question"] = ""
-    if "legal_question" not in .st.session_state:
+    if "legal_question" not in st.session_state:
         st.session_state["legal_question"] = ""
     
 
