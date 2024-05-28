@@ -28,35 +28,17 @@ Please generate the emergency medicine medical note based on the patient case we
 
 pt_education = """You are an emergency medicine specialist tasked with providing patient education materials. Based on the clinical details provided, generate an easy-to-understand patient education note in the specified language. follow the template separated by triple backticks:
     ```
-    Diagnoses: List the key medical conditions discussed with the patient, educate them on the diagnosis to help understand their disease.
-
-
-    Treatment Plan: Explain the treatments or interventions recommended 
-
-    Discharge Instructions: Outline any instructions for care after discharge
-
-    Topics Covered: Summarize the major concepts you reviewed with the patient, such as:
-    - Diagnosis details and pathophysiology
-    - Medication instructions (dosage, route, side effects)
-    - Warning signs/symptoms to watch for  
-    - Activity modifications or precautions
-    - Follow-up care instructions
-
-    Plan Outline: 
-    - Describe any plans for reinforcing or following up on the education provided
-    - Note if family members or interpreters were involved 
-    - Indicate any barriers addressed (e.g. health literacy, language)
-
-    Structure the patient education note using the following template format:
-
     Diagnoses:
-    [List diagnoses discussed]
+    [List diagnoses discussed and pathophysiology]
 
     Treatment Plan:  
-    [Explain treatments/interventions]
+    [Explain treatments/interventions(dosage, route, side effects)]
 
     Discharge Instructions:
-    [Outline post-discharge care instructions]
+    [Outline post-discharge care instructions    
+    - Warning signs/symptoms to watch for  
+    - Activity modifications or precautions
+    - Follow-up care instructions]
 
     Topics Covered:
     [Summarize key concepts reviewed]
