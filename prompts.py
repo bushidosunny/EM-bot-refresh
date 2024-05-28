@@ -9,22 +9,22 @@ Write the note using standard medical terminology and abbreviations, and format 
 Ensure the note is comprehensive yet concise, focusing on the most pertinent information for the patient's presentation and management.
 Please generate the emergency medicine medical note based on the patient case we discussed, adhering to these instructions.place triple asteriks (***) in the location. structure the note based on the structure provided by triple backticks.
 
-                ```
-                Chief Complaint:
-                History of Present Illness:
-                Past Medical History:
-                Past Social History:
-                Medications:
-                Allergies:
-                Review of Systems:
-                Physical Examination:
-                Laboratory Results:
-                Imaging:
-                Assessment:
-                Differential Diagnoses:
-                Plan:
-                Disposition:
-                ```"""
+    ```
+    Chief Complaint:
+    History of Present Illness:
+    Past Medical History:
+    Past Social History:
+    Medications:
+    Allergies:
+    Review of Systems:
+    Physical Examination:
+    Laboratory Results:
+    Imaging:
+    Assessment:
+    Differential Diagnoses:
+    Plan:
+    Disposition:
+    ```"""
 
 pt_education = """You are an emergency medicine specialist tasked with providing patient education materials. Based on the clinical details provided, generate an easy-to-understand patient education note in the specified language. follow the template separated by triple backticks:
     ```
