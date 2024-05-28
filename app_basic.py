@@ -94,7 +94,7 @@ def main():
             with col1:
                 button1 = st.button("🛌Disposition Analysis")
             with col2:
-                button2 = st.button("💉💊😷🩺🩹Recommended Procedure Checklist")
+                button2 = st.button("💉Recommended Procedure")
             
             st.divider()
 
@@ -119,7 +119,7 @@ def main():
             with col1:  
                 button5 = st.button("🆘Recommended Next Step")  
             with col2:
-                button6 = st.button('🫡I did that, now what?')
+                button6 = st.button('🆗I did that, now what?')
                 
             # process buttons 
             if button1: 
