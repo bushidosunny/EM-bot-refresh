@@ -5,13 +5,14 @@ import os
 from dotenv import load_dotenv
 from prompts import *
 import json
+import re
 
 # Load variables
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 resident_assistant ="asst_Pau6T5mMH3cZBnEePso5kFuJ"
 legal_attorney = "asst_ZI3rML4v8eG1vhQ3Fis5ikOd"
-patient_language = "english"
+
 
 client = OpenAI(api_key=api_key)
 
@@ -19,6 +20,13 @@ client = OpenAI(api_key=api_key)
 if "thread_id" not in st.session_state:
     thread = client.beta.threads.create()
     st.session_state.thread_id = thread.id
+
+# Create new thread
+def new_thread():
+    thread = client.beta.threads.create()
+    st.session_state.thread_id = thread.id
+    st.session_state.chat_history = []
+
 
 # Function to generate the response stream
 def generate_response_stream(stream):
@@ -45,10 +53,13 @@ def handle_userinput(user_question):
         assistant_id=resident_assistant
     ) as stream:
         assistant_response = "".join(generate_response_stream(stream))
-        st.session_state.chat_history.append({"role": "assistant", "content": assistant_response})  # Add assistant response to chat history
+        
         st.write_stream(generate_response_stream(stream))
     extract_json(assistant_response)
-    
+    st.session_state.chat_history.append({"role": "assistant", "content": st.session_state.assistant_response})  # Add assistant response to chat history
+    user_input_counter = 0
+    user_input_counter += 1
+    print(user_input_counter)
 
 @st.cache_data
 def handle_user_legal_input(legal_question):    
@@ -72,26 +83,29 @@ def handle_user_legal_input(legal_question):
 
 
 def extract_json(assistant_response):
-    # Find the position of the first opening brace of the JSON
-    json_start = assistant_response.find('{')
+    json_pattern = re.compile(r'{.*}', re.DOTALL)
+    json_match = json_pattern.search(assistant_response)
+    
+    print(assistant_response)
+    print(f'json_match: {json_match}')
 
-    # Find the position of the last closing brace of the JSON
-    json_end = assistant_response.rfind('}')
-
-    # Extract the JSON substring from the start position to the end position
-    json_substring = assistant_response[json_start:json_end+1]
-
-    # Parse the JSON substring into a Python dictionary
-    json_data = json.loads(json_substring)
-
-    print (assistant_response)
-    print(json_data)
-
-    st.session_state.json_data=json_data
-    diff_diag_list = "\n".join(f"{i}. {value}" for i, value in enumerate(json_data["differential_diagnosis"], start=1))
-    st.session_state.diff_diag_list=diff_diag_list
-    danger_diag_list = "\n".join(f"{i}. {value}" for i, value in enumerate(json_data["dangerous_diagnosis"], start=1))
-    st.session_state.danger_diag_list=danger_diag_list
+    if json_match:
+        json_string = json_match.group()
+        json_data = json.loads(json_string)
+        
+        # Remove the JSON string from the original text
+        text_without_json = json_pattern.sub('', assistant_response)
+        print(f'text_without_json = {text_without_json}')
+        
+        # Extract diagnoses and critical_actions from the JSON data
+        ddx_json = json_data['diagnoses']
+        critical_actions_json = json_data['critical_actions']
+        st.session_state.ddx_json = ddx_json
+        st.session_state.critical_actions_json = critical_actions_json
+        st.session_state.assistant_response = text_without_json
+        
+    else:
+        print("No valid JSON found in the text.")
     
 def main():
     st.set_page_config(page_title="EMA", page_icon="🤖🩺")
@@ -105,13 +119,32 @@ def main():
         st.session_state["legal_question"] = ""
     if "json_data" not in st.session_state:
         st.session_state.json_data = None
-    if "diff_diag_list" not in st.session_state:
-        st.session_state.diff_diag_list = ""
+    if "ddx_json" not in st.session_state:
+        st.session_state.ddx_json = {}
     if "danger_diag_list" not in st.session_state:
-        st.session_state.danger_diag_list = ""
+        st.session_state.danger_diag_list = {}
+    if "critical_actions_json" not in st.session_state:
+        st.session_state.critical_actions_json = {}
+    if "sidebar_state" not in st.session_state:
+        st.session_state.sidebar_state = 1 
+    if "assistant_response" not in st.session_state:
+        st.session_state.assistant_response = ""
+    if "patient_language" not in st.session_state:
+        st.session_state.patient_language = "English"
     
 
     st.header("EMA - Emergency Medicine Assistant 🤖🩺")
+
+    # Display input container
+    input_container = st.container()
+    input_container.float(float_css_helper(bottom="5px"))
+    with input_container:
+        with st.form("my_form", clear_on_submit=True):
+            user_question = st.text_input("How may I help you?", key="widget2")
+            submitted = st.form_submit_button("Submit")
+
+            if submitted:
+                handle_userinput(user_question)
 
     #process user input
     #if user_question:
@@ -121,32 +154,42 @@ def main():
     if st.session_state["legal_question"]:
         handle_user_legal_input(st.session_state["legal_question"])
 
-    # Display chat history in the chat_container
-    chat_container = st.container()
-    with chat_container:
-        for message in st.session_state.chat_history:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"], unsafe_allow_html=True)
-                
     # Side bar
     with st.sidebar:
         st.markdown("<h1 style='text-align: center;'>EMA 🤖</h1>", unsafe_allow_html=True)
-        st.subheader("Differential Diagnosis from Most Likley to Least")
-        st.text(st.session_state.diff_diag_list)
-        st.subheader("Dangerous Diagnoses")
-        st.text(st.session_state.danger_diag_list)
-        tab1, tab2,= st.tabs(["Functions", "Note Analysis"])
+
+
+        tab1, tab2, tab3= st.tabs(["Functions", "Note Analysis", "Update Variables"])
         with tab1:
+            st.subheader("Critical Actions")
+            for action in st.session_state.critical_actions_json:
+                st.markdown(f"- {action}")
+
+            st.divider()
+
+            st.subheader("Differential Diagnosis")
+            
+            for diagnosis, value in st.session_state.ddx_json.items():
+                st.markdown(f"- {diagnosis}: {value}%")
+            
+
+            #st.subheader("Dangerous Diagnoses")
+            #st.text(st.session_state.danger_diag_list)
+
+            st.divider()
+
             st.subheader('Process Management')
+
+            
 
             #function buttons
             col1, col2, = st.columns(2)
             with col1:
                 button1 = st.button("🛌Disposition Analysis")
             with col2:
-                button2 = st.button("💉Recommended Procedure")
+                button2 = st.button("💉Recommend Procedure")
             
-            st.divider()
+            
 
             st.subheader('Note Management')
 
@@ -154,21 +197,24 @@ def main():
             with col1:
                 button3 = st.button('📃Create Medical Note')
             with col2:
-                button4 = st.button("📃Patient Education Note")
-                patient_laguage = st.text_input("Type language if not English")
-                if patient_language:
-                    st.write(f'Patient language is in {patient_language}')
+                button4 = st.button("📃Pt Education Note")
+ 
                 
             
-            st.divider()
 
             st.subheader('AI Guidance')
 
             col1, col2, = st.columns(2)
             with col1:  
-                button5 = st.button("🆘Recommended Next Step")  
+                button5 = st.button("🆘Recommend Next Step")  
             with col2:
                 button6 = st.button('🆗I did that, now what?')
+
+            st.divider()
+
+            col1, col2, = st.columns(2)
+            with col2:
+                button9 = st.button('NEW THREAD')
                 
             # process buttons 
             if button1: 
@@ -181,14 +227,17 @@ def main():
                 # create medical note from this case when Button 1 is clicked
                 st.session_state["user_question"] = create_med_note      
             if button4: 
-                # Disposition decision helper, safer for home? 
-                st.session_state["user_question"] = pt_education + f"\n the patient's instructions needs to be in {patient_language}"
+                # Patient enducation instructions? 
+                st.session_state["user_question"] = pt_education + f"\n the patient's instructions needs to be in {st.session_state.patient_language}"
             if button5:
                 # Create Procedure Checklis
                 st.session_state["user_question"] = "What should i do next here in the emergency department?"
             if button6:
                 # create medical note from this case when Button 1 is clicked
                 st.session_state["user_question"] = "Ok i did that. Now what?" 
+            if button9:
+                # Refresh button
+                new_thread()
 
         with tab2: 
             st.header("Note Analysis")
@@ -214,19 +263,25 @@ def main():
             if button8:
                 # Create Procedure Checklis
                 st.session_state["legal_question"] = optimize_legal_note + f' here is the note separated by triple backticks```{note_check}```'
+        
+        with tab3:
+            patient_language = st.text_input("Type language if not English")
+            if patient_language:
+                st.session_state.patient_language = patient_language
+                st.write(f'Patient language is {st.session_state.patient_language}')
             
+    if st.session_state["user_question"]:
+        handle_userinput(st.session_state["user_question"])
+    if st.session_state["legal_question"]:
+        handle_user_legal_input(st.session_state["legal_question"])
 
-    # Display input container
-    input_container = st.container()
-    input_container.float(float_css_helper(bottom="5px"))
-    with input_container:
-        with st.form("my_form", clear_on_submit=True):
-            user_question = st.text_input("How may I help you?", key="widget2")
-            submitted = st.form_submit_button("Submit")
 
-            if submitted:
-                handle_userinput(user_question)
-    
+    # Display chat history in the chat_container
+    chat_container = st.container()
+    with chat_container:
+        for message in st.session_state.chat_history:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"], unsafe_allow_html=True)
 
                        
 if __name__ == '__main__':
