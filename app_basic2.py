@@ -4,11 +4,14 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 from prompts import *
+import json
 
 # Load variables
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
-resident_assitant ="asst_Pau6T5mMH3cZBnEePso5kFuJ"
+resident_assistant ="asst_Pau6T5mMH3cZBnEePso5kFuJ"
+legal_attorney = "asst_ZI3rML4v8eG1vhQ3Fis5ikOd"
+patient_language = "english"
 
 client = OpenAI(api_key=api_key)
 
@@ -16,7 +19,14 @@ client = OpenAI(api_key=api_key)
 if "thread_id" not in st.session_state:
     thread = client.beta.threads.create()
     st.session_state.thread_id = thread.id
-    print(f"Thread ID: {st.session_state.thread_id}")
+
+# Function to generate the response stream
+def generate_response_stream(stream):
+    for response in stream:
+        if response.event == 'thread.message.delta':
+            for delta in response.data.delta.content:
+                if delta.type == 'text':
+                    yield delta.text.value
 
 @st.cache_data
 def handle_userinput(user_question):    
@@ -24,104 +34,92 @@ def handle_userinput(user_question):
     # append user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": user_question})
         
-    # Send user message to OpenAI API
-    client.beta.threads.messages.create(
+    message = client.beta.threads.messages.create(
         thread_id=st.session_state.thread_id,
         role="user",
-        content=user_question,
+        content=user_question
     )
 
-    # Get assistant response
-    run = client.beta.threads.runs.create(
+    with client.beta.threads.runs.stream(
         thread_id=st.session_state.thread_id,
-        assistant_id=resident_assitant
-    )
-    # Periodically retrieve the Run to check status until it completes
-    while run.status != "completed":
-        run = client.beta.threads.runs.retrieve(
-            thread_id=st.session_state.thread_id, 
-            run_id=run.id
-        )
-        if run.status == "completed":
-            break
-
-    # Retrieve assistant's response messages from the thread
-    response_messages = client.beta.threads.messages.list(thread_id=st.session_state.thread_id)
-
-    # Append assistant response to chat history
-    for message in response_messages:
-        if message.role == "assistant":
-            assistant_response = message.content[0].text.value
-            st.session_state.chat_history.append({"role": "assistant", "content": assistant_response})
+        assistant_id=resident_assistant
+    ) as stream:
+        assistant_response = "".join(generate_response_stream(stream))
+        st.session_state.chat_history.append({"role": "assistant", "content": assistant_response})  # Add assistant response to chat history
+        st.write_stream(generate_response_stream(stream))
+    extract_json(assistant_response)
     
+
+@st.cache_data
+def handle_user_legal_input(legal_question):    
+
+    # append user message to chat history
+    st.session_state.chat_history.append({"role": "user", "content": legal_question})
+        
+    message = client.beta.threads.messages.create(
+        thread_id=st.session_state.thread_id,
+        role="user",
+        content=legal_question
+    )
+
+    with client.beta.threads.runs.stream(
+        thread_id=st.session_state.thread_id,
+        assistant_id=legal_attorney
+    ) as stream:
+        assistant_response = "".join(generate_response_stream(stream))        
+        st.session_state.chat_history.append({"role": "assistant", "content": assistant_response})  # Add assistant response to chat history
+        st.write_stream(generate_response_stream(stream))
+
+
+def extract_json(assistant_response):
+    # Find the position of the first opening brace of the JSON
+    json_start = assistant_response.find('{')
+
+    # Find the position of the last closing brace of the JSON
+    json_end = assistant_response.rfind('}')
+
+    # Extract the JSON substring from the start position to the end position
+    json_substring = assistant_response[json_start:json_end+1]
+
+    # Parse the JSON substring into a Python dictionary
+    json_data = json.loads(json_substring)
+
+    print (assistant_response)
+    print(json_data)
+
+    st.session_state.json_data=json_data
+    diff_diag_list = "\n".join(f"{i}. {value}" for i, value in enumerate(json_data["differential_diagnosis"], start=1))
+    st.session_state.diff_diag_list=diff_diag_list
+    danger_diag_list = "\n".join(f"{i}. {value}" for i, value in enumerate(json_data["dangerous_diagnosis"], start=1))
+    st.session_state.danger_diag_list=danger_diag_list
     
 def main():
-    st.set_page_config(page_title="EM Assistant Basic", page_icon="🤖🩺")
+    st.set_page_config(page_title="EMA", page_icon="🤖🩺")
     
     # Initialize session state
-    
     if "chat_history" not in st.session_state: #keep conversation variable from refreshing (keep consistant), as Streamlit likes to refreashthe entire code otherwise during use.
         st.session_state.chat_history = []
     if "user_question" not in st.session_state:
         st.session_state["user_question"] = ""
-
-    st.header("EM Assistant Basic 🤖🩺")
-
-    # Side bar
-    with st.sidebar:
-        st.header("FUNCTIONS")
-        st.subheader("Optimize Your Note For Legal Protection")
-        note_check = st.text_area("Paste your note here and hit 'Ctrl+Enter'", height=200)
-        if note_check:
-            with st.spinner("Processing"):
-                user_question = optimize_legal_note
-                handle_userinput(user_question)
+    if "legal_question" not in st.session_state:
+        st.session_state["legal_question"] = ""
+    if "json_data" not in st.session_state:
+        st.session_state.json_data = None
+    if "diff_diag_list" not in st.session_state:
+        st.session_state.diff_diag_list = ""
+    if "danger_diag_list" not in st.session_state:
+        st.session_state.danger_diag_list = ""
     
-    # Display input container
-    input_container = st.container()
-    input_container.float(float_css_helper(bottom="50px"))
-    with input_container:
-        with st.form("my_form", clear_on_submit=True):
-            user_question = st.text_input("How may I help you?", key="widget2")
-            submitted = st.form_submit_button("Submit")
 
-            if submitted:
-                handle_userinput(user_question)
+    st.header("EMA - Emergency Medicine Assistant 🤖🩺")
 
-        #function buttons
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            button1 = st.button("Disposition Analysis")
-
-        with col2:
-            button2 = st.button("Recommended Procedure Checklist")
-
-        with col3:  
-            button3 = st.button('Create Medical Note')            
-
-        with col4:
-            button4 = st.button("Patient Eductation Handout")
-        
-        # process buttons
-          
-
-        if button1: 
-            # Disposition decision helper, safer for home? 
-            st.session_state["user_question"] = disposition_analysis
-        if button2:
-            # Create Procedure Checklis
-            st.session_state["user_question"] = procedure_checklist
-        if button3:
-            # create medical note from this case when Button 1 is clicked
-            st.session_state["user_question"] = create_med_note  
-        if button4:
-            # create Patient Eductation Handout
-            st.session_state["user_question"] = pt_education
     #process user input
     #if user_question:
         #handle_userinput(user_question)
     if st.session_state["user_question"]:
         handle_userinput(st.session_state["user_question"])
+    if st.session_state["legal_question"]:
+        handle_user_legal_input(st.session_state["legal_question"])
 
     # Display chat history in the chat_container
     chat_container = st.container()
@@ -130,6 +128,106 @@ def main():
             with st.chat_message(message["role"]):
                 st.markdown(message["content"], unsafe_allow_html=True)
                 
+    # Side bar
+    with st.sidebar:
+        st.markdown("<h1 style='text-align: center;'>EMA 🤖</h1>", unsafe_allow_html=True)
+        st.subheader("Differential Diagnosis from Most Likley to Least")
+        st.text(st.session_state.diff_diag_list)
+        st.subheader("Dangerous Diagnoses")
+        st.text(st.session_state.danger_diag_list)
+        tab1, tab2,= st.tabs(["Functions", "Note Analysis"])
+        with tab1:
+            st.subheader('Process Management')
 
+            #function buttons
+            col1, col2, = st.columns(2)
+            with col1:
+                button1 = st.button("🛌Disposition Analysis")
+            with col2:
+                button2 = st.button("💉Recommended Procedure")
+            
+            st.divider()
+
+            st.subheader('Note Management')
+
+            col1, col2, = st.columns(2)
+            with col1:
+                button3 = st.button('📃Create Medical Note')
+            with col2:
+                button4 = st.button("📃Patient Education Note")
+                patient_laguage = st.text_input("Type language if not English")
+                if patient_language:
+                    st.write(f'Patient language is in {patient_language}')
+                
+            
+            st.divider()
+
+            st.subheader('AI Guidance')
+
+            col1, col2, = st.columns(2)
+            with col1:  
+                button5 = st.button("🆘Recommended Next Step")  
+            with col2:
+                button6 = st.button('🆗I did that, now what?')
+                
+            # process buttons 
+            if button1: 
+                # Disposition decision helper, safer for home? 
+                st.session_state["user_question"] = disposition_analysis
+            if button2:
+                # Create Procedure Checklis
+                st.session_state["user_question"] = procedure_checklist
+            if button3:
+                # create medical note from this case when Button 1 is clicked
+                st.session_state["user_question"] = create_med_note      
+            if button4: 
+                # Disposition decision helper, safer for home? 
+                st.session_state["user_question"] = pt_education + f"\n the patient's instructions needs to be in {patient_language}"
+            if button5:
+                # Create Procedure Checklis
+                st.session_state["user_question"] = "What should i do next here in the emergency department?"
+            if button6:
+                # create medical note from this case when Button 1 is clicked
+                st.session_state["user_question"] = "Ok i did that. Now what?" 
+
+        with tab2: 
+            st.header("Note Analysis")
+            
+            # paste in note
+            note_check = st.text_area("Paste your note here and hit 'Ctrl+Enter'", height=200)
+            if note_check:
+                st.write('Note uploaded 👍')            
+            else:
+                st.write('no note uploaded')
+            
+            # display buttons
+            col1, col2, = st.columns(2)
+            with col1:
+                button7 = st.button("Summarize Note")
+            with col2:
+                button8 = st.button("Optimize Your Note For Legal Protection")
+            
+            # process buttons 
+            if button7: 
+                # Disposition decision helper, safer for home? 
+                st.session_state["user_question"] = summarize_note + f' here is the note separated by triple backticks```{note_check}```'           
+            if button8:
+                # Create Procedure Checklis
+                st.session_state["legal_question"] = optimize_legal_note + f' here is the note separated by triple backticks```{note_check}```'
+            
+
+    # Display input container
+    input_container = st.container()
+    input_container.float(float_css_helper(bottom="5px"))
+    with input_container:
+        with st.form("my_form", clear_on_submit=True):
+            user_question = st.text_input("How may I help you?", key="widget2")
+            submitted = st.form_submit_button("Submit")
+
+            if submitted:
+                handle_userinput(user_question)
+    
+
+                       
 if __name__ == '__main__':
     main()
