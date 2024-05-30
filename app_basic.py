@@ -147,7 +147,7 @@ def main():
         st.session_state.assistant_response = ""
     if "patient_language" not in st.session_state:
         st.session_state.patient_language = "English"
-    if "note_request" not in st.sesstion_state:
+    if "note_request" not in st.session_state:
         st.session_state.note_request = ""
     
 
