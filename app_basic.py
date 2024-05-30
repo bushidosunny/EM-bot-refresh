@@ -12,6 +12,7 @@ load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 resident_assistant ="asst_Pau6T5mMH3cZBnEePso5kFuJ"
 legal_attorney = "asst_ZI3rML4v8eG1vhQ3Fis5ikOd"
+note_writer = "asst_Ua6cmp6dpTc33cSpuZxutGsX"
 
 
 client = OpenAI(api_key=api_key)
@@ -80,6 +81,26 @@ def handle_user_legal_input(legal_question):
         st.write_stream(generate_response_stream(stream))
 
 @st.cache_data
+def note_writer(note_request):    
+
+    # append user message to chat history
+    st.session_state.chat_history.append({"role": "user", "content": note_request})
+        
+    message = client.beta.threads.messages.create(
+        thread_id=st.session_state.thread_id,
+        role="user",
+        content=note_request
+    )
+
+    with client.beta.threads.runs.stream(
+        thread_id=st.session_state.thread_id,
+        assistant_id=note_writer
+    ) as stream:
+        assistant_response = "".join(generate_response_stream(stream))        
+        st.session_state.chat_history.append({"role": "assistant", "content": assistant_response})  # Add assistant response to chat history
+        st.write_stream(generate_response_stream(stream))
+
+@st.cache_data
 def extract_json(assistant_response):
     json_pattern = re.compile(r'{.*}', re.DOTALL)
     json_match = json_pattern.search(assistant_response)
@@ -126,6 +147,8 @@ def main():
         st.session_state.assistant_response = ""
     if "patient_language" not in st.session_state:
         st.session_state.patient_language = "English"
+    if "note_request" non in st.sesstion_state:
+        st.session_state.note_request = ""
     
 
     st.header("EMA - Emergency Medicine Assistant 🤖🩺")
@@ -218,7 +241,7 @@ def main():
                 st.session_state["user_question"] = procedure_checklist
             if button3:
                 # create medical note from this case when Button 1 is clicked
-                st.session_state["user_question"] = create_med_note      
+                st.session_state["note_request"] = note_request      
             if button4: 
                 # Patient enducation instructions? 
                 st.session_state["user_question"] = pt_education + f"\n the patient's instructions needs to be in {st.session_state.patient_language}"
@@ -229,7 +252,7 @@ def main():
                 # create medical note from this case when Button 1 is clicked
                 st.session_state["user_question"] = "Ok i did that. Now what?" 
             if button9:
-                # Refresh button
+                # New Thread Refresh button
                 new_thread()
 
         with tab2: 
@@ -251,8 +274,8 @@ def main():
             
             # process buttons 
             if button7: 
-                # Disposition decision helper, safer for home? 
-                st.session_state["user_question"] = summarize_note + f' here is the note separated by triple backticks```{note_check}```'           
+                # Summarize Note 
+                st.session_state["note_request"] = summarize_note + f' here is the note separated by triple backticks```{note_check}```'           
             if button8:
                 # Create Procedure Checklis
                 st.session_state["legal_question"] = optimize_legal_note + f' here is the note separated by triple backticks```{note_check}```'
