@@ -55,7 +55,7 @@ def handle_userinput(user_question):
         assistant_response = "".join(generate_response_stream(stream))
         
         st.write_stream(generate_response_stream(stream))
-    # extract_json(assistant_response)
+    extract_json(assistant_response)
     st.session_state.chat_history.append({"role": "assistant", "content": st.session_state.assistant_response})  # Add assistant response to chat history
     user_input_counter = 0
     user_input_counter += 1
@@ -81,7 +81,7 @@ def handle_user_legal_input(legal_question):
         st.session_state.chat_history.append({"role": "assistant", "content": assistant_response})  # Add assistant response to chat history
         st.write_stream(generate_response_stream(stream))
 
-
+@st.cache_data
 def extract_json(assistant_response):
     json_pattern = re.compile(r'{.*}', re.DOTALL)
     json_match = json_pattern.search(assistant_response)
