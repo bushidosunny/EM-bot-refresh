@@ -102,7 +102,7 @@ def note_writer(note_request):
 
 @st.cache_data
 def extract_json(assistant_response):
-    json_pattern = re.compile(r'{.*}', re.DOTALL)
+    json_pattern = re.compile(r'{.*?}', re.DOTALL)
     json_match = json_pattern.search(assistant_response)
         
     if json_match:
