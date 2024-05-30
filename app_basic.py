@@ -11,7 +11,7 @@ import re
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 resident_assistant ="asst_Pau6T5mMH3cZBnEePso5kFuJ"
-ema_v2 = asst_na7TnRA4wkDbflTYKzo9kmca
+ema_v2 = "asst_na7TnRA4wkDbflTYKzo9kmca"
 legal_attorney = "asst_ZI3rML4v8eG1vhQ3Fis5ikOd"
 note_writer = "asst_Ua6cmp6dpTc33cSpuZxutGsX"
 
