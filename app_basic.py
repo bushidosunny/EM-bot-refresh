@@ -112,6 +112,12 @@ def extract_json(assistant_response):
         st.text(json_string)
         json_data = json.loads(json_string)
         st.text(json_data)
+        for json_string in json_matches:
+            try:
+                data = json.loads(json_string)
+                print(data)
+            except json.JSONDecodeError as e:
+                print(f"Error decoding JSON: {e}")
         
         # Remove the JSON string from the original text
         text_without_json = json_pattern.sub('', assistant_response)
