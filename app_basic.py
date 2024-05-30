@@ -11,6 +11,7 @@ import re
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 resident_assistant ="asst_Pau6T5mMH3cZBnEePso5kFuJ"
+ema_v2 = asst_na7TnRA4wkDbflTYKzo9kmca
 legal_attorney = "asst_ZI3rML4v8eG1vhQ3Fis5ikOd"
 note_writer = "asst_Ua6cmp6dpTc33cSpuZxutGsX"
 
@@ -51,7 +52,7 @@ def handle_userinput(user_question):
 
     with client.beta.threads.runs.stream(
         thread_id=st.session_state.thread_id,
-        assistant_id=resident_assistant
+        assistant_id=ema_v2
     ) as stream:
         assistant_response = "".join(generate_response_stream(stream))
         
