@@ -107,7 +107,10 @@ def extract_json(assistant_response):
         
     if json_match:
         json_string = json_match.group()
+        
+        st.text(json_string)
         json_data = json.loads(json_string)
+        st.text(json_data)
         
         # Remove the JSON string from the original text
         text_without_json = json_pattern.sub('', assistant_response)
