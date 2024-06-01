@@ -33,6 +33,7 @@ pt_education = """You are an emergency medicine specialist tasked with providing
 
     Treatment Plan:  
     [Explain treatments/interventions(dosage, route, side effects)]
+    [If Physical therapy interventions were provided also disply them here]
 
     Discharge Instructions:
     [Outline post-discharge care instructions    
