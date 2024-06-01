@@ -19,7 +19,7 @@ client = OpenAI(api_key=api_key)
 
 # Specialist to Assistant ID mapping
 specialist_to_assistant_id = {
-    "Acute Care": ema_v2,    
+    "Emergency Medicine": ema_v2,    
     "Neurological": "asst_caM9P1caoAjFRvSAmT6Y6mIz",    
     "Sensory Systems (Eyes, Ears, Nose, Throat)": "asst_UB1VTD6NyYbb1xTrUueb3xlI",
     "Cardiovascular and Respiratory": "asst_bH6wKFfCMVBiH3yUkM0DWdFk",
@@ -30,10 +30,10 @@ specialist_to_assistant_id = {
     "General": "asst_K2QHe4VfHGdyrrfTCiyctzyY",
     "Pediatrics": "asst_cVQwzy87fwOvTnb66zsvVB5L",
     "Medical Legal": "asst_ZI3rML4v8eG1vhQ3Fis5ikOd",
-    "Acute Care beta": "asst_GeAw2bIhrATHejogynMmP2VB",}
+    "Emergency Medicine beta": "asst_GeAw2bIhrATHejogynMmP2VB",}
 
 specialist_id_caption = {
-  "Acute Care": {
+  "Emergency Medicine": {
     "assistant_id": "ema_v2",
     "caption": "EM, Peds EM, Toxicology, Wilderness"
   },
@@ -77,7 +77,7 @@ specialist_id_caption = {
     "assistant_id": "asst_ZI3rML4v8eG1vhQ3Fis5ikOd",
     "caption": ""
   },
-  "Acute Care beta": {
+  "Emergency Medicine beta": {
     "assistant_id": "asst_GeAw2bIhrATHejogynMmP2VB",
     "caption": "EM - beta testing"
   }
