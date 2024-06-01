@@ -115,7 +115,7 @@ def handle_user_input_container():
     input_container = st.container()
     input_container.float(float_css_helper(bottom="50px"))
     with input_container:
-        specialist = st.session_state.get('specialist', '')
+        specialist = st.session_state.specialist
         st.markdown(
             f"""
             <div style="text-align: center;">
@@ -124,6 +124,7 @@ def handle_user_input_container():
             """, 
             unsafe_allow_html=True
         )
+        
         user_question = st.chat_input("How may I help you?", key="widget2")
         if user_question:
             handle_userinput(user_question)
@@ -247,12 +248,14 @@ def choose_specialist_radio():
 
     # Display the radio button with specialities and captions
     specialist = st.radio("**Choose Your Specialty Group**", specialities, captions = captions)
-    return specialist
+    
     if specialist and specialist != st.session_state.specialist:
         st.session_state.specialist = specialist
         st.session_state.assistant_id = specialist_to_assistant_id.get(specialist, ema_v2)
         st.session_state['should_rerun'] = True
         st.rerun()
+    
+    return specialist
 
 # Updating the patient language
 def update_patient_language():
