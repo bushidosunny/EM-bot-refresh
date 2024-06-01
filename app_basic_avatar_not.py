@@ -5,7 +5,6 @@ import os
 from dotenv import load_dotenv
 from prompts import *
 from extract_json import extract_json
-import base64
 
 # Load variables
 load_dotenv()
@@ -18,79 +17,88 @@ note_writer = 'asst_Ua6cmp6dpTc33cSpuZxutGsX'
 
 client = OpenAI(api_key=api_key)
 
-# Function to load and encode images as base64
-def load_image_as_base64(image_path):
-    with open(image_path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode("utf-8")
+# Define the avatar URLs
+user_avatar_url = "https://cdn.pixabay.com/photo/2016/12/21/07/36/profession-1922360_1280.png"
 
-# Define the avatar base64 strings
-user_avatar_base64 = load_image_as_base64("avatars/user.jpg")
-
+# Specialist to Assistant ID mapping
+specialist_to_assistant_id = {
+    "Emergency Medicine": ema_v2,    
+    "Neurological": "asst_caM9P1caoAjFRvSAmT6Y6mIz",    
+    "Sensory Systems (Eyes, Ears, Nose, Throat)": "asst_UB1VTD6NyYbb1xTrUueb3xlI",
+    "Cardiovascular and Respiratory": "asst_bH6wKFfCMVBiH3yUkM0DWdFk",
+    "Gastrointestinal Systems": "asst_Z6bVfy6eOZBVdiwoS75eGdG9",
+    "Renal and GU Systems": "asst_SV4dNDe8sX0drryIVhQFeJj3",
+    "Dermatology and Plastic Surgery": "asst_HzMNSMBEDBa3G6ABSISqu08e",
+    "Musculoskeletal Systems": "asst_d9cMY1Sxwz0dUsKJXjuZMoiM",
+    "General": "asst_K2QHe4VfHGdyrrfTCiyctzyY",
+    "Pediatrics": "asst_cVQwzy87fwOvTnb66zsvVB5L",
+    "Medical Legal": "asst_ZI3rML4v8eG1vhQ3Fis5ikOd",
+    "Emergency Medicine beta": "asst_GeAw2bIhrATHejogynMmP2VB",}
 specialist_id_caption = {
   "Emergency Medicine": {
-    "assistant_id": "ema_v2",
+    "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
     "caption": "EM, Peds EM, Toxicology, Wilderness",
-    "avatar": load_image_as_base64("avatars/emergency_medicine.jpg")
+    "avatar": "https://cdn.pixabay.com/photo/2017/03/31/23/11/robot-2192617_1280.png"
   },
   "Neurological": {
     "assistant_id": "asst_caM9P1caoAjFRvSAmT6Y6mIz",
     "caption": "Neurology, Neurosurgery, Psychiatry",
-    "avatar": load_image_as_base64("avatars/neurological.jpg")
+    "avatar": "URL_to_neurological_avatar"
   },
   "Sensory Systems (Eyes, Ears, Nose, Throat)": {
     "assistant_id": "asst_UB1VTD6NyYbb1xTrUueb3xlI",
     "caption": "Ophthalmology, ENT",
-    "avatar": load_image_as_base64("avatars/sensory_systems.jpg")
+    "avatar": "URL_to_sensory_systems_avatar"
   },
   "Cardiovascular and Respiratory": {
     "assistant_id": "asst_bH6wKFfCMVBiH3yUkM0DWdFk",
     "caption": "Cardiology, Cardiovascular Surgery, Vascular Surgery, Pulmonology, Thoracic Surgery",
-    "avatar": load_image_as_base64("avatars/cardiovascular_respiratory.jpg")
+    "avatar": "URL_to_cardiovascular_respiratory_avatar"
   },
   "Gastrointestinal Systems": {
     "assistant_id": "asst_Z6bVfy6eOZBVdiwoS75eGdG9",
     "caption": "Gastroenterology, Hepatology, Colorectal Surgery, General Surgery",
-    "avatar": load_image_as_base64("avatars/gastrointestinal_systems.jpg")
+    "avatar": "URL_to_gastrointestinal_systems_avatar"
   },
   "Renal and GU Systems": {
     "assistant_id": "asst_SV4dNDe8sX0drryIVhQFeJj3",
     "caption": "Nephrology, Gynecology, Urology, Obstetrics",
-    "avatar": load_image_as_base64("avatars/renal_gu_systems.jpg")
+    "avatar": "URL_to_renal_gu_systems_avatar"
   },
   "Dermatology and Plastic Surgery": {
     "assistant_id": "asst_HzMNSMBEDBa3G6ABSISqu08e",
     "caption": "Dermatology, Plastic Surgery",
-    "avatar": load_image_as_base64("avatars/dermatology_plastic_surgery.jpg")
+    "avatar": "URL_to_dermatology_plastic_surgery_avatar"
   },
   "Musculoskeletal Systems": {
     "assistant_id": "asst_d9cMY1Sxwz0dUsKJXjuZMoiM",
     "caption": "Sports Med, Orthopedics, PM&R, Rheumatology, Physical Therapy",
-    "avatar": load_image_as_base64("avatars/musculoskeletal_systems.jpg")
+    "avatar": "URL_to_musculoskeletal_systems_avatar"
   },
   "General": {
     "assistant_id": "asst_K2QHe4VfHGdyrrfTCiyctzyY",
-    "caption": "ICU, Internal Medicine, Infectious Disease, HemOnc, Endocrinology",
-    "avatar": load_image_as_base64("avatars/general.jpg")
+    "caption": "ICU, Internal Medicine, Infectious Disease, HemOnc, Endo",
+    "avatar": "URL_to_general_avatar"
   },
   "Pediatrics": {
     "assistant_id": "asst_cVQwzy87fwOvTnb66zsvVB5L",
     "caption": "Pediatrics, Neonatology, Pediatric Surgery",
-    "avatar": load_image_as_base64("avatars/pediatrics.jpg")
+    "avatar": "URL_to_pediatrics_avatar"
   },
   "Medical Legal": {
     "assistant_id": "asst_ZI3rML4v8eG1vhQ3Fis5ikOd",
-    "caption": "Legal Consultant",
-    "avatar": load_image_as_base64("avatars/medical_legal.jpg")
+    "caption": "Medical Legal",
+    "avatar": "URL_to_medical_legal_avatar"
   },
   "Note Writer": {
     "assistant_id": "asst_Ua6cmp6dpTc33cSpuZxutGsX",
-    "caption": "Medical Note Writer",
-    "avatar": load_image_as_base64("avatars/note_writer.jpg")
+    "caption": "Your medical note writer, with medico-legal knowledge",
+    "avatar": "URL_to_note_writer_avatar"
   },
   "Emergency Medicine beta": {
     "assistant_id": "asst_GeAw2bIhrATHejogynMmP2VB",
-    "caption": "EM - Beta testing",
-    "avatar": load_image_as_base64("avatars/emergency_medicine_beta.jpg")
+    "caption": "EM - beta testing",
+    "avatar": "URL_to_emergency_medicine_beta_avatar"
   }
 }
 
@@ -110,6 +118,7 @@ def initialize_session_state():
         "patient_language": "English",
         "specialist_input": "",
         "specialist": "",
+        "assistant_id": specialist_id_caption["Emergency Medicine"]["assistant_id"],
         "should_rerun": False
     }
     for key, default in state_keys_defaults.items():
@@ -145,14 +154,12 @@ def display_chat_history():
     chat_container = st.container()
     with chat_container:
         for message in st.session_state.chat_history:
-            avatar_image = user_avatar_base64
+            avatar_url = user_avatar_url
             if message["role"] == "assistant":
-                # Use the correct avatar base64 for the assistant based on the selected specialist
+                # Use the correct avatar URL for the assistant based on the selected specialist
                 specialist = st.session_state.specialist
-                avatar_image = specialist_id_caption[specialist]["avatar"]
-            # Encapsulate the image data in a way that Streamlit can use for avatars
-            avatar_data_url = f"data:image/jpg;base64,{avatar_image}"
-            with st.chat_message(message["role"], avatar=avatar_data_url):
+                avatar_url = specialist_id_caption[specialist]["avatar"]
+            with st.chat_message(message["role"], avatar=avatar_url):
                 st.markdown(message["content"], unsafe_allow_html=True)
 
 # Sidebar display
@@ -265,11 +272,11 @@ def choose_specialist_radio():
     captions = [specialist_id_caption[speciality]["caption"] for speciality in specialities]
 
     # Display the radio button with specialities and captions
-    specialist = st.radio("**Choose Your Specialty Group**", specialities)
+    specialist = st.radio("**Choose Your Specialty Group**", specialities, captions = captions)
     
     if specialist and specialist != st.session_state.specialist:
         st.session_state.specialist = specialist
-        st.session_state.assistant_id = specialist_id_caption[specialist]["assistant_id"]
+        st.session_state.assistant_id = specialist_id_caption[specialist, ema_v2]
         st.session_state['should_rerun'] = True
         st.rerun()
     
@@ -349,4 +356,49 @@ def parse_json(assistant_response):
     print("Debug: modified_text:", modified_text)
     
     # Assign the return values to the session state
-    st.session_state.differential_diagnosis = differential_diagn
+    st.session_state.differential_diagnosis = differential_diagnosis
+    st.session_state.critical_actions = critical_actions
+    st.session_state.assistant_response = modified_text
+
+@st.cache_data
+def write_note(note_input):    
+    # append user message to chat history
+    st.session_state.chat_history.append({"role": "user", "content": note_input})
+        
+    client.beta.threads.messages.create(thread_id=st.session_state.thread_id, role="user", content=note_input)
+
+    with client.beta.threads.runs.stream(thread_id=st.session_state.thread_id, assistant_id=note_writer) as stream:
+        assistant_response = "".join(generate_response_stream(stream))
+        st.write_stream(generate_response_stream(stream))
+
+# Initialization of Session States
+def initialize_session_state():
+    state_keys_defaults = {
+        "chat_history": [],
+        "user_question": "",
+        "legal_question": "",
+        "note_input": "",
+        "json_data": {},
+        "differential_diagnosis": {},
+        "danger_diag_list": {},
+        "critical_actions": {},
+        "sidebar_state": 1,
+        "assistant_response": "",
+        "patient_language": "English",
+        "specialist_input": "",
+        "specialist": ""
+    }
+    for key, default in state_keys_defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = default
+
+def main():
+    initialize_session_state()
+    display_header()
+    handle_user_input_container()
+    process_queries()
+    display_chat_history()
+    display_sidebar()
+    
+if __name__ == '__main__':
+    main()

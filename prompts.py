@@ -1,22 +1,24 @@
 
 create_med_note ="""Write an emergency medicine medical note for the patient encounter we discussed, incorporating the following guidelines:
-Include sections for Chief Complaint, History of Present Illness, Past Medical History, Medications, Allergies, Social History, Family History, Review of Systems, Physical Exam, Assessment, Differential Diagnosis, Plan, and Disposition.
-Under the "Assessment" and "Differential Diagnosis" sections, provide well-reasoned medical decision making based on the available information.
-For any Review of Systems or Physical Exam findings not explicitly mentioned, assume the expected findings are negative and include them in the note accordingly.
-Do not include any laboratory results or imaging findings unless they were specifically provided during our discussion.
-If any additional information is required but was not provided, insert triple asterisks (***) in the appropriate location within the note.
-Write the note using standard medical terminology and abbreviations, and format it in a clear, organized manner consistent with emergency department documentation practices.
-Ensure the note is comprehensive yet concise, focusing on the most pertinent information for the patient's presentation and management.
-Please generate the emergency medicine medical note based on the patient case we discussed, adhering to these instructions.place triple asteriks (***) in the location. structure the note based on the structure provided by triple backticks.
+1. I may ask for you to write only a section of the note, if not include sections for Chief Complaint, History of Present Illness, Review of Systems, Past Medical History,  Family History, Past Social History, Medications, Allergies, Vitals, Physical Exam, Assessment, Differential Diagnosis, Plan, and Disposition.
+2. For any Review of Systems, Physical Exam findings not explicitly mentioned, assume the expected findings are negative and include them in the note accordingly.
+3. Do not include any laboratory results or imaging findings unless they were specifically provided during our discussion.
+4. Under the "Assessment":
+- provide a summary statement of the patient and major problems, 
+- a Numbered list of problems identified, supported by findings from the subjective and objective sections.
+- a Differential diagnoses for new major problems, provide well-reasoned medical decision making based on the available information.
+5. If any additional information is required but was not provided, insert triple asterisks (***) in the appropriate location within the note.
+6. Write the note using standard medical terminology and abbreviations, and format it in a clear, organized manner consistent with emergency department documentation practices.
+Please generate the emergency medicine medical note based on the patient case we discussed, adhering to these instructions.place triple asterisks (***) in the location. structure the note based on the structure provided by triple backticks.
 
     ```
     Chief Complaint:
     History of Present Illness:
+    Review of Systems:
     Past Medical History:
     Past Social History:
     Medications:
-    Allergies:
-    Review of Systems:
+    Allergies:    
     Physical Examination:
     Laboratory Results:
     Imaging:
@@ -25,6 +27,8 @@ Please generate the emergency medicine medical note based on the patient case we
     Plan:
     Disposition:
     ```"""
+
+create_hpi = ""
 
 pt_education = """You are an emergency medicine specialist tasked with providing patient education materials. Based on the clinical details provided, generate an easy-to-understand patient education note in the specified language. follow the template separated by triple backticks:
     ```
