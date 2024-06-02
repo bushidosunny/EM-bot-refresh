@@ -28,7 +28,8 @@ Please generate the emergency medicine medical note based on the patient case we
     Disposition:
     ```"""
 
-create_hpi = ""
+create_hpi = "Write just the HPI and ROX"
+create_ap = "Write just the assesment, ddx, plan and disposition"
 
 pt_education = """You are an emergency medicine specialist tasked with providing patient education materials. Based on the clinical details provided, generate an easy-to-understand patient education note in the specified language. follow the template separated by triple backticks:
     ```
@@ -53,7 +54,7 @@ pt_education = """You are an emergency medicine specialist tasked with providing
     ```
     Please provide the education note only in the specified patient language. If any critical information is missing to comprehensively create the note, please let me know.
     """ 
-
+pt_plan = "Create a physical therapy treatment plan for this patient"
 optimize_legal_note = f"Check the following medical note separated by triple backticks.  1. Evaluate on its ability to be legally defensible. 2. Suggest what else can be done for the patient before disposition. Separate the importance of the improvement from critical to mild. 3. Rewrite the note with the avialable information. Explain any changes. Be complete and accurate. < >Utizilze the following guidlines: Document all relevant aspects of the patient encounter thoroughly, including chief complaint, history of present illness, review of systems, physical exam findings, diagnostic test results, assessment/differential diagnosis, and treatment plan. Leaving out important details can be problematic legally. Write legibly and clearly. Illegible or ambiguous notes open the door for misinterpretation. Use standard medical terminology and accepted abbreviations. If using an EMR, avoid copy/paste errors. Record in real-time. Chart contemporaneously while details are fresh in your mind rather than waiting until the end of your shift. Late entries raise suspicions. Date, time and sign every entry. This establishes a clear timeline of events. Sign with your full name and credentials.Explain your medical decision making. Articulate your thought process and rationale for diagnosis and treatment decisions. This demonstrates you met the standard of care. Avoid speculation or subjective comments. Stick to objective facts and medical information. Editorializing can be used against you. Make addendums if needed. If you later remember an important detail, it's okay to go back and add it with the current date/time. Never alter original notes. Ensure informed consent is documented. Record that risks, benefits and alternatives were discussed and the patient agreed to the plan. Keep personal notes separate.< >"
 
 disposition_analysis =  f"Analyze the patient's current condition. Assess for safe discharge or if the patient should be admitted. Provide reasons for or against. If it is not clear provide things to consider. Be concise with structured short bullet points"

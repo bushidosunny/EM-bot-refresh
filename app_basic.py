@@ -90,6 +90,11 @@ specialist_id_caption = {
     "assistant_id": "asst_GeAw2bIhrATHejogynMmP2VB",
     "caption": "EM - Beta testing",
     "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/33/carrot-148456_960_720.png"
+  },
+  "Mindfulness Teacher": {
+    "assistant_id": "asst_bnFm27eqedaYK9Ulekh8Yjd9",
+    "caption": "Goes Deep",
+    "avatar": "https://cdn.pixabay.com/photo/2013/07/12/19/30/enlightenment-154910_1280.png"
   }
 }
 
@@ -159,7 +164,8 @@ def display_chat_history():
 # Sidebar display
 def display_sidebar():
     with st.sidebar:
-        st.markdown("<h1 style='text-align: center;'>EMA 🤖</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='margin-top: -90px;text-align: center;'>EMA 🤖</h1>", unsafe_allow_html=True)
+        st.button('New Thread')
         tab1, tab2, tab3, tab4 = st.tabs(["Functions", "Note Analysis", "Specialists", "Update Variables"])
         with tab1:
             display_functions_tab()
@@ -195,21 +201,25 @@ def display_functions_tab():
     with col1:
         button1 = st.button("🛌Disposition Analysis")
     with col2:
-        button2 = st.button("💉Recommend Procedure")
+        button2 = st.button("💉Which Procedure")
 
-    st.subheader('Note Management')
+    st.subheader('📝Note Writer')
     col1, col2 = st.columns(2)
     with col1:
-        button3 = st.button('📃Create Medical Note')
+        button3 = st.button('Full Medical Note')
+        button4 = st.button("Pt Education Note")
     with col2:
-        button4 = st.button("📃Pt Education Note")
+        button11 = st.button('HPI only')
+        button12 = st.button('A&P only')
+        button13 = st.button('PT Plan')
+        
 
-    st.subheader('AI Guidance')
+    st.subheader('🏃‍♂️Flow')
     col1, col2 = st.columns(2)
     with col1:
-        button5 = st.button("🆘Recommend Next Step")
+        button5 = st.button("Recommend the Next Step")
     with col2:
-        button6 = st.button('🆗I did that, now what?')
+        button6 = st.button('I did that, now what?')
 
     st.divider()
     col1, col2 = st.columns(2)
@@ -217,16 +227,18 @@ def display_functions_tab():
         button9 = st.button('NEW THREAD', type="primary")
 
     # Process button actions
-    process_buttons(button1, button2, button3, button4, button5, button6, button9)
+    process_buttons(button1, button2, button3, button4, button5, button6, button9, button11, button12, button13)
 
 # Process the buttons
-def process_buttons(button1, button2, button3, button4, button5, button6, button9):
+def process_buttons(button1, button2, button3, button4, button5, button6, button9, button11, button12, button13):
     if button1:
         st.session_state["user_question"] = disposition_analysis
     if button2:
         st.session_state["user_question"] = procedure_checklist
     if button3:
-        st.session_state["note_input"] = "Write a medical note"
+        specialist = 'Note Writer'
+        prompt = "Write a full medical note on this patient"
+        button_input(specialist, prompt)
     if button4:
         st.session_state["user_question"] = pt_education + f"\n the patient's instructions needs to be in {st.session_state.patient_language}"
     if button5:
@@ -235,6 +247,18 @@ def process_buttons(button1, button2, button3, button4, button5, button6, button
         st.session_state["user_question"] = "Ok i did that. Now what?"
     if button9:
         new_thread()
+    if button11:
+        specialist = 'Note Writer'
+        prompt = create_hpi
+        button_input(specialist, prompt)
+    if button12:
+        specialist = 'Note Writer'
+        prompt = create_ap
+        button_input(specialist, prompt)
+    if button13:
+        specialist = 'Musculoskeletal Systems'
+        prompt = pt_plan
+        button_input(specialist, prompt)
 
 # Note Analysis for summary and legal analysis
 def display_note_analysis_tab():
@@ -259,9 +283,6 @@ def display_note_analysis_tab():
 
 # Choosing the specialty group
 def choose_specialist_radio():
-    # Get Specialist Avatars
-    #specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
-
     # Extract the list of specialities
     specialities = list(specialist_id_caption.keys())
     
@@ -278,6 +299,12 @@ def choose_specialist_radio():
         st.rerun()
     
     return specialist
+
+# process button inputs for quick bot responses
+def button_input(specialist, prompt):
+    st.session_state.specialist = specialist    
+    st.session_state.assistant_id = specialist_id_caption[specialist]["assistant_id"]
+    handle_userinput(prompt)
 
 # Updating the patient language
 def update_patient_language():
@@ -328,7 +355,7 @@ def handle_userinput(user_question):
     specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
     parse_json(assistant_response)
     st.session_state.chat_history.append({"role": "assistant", "content": st.session_state.assistant_response, "avatar": specialist_avatar})  # Add assistant response to chat history
-    print(f'Debug: {st.session_state.chat_history}')
+    
 
 @st.cache_data
 def handle_user_legal_input(legal_question):    
