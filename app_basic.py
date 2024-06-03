@@ -400,8 +400,8 @@ def main():
     display_header()
     handle_user_input_container()
     process_queries()
-    display_chat_history()
     display_sidebar()
+    display_chat_history()
     
 if __name__ == '__main__':
     main()
