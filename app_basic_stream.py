@@ -9,6 +9,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 # Load variables
 load_dotenv()
+
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     st.error("API Key not found! Please check your environment variables.")
