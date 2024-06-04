@@ -13,8 +13,6 @@ load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     st.error("API Key not found! Please check your environment variables.")
-legal_attorney = "asst_ZI3rML4v8eG1vhQ3Fis5ikOd"
-note_writer = 'asst_Ua6cmp6dpTc33cSpuZxutGsX'
 
 client = OpenAI(api_key=api_key)
 
