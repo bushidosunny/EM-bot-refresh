@@ -20,6 +20,7 @@ Please generate the emergency medicine medical note based on the patient case we
     Medications:
     Allergies:    
     Physical Examination:
+    [Do not include vitals sign numbers unless explicitly stated, leave triple asterisks (***) if missing]
     Laboratory Results:
     Imaging:
     Assessment:
@@ -44,7 +45,7 @@ pt_education = """You are an emergency medicine specialist tasked with providing
     [Outline post-discharge care instructions    
     - Warning signs/symptoms to watch for  
     - Activity modifications or precautions
-    - Follow-up care instructions]
+    - Follow-up care instructions with time frame]
 
     Topics Covered:
     [Summarize key concepts reviewed]

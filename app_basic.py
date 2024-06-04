@@ -164,21 +164,74 @@ def display_chat_history():
 # Sidebar display
 def display_sidebar():
     with st.sidebar:
-        st.markdown("<h1 style='margin-top: -90px;text-align: center;'>EMA 🤖</h1>", unsafe_allow_html=True)
-        st.button('New Thread')
-        tab1, tab2, tab3, tab4 = st.tabs(["Functions", "Note Analysis", "Specialists", "Update Variables"])
+        st.markdown("<h1 style='margin-top: -60px;text-align: center;'>EMA 🤖</h1>", unsafe_allow_html=True)
+        
+        
+        tab1, tab2, tab3, tab4 = st.tabs(["Functions", "Specialists", "Note Analysis", "Update Variables"])
+        
         with tab1:
+                    # Actions and DDX
+            if st.session_state.critical_actions:
+                
+                st.subheader(":orange[Critical Actions]")
+                for action in st.session_state.critical_actions.get('critical_actions', []):
+                    st.markdown(f"- :orange[{action}]")
+                
+
+            
+            
+            if st.session_state.differential_diagnosis:
+                st.subheader("Differential Diagnosis")
+                for diagnosis_obj in st.session_state.differential_diagnosis.get("differential_diagnosis", []):
+                    diagnosis = diagnosis_obj.get("diagnosis")
+                    probability = diagnosis_obj.get("probability")
+                    st.markdown(f"- {diagnosis} {probability}%")
+                st.divider()
             display_functions_tab()
         with tab2:
-            display_note_analysis_tab()
-        with tab3:
+                                # Actions and DDX
+            if st.session_state.critical_actions:
+                
+                st.subheader(":orange[Critical Actions]")
+                for action in st.session_state.critical_actions.get('critical_actions', []):
+                    st.markdown(f"- :orange[{action}]")
+                
+
+            
+            
+            if st.session_state.differential_diagnosis:
+                st.subheader("Differential Diagnosis")
+                for diagnosis_obj in st.session_state.differential_diagnosis.get("differential_diagnosis", []):
+                    diagnosis = diagnosis_obj.get("diagnosis")
+                    probability = diagnosis_obj.get("probability")
+                    st.markdown(f"- {diagnosis} {probability}%")
+                st.divider()
             choose_specialist_radio()
+            
+            st.subheader(':orange[Consult Recommnedations]')
+            button1 = st.button("General Reccommendations")
+            button2 = st.button("Diagnosis")
+            button3 = st.button("Treatment Plan")
+            button4 = st.button("Disposition Plan")
+
+            # process buttons
+            # if button1:
+                # consult specialist, use prompts from prompts.py
+
+                # switch to EM agent
+
+                # have EM agent update ddx and plan with new information only. 
+                
+            
+        with tab3:
+            display_note_analysis_tab()
+            
         with tab4:
             update_patient_language()
 
 # Sidebar tabs and functions
 def display_functions_tab():
-    st.subheader(":orange[Critical Actions]")
+    """st.subheader(":orange[Critical Actions]")
     if st.session_state.critical_actions:
         for action in st.session_state.critical_actions.get('critical_actions', []):
             st.markdown(f":orange[- {action}]")
@@ -194,8 +247,9 @@ def display_functions_tab():
             st.markdown(f"- {diagnosis} {probability}%")
     else:
         st.markdown("None")
+        
 
-    st.divider()
+    st.divider()"""
     st.subheader('Process Management')
     col1, col2 = st.columns(2)
     with col1:
@@ -217,9 +271,10 @@ def display_functions_tab():
     st.subheader('🏃‍♂️Flow')
     col1, col2 = st.columns(2)
     with col1:
-        button5 = st.button("Recommend the Next Step")
+        button5 = st.button("➡️Next Step Recommendation")
+        button7 = st.button("📞Consult specialist🧑‍⚕️")
     with col2:
-        button6 = st.button('I did that, now what?')
+        button6 = st.button('➡️➡️I did that, now what?')
 
     st.divider()
     col1, col2 = st.columns(2)
@@ -259,6 +314,7 @@ def process_buttons(button1, button2, button3, button4, button5, button6, button
         specialist = 'Musculoskeletal Systems'
         prompt = pt_plan
         button_input(specialist, prompt)
+    
 
 # Note Analysis for summary and legal analysis
 def display_note_analysis_tab():
@@ -290,7 +346,7 @@ def choose_specialist_radio():
     captions = [specialist_id_caption[speciality]["caption"] for speciality in specialities]
 
     # Display the radio button with specialities and captions
-    specialist = st.radio("**Choose Your Specialty Group**", specialities, captions = captions)
+    specialist = st.radio("**:orange[Choose Your Specialty Group]**", specialities, captions = captions)
     
     if specialist and specialist != st.session_state.specialist:
         st.session_state.specialist = specialist
@@ -372,6 +428,12 @@ def handle_user_legal_input(legal_question):
 def parse_json(assistant_response):
     # Call the extract_json function and capture its return values
     differential_diagnosis, critical_actions, modified_text = extract_json(assistant_response)
+
+    # Check if the extracted values indicate no JSON content
+    if not differential_diagnosis and not critical_actions:
+        print("No JSON content found in assistant response.")
+        st.session_state.assistant_response = modified_text
+        return
     
     # Add debugging print statements
     print("Debug: assistant response: ", assistant_response)
@@ -399,9 +461,10 @@ def main():
     initialize_session_state()
     display_header()
     handle_user_input_container()
-    process_queries()
-    display_chat_history()
     display_sidebar()
+    process_queries()    
+    display_chat_history()
+    
     
 if __name__ == '__main__':
     main()
