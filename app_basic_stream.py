@@ -5,15 +5,14 @@ import os
 from dotenv import load_dotenv
 from prompts import *
 from extract_json import extract_json
+from langchain_core.messages import HumanMessage, AIMessage
 
 # Load variables
 load_dotenv()
-ema_v2 = "asst_na7TnRA4wkDbflTYKzo9kmca"
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     st.error("API Key not found! Please check your environment variables.")
-legal_attorney = "asst_ZI3rML4v8eG1vhQ3Fis5ikOd"
-note_writer = 'asst_Ua6cmp6dpTc33cSpuZxutGsX'
+
 
 client = OpenAI(api_key=api_key)
 
@@ -21,67 +20,67 @@ client = OpenAI(api_key=api_key)
 user_avatar_url = "https://cdn.pixabay.com/photo/2016/12/21/07/36/profession-1922360_1280.png"
 
 specialist_id_caption = {
-  "Emergency Medicine": {
+  "🤖Emergency Medicine": {
     "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
     "caption": "EM, Peds EM, Toxicology, Wilderness",
     "avatar": "https://cdn.pixabay.com/photo/2017/03/31/23/11/robot-2192617_1280.png"
   },
-  "Neurological": {
+  "🧠Neurological": {
     "assistant_id": "asst_caM9P1caoAjFRvSAmT6Y6mIz",
     "caption": "Neurology, Neurosurgery, Psychiatry",
     "avatar": "https://cdn.pixabay.com/photo/2018/11/21/02/04/graphic-3828723_1280.png"
   },
-  "Sensory Systems (Eyes, Ears, Nose, Throat)": {
+  "👁️Sensory Systems (Eyes, Ears, Nose, Throat)": {
     "assistant_id": "asst_UB1VTD6NyYbb1xTrUueb3xlI",
     "caption": "Ophthalmology, ENT",
     "avatar": "https://cdn.imgbin.com/17/1/11/imgbin-mr-potato-head-toy-child-infant-computer-icons-toy-GdJDP1cicFXdWJHbgSanRhnFQ.jpg"
   },
-  "Cardiovascular and Respiratory": {
+  "🫀🫁Cardiovascular and Respiratory": {
     "assistant_id": "asst_bH6wKFfCMVBiH3yUkM0DWdFk",
     "caption": "Cardiology, Cardiovascular Surgery, Vascular Surgery, Pulmonology, Thoracic Surgery",
     "avatar": "https://cdn.pixabay.com/photo/2017/02/15/20/58/ekg-2069872_1280.png"
   },
-  "Gastrointestinal Systems": {
+  "🫃Gastrointestinal Systems": {
     "assistant_id": "asst_Z6bVfy6eOZBVdiwoS75eGdG9",
     "caption": "Gastroenterology, Hepatology, Colorectal Surgery, General Surgery",
     "avatar": "https://cdn.pixabay.com/photo/2017/03/27/03/08/stomach-2177194_1280.png"
   },
-  "Renal and GU Systems": {
+  "🫘♀️♂️ Renal and GU Systems": {
     "assistant_id": "asst_SV4dNDe8sX0drryIVhQFeJj3",
     "caption": "Nephrology, Gynecology, Urology, Obstetrics",
     "avatar": "https://cdn.pixabay.com/photo/2022/09/20/10/27/urology-7467570_960_720.png"
   },
-  "Dermatology and Plastic Surgery": {
+  "🧴Dermatology and Plastic Surgery": {
     "assistant_id": "asst_HzMNSMBEDBa3G6ABSISqu08e",
     "caption": "Dermatology, Plastic Surgery",
     "avatar": "https://media.istockphoto.com/id/1325453968/vector/skin-layers-structure-anatomy-diagram-human-skin-infographic-anatomical-background.jpg?s=2048x2048&w=is&k=20&c=gr7MHjhjyVZgjQhh4TyabN1gZWnxF1WlB33Ul-mr6b4="
   },
-  "Musculoskeletal Systems": {
+  "💪Musculoskeletal Systems": {
     "assistant_id": "asst_d9cMY1Sxwz0dUsKJXjuZMoiM",
     "caption": "Sports Med, Orthopedics, PM&R, Rheumatology, Physical Therapy",
     "avatar": "https://cdn.pixabay.com/photo/2015/12/09/22/19/muscle-1085672_1280.png"
   },
-  "General": {
+  "🧑‍⚕️General": {
     "assistant_id": "asst_K2QHe4VfHGdyrrfTCiyctzyY",
     "caption": "ICU, Internal Medicine, HemOnc, Endocrinology",
     "avatar": "https://cdn.pixabay.com/photo/2013/07/12/18/59/doctor-154130_1280.png"
   },
-  "Pediatrics": {
+  "👶Pediatrics": {
     "assistant_id": "asst_cVQwzy87fwOvTnb66zsvVB5L",
     "caption": "Pediatrics, Neonatology, Pediatric Surgery",
     "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/15/man-148077_1280.png"
   },
-  "Infectious Disease": {
+  "🦠Infectious Disease": {
     "assistant_id": "asst_40hUiBxEhoylT6dCEqhssCiI",
     "caption": "Infectious Disease, Epidemiology",
     "avatar": "https://cdn.pixabay.com/photo/2020/04/18/08/33/coronavirus-5058247_1280.png"
   }, 
-  "Medical Legal": {
+  "⚖️Medical Legal": {
     "assistant_id": "asst_ZI3rML4v8eG1vhQ3Fis5ikOd",
     "caption": "Legal Consultant",
     "avatar": "https://cdn.pixabay.com/photo/2017/01/31/17/34/comic-characters-2025788_1280.png"
   },
-  "Note Writer": {
+  "📝Note Writer": {
     "assistant_id": "asst_Ua6cmp6dpTc33cSpuZxutGsX",
     "caption": "Medical Note Writer",
     "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png"
@@ -113,8 +112,8 @@ def initialize_session_state():
         "assistant_response": "",
         "patient_language": "English",
         "specialist_input": "",
-        "specialist": "Emergency Medicine",
-        "assistant_id": specialist_id_caption["Emergency Medicine"]["assistant_id"],  # Initialize 'assistant_id' here
+        "specialist": "🤖Emergency Medicine",
+        "assistant_id": specialist_id_caption["🤖Emergency Medicine"]["assistant_id"],  # Initialize 'assistant_id' here
         "should_rerun": False
     }
     for key, default in state_keys_defaults.items():
@@ -364,7 +363,6 @@ def process_buttons(button1, button2, button3, button4, button5, button6, button
         prompt = pt_plan
         button_input(specialist, prompt)
     
-
 # Note Analysis for summary and legal analysis
 def display_note_analysis_tab():
     st.header("Note Analysis")
@@ -462,7 +460,7 @@ def handle_userinput(user_question):
     st.session_state.chat_history.append({"role": "assistant", "content": st.session_state.assistant_response, "avatar": specialist_avatar})  # Add assistant response to chat history
     
 
-@st.cache_data
+#@st.cache_data
 def handle_user_legal_input(legal_question):    
     # Append user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": legal_question, "avatar": user_avatar_url})
