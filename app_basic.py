@@ -215,13 +215,76 @@ def display_sidebar():
             button4 = st.button("Disposition Plan")
 
             # process buttons
-            # if button1:
+            # "General Rec"
+            if button1: 
                 # consult specialist, use prompts from prompts.py
+                specialist = st.session_state.specialist
+                prompt = consult_specialist
+                button_input(specialist, prompt)
+
 
                 # switch to EM agent
+                specialist = "Emergency Medicine"
+                st.session_state.specialist = specialist
+                st.session_state.assistant_id = specialist_id_caption[specialist]["assistant_id"]
 
                 # have EM agent update ddx and plan with new information only. 
-                
+                prompt = integrate_consultation
+                button_input(specialist, prompt)
+            
+                        # process buttons
+            # "Diagnosis consult"
+            if button2: 
+                # consult specialist, use prompts from prompts.py
+                specialist = st.session_state.specialist
+                prompt = consult_diagnosis
+                button_input(specialist, prompt)
+
+
+                # switch to EM agent
+                specialist = "Emergency Medicine"
+                st.session_state.specialist = specialist
+                st.session_state.assistant_id = specialist_id_caption[specialist]["assistant_id"]
+
+                # have EM agent update ddx and plan with new information only. 
+                prompt = integrate_consultation
+                button_input(specialist, prompt)
+
+                        # process buttons
+            # "Treatment consult"
+            if button3: 
+                # consult specialist, use prompts from prompts.py
+                specialist = st.session_state.specialist
+                prompt = consult_treatment
+                button_input(specialist, prompt)
+
+
+                # switch to EM agent
+                specialist = "Emergency Medicine"
+                st.session_state.specialist = specialist
+                st.session_state.assistant_id = specialist_id_caption[specialist]["assistant_id"]
+
+                # have EM agent update ddx and plan with new information only. 
+                prompt = integrate_consultation
+                button_input(specialist, prompt)
+            
+                        
+            # "Disposition consult"
+            if button4: 
+                # consult specialist, use prompts from prompts.py
+                specialist = st.session_state.specialist
+                prompt = consult_disposition
+                button_input(specialist, prompt)
+
+
+                # switch to EM agent
+                specialist = "Emergency Medicine"
+                st.session_state.specialist = specialist
+                st.session_state.assistant_id = specialist_id_caption[specialist]["assistant_id"]
+
+                # have EM agent update ddx and plan with new information only. 
+                prompt = integrate_consultation
+                button_input(specialist, prompt)
             
         with tab3:
             display_note_analysis_tab()
@@ -231,25 +294,7 @@ def display_sidebar():
 
 # Sidebar tabs and functions
 def display_functions_tab():
-    """st.subheader(":orange[Critical Actions]")
-    if st.session_state.critical_actions:
-        for action in st.session_state.critical_actions.get('critical_actions', []):
-            st.markdown(f":orange[- {action}]")
-    else:
-        st.markdown("None")
-
-    st.divider()
-    st.subheader("Differential Diagnosis")
-    if st.session_state.differential_diagnosis:
-        for diagnosis_obj in st.session_state.differential_diagnosis.get("differential_diagnosis", []):
-            diagnosis = diagnosis_obj.get("diagnosis")
-            probability = diagnosis_obj.get("probability")
-            st.markdown(f"- {diagnosis} {probability}%")
-    else:
-        st.markdown("None")
-        
-
-    st.divider()"""
+    
     st.subheader('Process Management')
     col1, col2 = st.columns(2)
     with col1:
@@ -277,15 +322,15 @@ def display_functions_tab():
         button6 = st.button('➡️➡️I did that, now what?')
 
     st.divider()
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns([1,3,1])
     with col2:
         button9 = st.button('NEW THREAD', type="primary")
 
     # Process button actions
-    process_buttons(button1, button2, button3, button4, button5, button6, button9, button11, button12, button13)
+    process_buttons(button1, button2, button3, button4, button5, button6, button7, button9, button11, button12, button13)
 
 # Process the buttons
-def process_buttons(button1, button2, button3, button4, button5, button6, button9, button11, button12, button13):
+def process_buttons(button1, button2, button3, button4, button5, button6, button7, button9, button11, button12, button13):
     if button1:
         st.session_state["user_question"] = disposition_analysis
     if button2:
@@ -300,6 +345,10 @@ def process_buttons(button1, button2, button3, button4, button5, button6, button
         st.session_state["user_question"] = "What should i do next here in the emergency department?"
     if button6:
         st.session_state["user_question"] = "Ok i did that. Now what?"
+    if button7:
+        specialist = st.session_state.specialist
+        prompt = consult_specialist
+        button_input(specialist, prompt)
     if button9:
         new_thread()
     if button11:
@@ -398,7 +447,7 @@ def generate_response_stream(stream):
                 if delta.type == 'text':
                     yield delta.text.value
 
-@st.cache_data
+#@st.cache_data
 def handle_userinput(user_question):    
     # Append user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": user_question, "avatar": user_avatar_url})
@@ -446,7 +495,7 @@ def parse_json(assistant_response):
     st.session_state.critical_actions = critical_actions
     st.session_state.assistant_response = modified_text
 
-@st.cache_data
+#@st.cache_data
 def write_note(note_input):    
     # Append user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": note_input, "avatar": user_avatar_url})

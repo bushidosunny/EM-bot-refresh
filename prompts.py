@@ -73,3 +73,10 @@ summarize_note = """Carefully review the provided clinical note, paying special 
     After the summary, analyze the available information and treatment plan. Identify any potential gaps in the workup, additional tests or referrals to consider, aspects of the plan that may need adjustment, and any other opportunities to optimize the patient's care.
     Provide your recommendations in a clear, actionable manner. Explain your rationale, citing specific information from the note as needed.
     Ensure your summary and analysis are accurate, logical and grounded in the provided information. Maintain a professional tone and avoid speculation beyond what can be reasonably concluded from the clinical details provided."""    
+
+consult_specialist = "Hello, can you look at this case and give general recommendations on managing this patient?"
+consult_diagnosis = "Hello, can you help me on the differential diagnosis?"
+consult_treatment = "Hello, can you help with the treatment plan?"
+consult_disposition = "Hello, can you help with the disposition plan?"
+
+integrate_consultation = "Please integrate the specialist's recommendations into this case"
