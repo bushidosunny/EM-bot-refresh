@@ -427,10 +427,7 @@ def process_queries():
         write_note(st.session_state["note_input"])
 
 
-# Create a thread where the conversation will happen and keep Streamlit from initiating a new session state
-if "thread_id" not in st.session_state:
-    thread = client.beta.threads.create()
-    st.session_state.thread_id = thread.id
+
 
 # Create new thread
 def new_thread():
@@ -507,6 +504,11 @@ def write_note(note_input):
         st.write_stream(generate_response_stream(stream))
 
 def main():
+    # Create a thread where the conversation will happen and keep Streamlit from initiating a new session state
+    if "thread_id" not in st.session_state:
+        thread = client.beta.threads.create()
+        st.session_state.thread_id = thread.id
+
     initialize_session_state()
     display_header()
     handle_user_input_container()

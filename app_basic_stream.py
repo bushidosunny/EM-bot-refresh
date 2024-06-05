@@ -1,19 +1,20 @@
 import streamlit as st
 from streamlit_float import float_css_helper
 from openai import OpenAI
+from langchain_core.messages import HumanMessage, AIMessage
 import os
 from dotenv import load_dotenv
 from prompts import *
 from extract_json import extract_json
-from langchain_core.messages import HumanMessage, AIMessage
 
 # Load variables
 load_dotenv()
-
+ema_v2 = "asst_na7TnRA4wkDbflTYKzo9kmca"
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     st.error("API Key not found! Please check your environment variables.")
-
+legal_attorney = "asst_ZI3rML4v8eG1vhQ3Fis5ikOd"
+note_writer = 'asst_Ua6cmp6dpTc33cSpuZxutGsX'
 
 client = OpenAI(api_key=api_key)
 
@@ -21,67 +22,67 @@ client = OpenAI(api_key=api_key)
 user_avatar_url = "https://cdn.pixabay.com/photo/2016/12/21/07/36/profession-1922360_1280.png"
 
 specialist_id_caption = {
-  "🤖Emergency Medicine": {
+  "Emergency Medicine": {
     "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
     "caption": "EM, Peds EM, Toxicology, Wilderness",
     "avatar": "https://cdn.pixabay.com/photo/2017/03/31/23/11/robot-2192617_1280.png"
   },
-  "🧠Neurological": {
+  "Neurological": {
     "assistant_id": "asst_caM9P1caoAjFRvSAmT6Y6mIz",
     "caption": "Neurology, Neurosurgery, Psychiatry",
     "avatar": "https://cdn.pixabay.com/photo/2018/11/21/02/04/graphic-3828723_1280.png"
   },
-  "👁️Sensory Systems (Eyes, Ears, Nose, Throat)": {
+  "Sensory Systems (Eyes, Ears, Nose, Throat)": {
     "assistant_id": "asst_UB1VTD6NyYbb1xTrUueb3xlI",
     "caption": "Ophthalmology, ENT",
     "avatar": "https://cdn.imgbin.com/17/1/11/imgbin-mr-potato-head-toy-child-infant-computer-icons-toy-GdJDP1cicFXdWJHbgSanRhnFQ.jpg"
   },
-  "🫀🫁Cardiovascular and Respiratory": {
+  "Cardiovascular and Respiratory": {
     "assistant_id": "asst_bH6wKFfCMVBiH3yUkM0DWdFk",
     "caption": "Cardiology, Cardiovascular Surgery, Vascular Surgery, Pulmonology, Thoracic Surgery",
     "avatar": "https://cdn.pixabay.com/photo/2017/02/15/20/58/ekg-2069872_1280.png"
   },
-  "🫃Gastrointestinal Systems": {
+  "Gastrointestinal Systems": {
     "assistant_id": "asst_Z6bVfy6eOZBVdiwoS75eGdG9",
     "caption": "Gastroenterology, Hepatology, Colorectal Surgery, General Surgery",
     "avatar": "https://cdn.pixabay.com/photo/2017/03/27/03/08/stomach-2177194_1280.png"
   },
-  "🫘♀️♂️ Renal and GU Systems": {
+  "Renal and GU Systems": {
     "assistant_id": "asst_SV4dNDe8sX0drryIVhQFeJj3",
     "caption": "Nephrology, Gynecology, Urology, Obstetrics",
     "avatar": "https://cdn.pixabay.com/photo/2022/09/20/10/27/urology-7467570_960_720.png"
   },
-  "🧴Dermatology and Plastic Surgery": {
+  "Dermatology and Plastic Surgery": {
     "assistant_id": "asst_HzMNSMBEDBa3G6ABSISqu08e",
     "caption": "Dermatology, Plastic Surgery",
     "avatar": "https://media.istockphoto.com/id/1325453968/vector/skin-layers-structure-anatomy-diagram-human-skin-infographic-anatomical-background.jpg?s=2048x2048&w=is&k=20&c=gr7MHjhjyVZgjQhh4TyabN1gZWnxF1WlB33Ul-mr6b4="
   },
-  "💪Musculoskeletal Systems": {
+  "Musculoskeletal Systems": {
     "assistant_id": "asst_d9cMY1Sxwz0dUsKJXjuZMoiM",
     "caption": "Sports Med, Orthopedics, PM&R, Rheumatology, Physical Therapy",
     "avatar": "https://cdn.pixabay.com/photo/2015/12/09/22/19/muscle-1085672_1280.png"
   },
-  "🧑‍⚕️General": {
+  "General": {
     "assistant_id": "asst_K2QHe4VfHGdyrrfTCiyctzyY",
     "caption": "ICU, Internal Medicine, HemOnc, Endocrinology",
     "avatar": "https://cdn.pixabay.com/photo/2013/07/12/18/59/doctor-154130_1280.png"
   },
-  "👶Pediatrics": {
+  "Pediatrics": {
     "assistant_id": "asst_cVQwzy87fwOvTnb66zsvVB5L",
     "caption": "Pediatrics, Neonatology, Pediatric Surgery",
     "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/15/man-148077_1280.png"
   },
-  "🦠Infectious Disease": {
+  "Infectious Disease": {
     "assistant_id": "asst_40hUiBxEhoylT6dCEqhssCiI",
     "caption": "Infectious Disease, Epidemiology",
     "avatar": "https://cdn.pixabay.com/photo/2020/04/18/08/33/coronavirus-5058247_1280.png"
   }, 
-  "⚖️Medical Legal": {
+  "Medical Legal": {
     "assistant_id": "asst_ZI3rML4v8eG1vhQ3Fis5ikOd",
     "caption": "Legal Consultant",
     "avatar": "https://cdn.pixabay.com/photo/2017/01/31/17/34/comic-characters-2025788_1280.png"
   },
-  "📝Note Writer": {
+  "Note Writer": {
     "assistant_id": "asst_Ua6cmp6dpTc33cSpuZxutGsX",
     "caption": "Medical Note Writer",
     "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png"
@@ -100,6 +101,9 @@ specialist_id_caption = {
 
 # Initialize session_state variables
 def initialize_session_state():
+    primary_specialist = list(specialist_id_caption.keys())[0]
+    primary_specialist_id = specialist_id_caption[primary_specialist]["assistant_id"]
+    primary_specialist_avatar = specialist_id_caption[primary_specialist]["avatar"]
     state_keys_defaults = {
         "chat_history": [],
         "user_question": "",
@@ -113,8 +117,9 @@ def initialize_session_state():
         "assistant_response": "",
         "patient_language": "English",
         "specialist_input": "",
-        "specialist": "🤖Emergency Medicine",
-        "assistant_id": specialist_id_caption["🤖Emergency Medicine"]["assistant_id"],  # Initialize 'assistant_id' here
+        "specialist": primary_specialist,
+        "assistant_id": primary_specialist_id,  
+        "specialist_avatar": primary_specialist_avatar,
         "should_rerun": False
     }
     for key, default in state_keys_defaults.items():
@@ -125,41 +130,6 @@ def initialize_session_state():
 def display_header():
     st.set_page_config(page_title="EMA", page_icon="🤖🩺")
     st.header("EMA - Emergency Medicine Assistant 🤖🩺")
-
-# User input container
-def handle_user_input_container():
-    input_container = st.container()
-    input_container.float(float_css_helper(bottom="50px"))
-    with input_container:
-        specialist = st.session_state.specialist
-        #obtain specialist avatar
-        specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
-         # Replace with your avatar URL
-        st.markdown(
-            f"""
-            <div style="text-align: center;">
-                <h6>
-                    Specialty Group: 
-                    <img src="{specialist_avatar}" alt="Avatar" style="width:30px;height:30px;border-radius:50%;">
-                    <span style="color:red;">{specialist}</span>
-                </h6>
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
-        
-        user_question = st.chat_input("How may I help you?", key="widget2")
-        if user_question:
-            handle_userinput(user_question)
-
-# Chat history display
-def display_chat_history():
-    chat_container = st.container()
-    with chat_container:
-        for message in st.session_state.chat_history:
-            avatar_url = message.get("avatar", user_avatar_url)
-            with st.chat_message(message["role"], avatar=avatar_url):
-                st.markdown(message["content"], unsafe_allow_html=True)
 
 # Sidebar display
 def display_sidebar():
@@ -408,7 +378,7 @@ def choose_specialist_radio():
 def button_input(specialist, prompt):
     st.session_state.specialist = specialist    
     st.session_state.assistant_id = specialist_id_caption[specialist]["assistant_id"]
-    handle_userinput(prompt)
+    get_response(prompt)
 
 # Updating the patient language
 def update_patient_language():
@@ -419,17 +389,11 @@ def update_patient_language():
 # Processing queries
 def process_queries():
     if st.session_state["user_question"]:
-        handle_userinput(st.session_state["user_question"])
+        get_response(st.session_state["user_question"])
     elif st.session_state["legal_question"]:
         handle_user_legal_input(st.session_state["legal_question"])
     elif st.session_state["note_input"]:
         write_note(st.session_state["note_input"])
-
-
-# Create a thread where the conversation will happen and keep Streamlit from initiating a new session state
-if "thread_id" not in st.session_state:
-    thread = client.beta.threads.create()
-    st.session_state.thread_id = thread.id
 
 # Create new thread
 def new_thread():
@@ -446,8 +410,74 @@ def generate_response_stream(stream):
                 if delta.type == 'text':
                     yield delta.text.value
 
+def get_response(user_question):
+    client.beta.threads.messages.create(thread_id=st.session_state.thread_id, role="user", content=user_question)
+
+    response_placeholder = st.empty()  # Placeholder for streaming response text
+    response_text = ""  # To accumulate response text
+
+    # Stream response from the assistant
+    with client.beta.threads.runs.stream(thread_id=st.session_state.thread_id, assistant_id=st.session_state.assistant_id) as stream:
+        for chunk in stream:
+            if chunk.event == 'thread.message.delta':  # Check if it is the delta message
+                for delta in chunk.data.delta.content:
+                    if delta.type == 'text':
+                        response_text += delta.text.value  # Append new text fragment to response text
+                        response_placeholder.markdown(response_text)  # Update the placeholder with new response text as markdown
+
+    return response_text
+
+def display_chat_history():    
+    for message in st.session_state.chat_history:
+        if isinstance(message, HumanMessage):
+            avatar_url = message.avatar
+            with st.chat_message("user", avatar=user_avatar_url):                
+                st.markdown(message.content, unsafe_allow_html=True)
+        else:
+            avatar_url = st.session_state.specialist_avatar
+            with st.chat_message("AI", avatar=avatar_url):
+                st.markdown(message.content, unsafe_allow_html=True)
+
+
+# User input container
+def handle_user_input_container():
+    input_container = st.container()
+    input_container.float(float_css_helper(bottom="50px"))
+    with input_container:
+        specialist = st.session_state.specialist
+        #obtain specialist avatar
+        specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
+            # Replace with your avatar URL
+        st.markdown(
+            f"""
+            <div style="text-align: center;">
+                <h6>
+                    Specialty Group: 
+                    <img src="{specialist_avatar}" alt="Avatar" style="width:30px;height:30px;border-radius:50%;">
+                    <span style="color:red;">{specialist}</span>
+                </h6>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+        user_question = st.chat_input("How may I help you?")
+    if user_question is not None and user_question != "":
+        st.session_state.chat_history.append(HumanMessage(user_question, avatar=user_avatar_url))
+
+        with st.chat_message("user", avatar=user_avatar_url):
+            st.markdown(user_question)
+        
+        with st.chat_message("AI", avatar=specialist_avatar):
+            ai_response = get_response(user_question)
+            assistant_response = ai_response
+            
+        parse_json(assistant_response)
+        st.session_state.chat_history.append(AIMessage(assistant_response, avatar=specialist_avatar))
+
+
+
 #@st.cache_data
-def handle_userinput(user_question):    
+def xxxhandle_userinput(user_question):    
     # Append user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": user_question, "avatar": user_avatar_url})
         
@@ -459,9 +489,9 @@ def handle_userinput(user_question):
     specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
     parse_json(assistant_response)
     st.session_state.chat_history.append({"role": "assistant", "content": st.session_state.assistant_response, "avatar": specialist_avatar})  # Add assistant response to chat history
-    
+   
 
-#@st.cache_data
+@st.cache_data
 def handle_user_legal_input(legal_question):    
     # Append user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": legal_question, "avatar": user_avatar_url})
@@ -506,13 +536,17 @@ def write_note(note_input):
         st.write_stream(generate_response_stream(stream))
 
 def main():
+    # Create a thread where the conversation will happen and keep Streamlit from initiating a new session state
+    if "thread_id" not in st.session_state:
+        thread = client.beta.threads.create()
+        st.session_state.thread_id = thread.id
+
     initialize_session_state()
     display_header()
-    handle_user_input_container()
-    display_sidebar()
+
     process_queries()    
     display_chat_history()
-    
-    
+    handle_user_input_container()    
+    display_sidebar()
 if __name__ == '__main__':
     main()
