@@ -472,7 +472,7 @@ def handle_user_input_container():
             assistant_response = ai_response
             
         parse_json(assistant_response)
-        st.session_state.chat_history.append(AIMessage(assistant_response, avatar=specialist_avatar))
+        st.session_state.chat_history.append(AIMessage(st.session_state.assistant_response, avatar=specialist_avatar))
 
 
 
