@@ -112,6 +112,7 @@ def initialize_session_state():
         "sidebar_state": 1,
         "assistant_response": "",
         "patient_language": "English",
+        "primary_diagnosis": "",
         "specialist_input": "",
         "specialist": "Emergency Medicine",
         "assistant_id": specialist_id_caption["Emergency Medicine"]["assistant_id"],  # Initialize 'assistant_id' here
@@ -123,7 +124,7 @@ def initialize_session_state():
 
 # Setup the main page display and header
 def display_header():
-    st.set_page_config(page_title="EMA", page_icon="🤖🩺")
+    st.set_page_config(page_title=f"EMA {st.session_state.primary_diagnosis}", page_icon="🤖🩺")
     st.header("EMA - Emergency Medicine Assistant 🤖🩺")
 
 # User input container
@@ -205,6 +206,11 @@ def display_sidebar():
                     diagnosis = diagnosis_obj.get("diagnosis")
                     probability = diagnosis_obj.get("probability")
                     st.markdown(f"- {diagnosis} {probability}%")
+                ddx_list = st.session_state.differential_diagnosis.get("differential_diagnosis", [0])
+                primary_diagnosis = ddx_list[0]['diagnosis']
+                st.session_state.primary_diagnosis = primary_diagnosis
+                
+                
                 st.divider()
             choose_specialist_radio()
             
@@ -515,7 +521,6 @@ def main():
     display_sidebar()
     process_queries()    
     display_chat_history()
-    
     
 if __name__ == '__main__':
     main()
