@@ -29,8 +29,24 @@ Please generate the emergency medicine medical note based on the patient case we
     Disposition:
     ```"""
 
-create_hpi = "Write just the HPI and ROX"
-create_ap = "Write just the assesment, ddx, plan and disposition"
+create_hpi = """Write just the HPI and ROS. In this format:
+    ```
+    Chief Complaint:
+
+    History of Present Illness:
+
+    Review of Systems:
+    ```"""
+create_ap = """Write just the assesment, ddx, plan and disposition in this formt:
+    ```    
+    ASSESSMENT:
+
+    DIFFERENTIAL DIAGNOSISs:
+
+    PLAN:
+
+    DISPOSITION:
+    ```"""
 
 pt_education = """You are an emergency medicine specialist tasked with providing patient education materials. Based on the clinical details provided, generate an easy-to-understand patient education note in the specified language. follow the template separated by triple backticks:
     ```
