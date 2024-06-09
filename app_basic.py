@@ -463,7 +463,7 @@ def handle_userinput(user_question):
     specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
     parse_json(assistant_response)
     st.session_state.chat_history.append({"role": "assistant", "content": st.session_state.assistant_response, "avatar": specialist_avatar})  # Add assistant response to chat history
-    
+    st.rerun()
 
 @st.cache_data
 def handle_user_legal_input(legal_question):    
@@ -521,6 +521,7 @@ def main():
     display_sidebar()
     process_queries()    
     display_chat_history()
+    
     
 if __name__ == '__main__':
     main()

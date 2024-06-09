@@ -130,7 +130,7 @@ def initialize_session_state():
         st.session_state.specialist = primary_specialist
         st.session_state.assistant_id = specialist_id_caption[primary_specialist]["assistant_id"]
         st.session_state.specialist_avatar = specialist_id_caption[primary_specialist]["avatar"]
-        print(f'DEBUG: Initial specialist set to {primary_specialist}')
+        #print(f'DEBUG: Initial specialist set to {primary_specialist}')
 
 # Setup the main page display and header
 def display_header():
@@ -383,8 +383,8 @@ def process_other_queries():
 
         # set specialist_avatar for chat history
         specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
-        #print(f'DEBUG: PROCESSS OTHER QUERRIES --- ST-SESSION SPECIALIST : {st.session_state.specialist}')
-        #print(f'DEBUG: SPECIALIST AVATAR: {specialist_avatar}')
+        print(f'DEBUG: PROCESSS OTHER QUERRIES --- ST-SESSION SPECIALIST : {st.session_state.specialist}')
+        print(f'DEBUG: SPECIALIST AVATAR: {specialist_avatar}')
         
         # set user_question to sidebar user_question
         user_question = st.session_state.user_question_sidebar
@@ -395,17 +395,17 @@ def process_other_queries():
 
         # add querry to the chat history as human user
         st.session_state.chat_history.append(HumanMessage(user_question, avatar=user_avatar_url))
-        #print(f'DEBUG: HumanMessage: {HumanMessage(user_question, avatar=user_avatar_url)}')
+        
 
         #get ai response
         with st.chat_message("AI", avatar=specialist_avatar):
             assistant_response = get_response(user_question=user_question)
             #st.session_state.assistant_response = assistant_response
         
-        #print(f'DEBUG: assistnat_response: {assistant_response}')
+        
         #append ai response to chat_history
         st.session_state.chat_history.append(AIMessage(assistant_response, avatar=specialist_avatar))
-        #print(f'DEBUG: AIMessage: {AIMessage(assistant_response, avatar=specialist_avatar)}')
+        
         st.session_state.old_user_question_sidebar = user_question
 
 
@@ -446,10 +446,10 @@ def parse_json(assistant_response):
         return
     
     # Add debugging print statements
-    #print("Debug: assistant response: ", assistant_response)
-    #print("Debug: differential_diagnosis:", differential_diagnosis)
-    #print("Debug: critical_actions:", critical_actions)
-    #print("Debug: modified_text:", modified_text)
+    print("Debug: assistant response: ", assistant_response)
+    print("Debug: differential_diagnosis:", differential_diagnosis)
+    print("Debug: critical_actions:", critical_actions)
+    print("Debug: modified_text:", modified_text)
     
     # Assign the return values to the session state
     st.session_state.differential_diagnosis = differential_diagnosis
