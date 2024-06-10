@@ -1,4 +1,12 @@
 import json
+import os
+from prompts import create_json_prompt
+from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
+api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=api_key)
 
 def extract_json(input_text):
     def find_json_objects(text):
@@ -63,4 +71,21 @@ def remove_json_artifact():
 
     return differential_diagnosis, critical_actions, modified_text
 
+def create_json(text):
+    
+    # Summarize chat history (plain_text)  
+    response = client.chat.completions.create(
+        messages=[
+            {
+                "role": "user",
+                "content": create_json_prompt + text,
+            }
+        ],
+        model="gpt-3.5-turbo",
+        temperature=0.5
+    )
+    json_data = response.choices[0].message.content
+    # print chat summary
+
+    return json_data
  

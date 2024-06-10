@@ -96,3 +96,5 @@ consult_treatment = "Hello, can you help with the treatment plan?"
 consult_disposition = "Hello, can you help with the disposition plan?"
 
 integrate_consultation = "Please integrate the specialist's recommendations into this case"
+
+create_json_prompt = "create json for the patient with any associations such as: name, age, age units, sex, cheif complaint, cheif complaint in one word, lab results, imaging results, differential diagnosis, critical actions"

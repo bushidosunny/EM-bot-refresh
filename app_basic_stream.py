@@ -5,7 +5,8 @@ from langchain_core.messages import HumanMessage, AIMessage
 import os
 from dotenv import load_dotenv
 from prompts import *
-from extract_json import extract_json
+import json
+from extract_json import extract_json, create_json
 
 # Load variables
 load_dotenv()
@@ -379,7 +380,7 @@ def update_patient_language():
 
 # Processing queries
 def process_other_queries():
-    if st.session_state.user_question_sidebar is not "" and st.session_state.user_question_sidebar != st.session_state.old_user_question_sidebar:
+    if st.session_state.user_question_sidebar != "" and st.session_state.user_question_sidebar != st.session_state.old_user_question_sidebar:
 
         # set specialist_avatar for chat history
         specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
@@ -543,7 +544,16 @@ def process_user_question(user_question, specialist):
             st.session_state.assistant_response = assistant_response
 
         # extract json information from AI response   
-        parse_json(assistant_response)
+        #parse_json(assistant_response)
+        #print(f'DEBUG ASSISTANT RESPONSE: {assistant_response}')
+        pt_json = create_json(text=assistant_response)
+        data = json.loads(pt_json)
+        patient_name = data['patient']['name']
+        patient_age = data['patient']['age']
+        print(f'DEBUG PT_JSON: {pt_json}') 
+        print(f'DEBUG PT_JSON.DUMPS:{json.dumps(pt_json, indent=2)}')
+        print(f'DEBUG PT NAME: {patient_name}')
+        print(f'DEBUG PT AGE: {patient_age}')
         st.session_state.chat_history.append(AIMessage(st.session_state.assistant_response, avatar=specialist_avatar))
         #print(f'DEBUG st.session_state.chat_history: {st.session_state.chat_history}')
    
