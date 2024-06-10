@@ -78,11 +78,11 @@ def create_json(text):
         messages=[
             {
                 "role": "user",
-                "content": create_json_prompt + text,
+                "content": create_json_prompt + "```" + text + "```" ,
             }
         ],
         model="gpt-3.5-turbo",
-        temperature=0.5
+        temperature=0.0
     )
     json_data = response.choices[0].message.content
     # print chat summary

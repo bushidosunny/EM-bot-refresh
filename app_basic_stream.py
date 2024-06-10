@@ -108,6 +108,7 @@ def initialize_session_state():
         "legal_question": "",
         "note_input": "",
         "json_data": {},
+        "pt_data": {},
         "differential_diagnosis": {},
         "danger_diag_list": {},
         "critical_actions": {},
@@ -135,7 +136,14 @@ def initialize_session_state():
 
 # Setup the main page display and header
 def display_header():
-    st.set_page_config(page_title="EMA", page_icon="🤖🩺")
+    if st.session_state.pt_data != {}:
+        cc = st.session_state.pt_data['patient']["chief_complaint_two_word"]
+        age = st.session_state.pt_data['patient']["age"]
+        age_units = st.session_state.pt_data['patient']["age_unit"]
+        sex = st.session_state.pt_data['patient']["sex"]
+        st.set_page_config(page_title=f"{age}{age_units}{sex} {cc}", page_icon="🤖")
+    else:
+        st.set_page_config(page_title=f"EMA", page_icon="🤖")
     st.header("EMA - Emergency Medicine Assistant 🤖🩺")
 
 # Sidebar display
@@ -148,30 +156,30 @@ def display_sidebar():
         with tab1:
             if st.session_state.critical_actions:
                 st.subheader(":orange[Critical Actions]")
-                for action in st.session_state.critical_actions.get('critical_actions', []):
+                for action in st.session_state.critical_actions:
                     st.markdown(f"- :orange[{action}]")
             
             if st.session_state.differential_diagnosis:
                 st.subheader("Differential Diagnosis")
-                for diagnosis_obj in st.session_state.differential_diagnosis.get("differential_diagnosis", []):
-                    diagnosis = diagnosis_obj.get("diagnosis")
-                    probability = diagnosis_obj.get("probability")
-                    st.markdown(f"- {diagnosis} {probability}%")
+                for diagnosis in st.session_state.differential_diagnosis:
+                    disease = diagnosis['disease']
+                    probability = diagnosis['probability']
+                    st.markdown(f"- {disease} - {probability}%")
                 st.divider()
             display_functions_tab()
 
         with tab2:
             if st.session_state.critical_actions:
                 st.subheader(":orange[Critical Actions]")
-                for action in st.session_state.critical_actions.get('critical_actions', []):
+                for action in st.session_state.critical_actions:
                     st.markdown(f"- :orange[{action}]")
             
             if st.session_state.differential_diagnosis:
                 st.subheader("Differential Diagnosis")
-                for diagnosis_obj in st.session_state.differential_diagnosis.get("differential_diagnosis", []):
-                    diagnosis = diagnosis_obj.get("diagnosis")
-                    probability = diagnosis_obj.get("probability")
-                    st.markdown(f"- {diagnosis} {probability}%")
+                for diagnosis in st.session_state.differential_diagnosis:
+                    disease = diagnosis['disease']
+                    probability = diagnosis['probability']
+                    st.markdown(f"- {disease} - {probability}%")
                 st.divider()
             
             choose_specialist_radio()
@@ -437,14 +445,18 @@ def handle_user_legal_input(legal_question):
     st.session_state.chat_history.append({"role": "legal consultant", "content": assistant_response, "avatar": "https://avatars.dicebear.com/api/avataaars/legal_consultant.svg"})  # Add assistant response to chat history
 
 def parse_json(assistant_response):
+    pt_json = create_json(text=assistant_response)
+    data = json.loads(pt_json)
+    st.session_state.pt_data = data
+    print(f'DEBUG pt_json: {data}')
     # Call the extract_json function and capture its return values
-    differential_diagnosis, critical_actions, modified_text = extract_json(assistant_response)
+    #differential_diagnosis, critical_actions, modified_text = extract_json(assistant_response)
 
     # Check if the extracted values indicate no JSON content
-    if not differential_diagnosis and not critical_actions:
-        print("No JSON content found in assistant response.")
-        st.session_state.assistant_response = modified_text
-        return
+    #if not differential_diagnosis and not critical_actions:
+        #print("No JSON content found in assistant response.")
+        #st.session_state.assistant_response = modified_text
+        #return
     
     # Add debugging print statements
     #print("Debug: assistant response: ", assistant_response)
@@ -453,9 +465,9 @@ def parse_json(assistant_response):
     #print("Debug: modified_text:", modified_text)
     
     # Assign the return values to the session state
-    st.session_state.differential_diagnosis = differential_diagnosis
-    st.session_state.critical_actions = critical_actions
-    st.session_state.assistant_response = modified_text
+    st.session_state.differential_diagnosis = data['patient']['differential_diagnosis']
+    st.session_state.critical_actions = data['patient']['critical_actions']
+    #st.session_state.assistant_response = modified_text
 
 #@st.cache_data
 def write_note(note_input):    
@@ -544,16 +556,10 @@ def process_user_question(user_question, specialist):
             st.session_state.assistant_response = assistant_response
 
         # extract json information from AI response   
-        #parse_json(assistant_response)
+        parse_json(assistant_response)
         #print(f'DEBUG ASSISTANT RESPONSE: {assistant_response}')
-        pt_json = create_json(text=assistant_response)
-        data = json.loads(pt_json)
-        patient_name = data['patient']['name']
-        patient_age = data['patient']['age']
-        print(f'DEBUG PT_JSON: {pt_json}') 
-        print(f'DEBUG PT_JSON.DUMPS:{json.dumps(pt_json, indent=2)}')
-        print(f'DEBUG PT NAME: {patient_name}')
-        print(f'DEBUG PT AGE: {patient_age}')
+
+
         st.session_state.chat_history.append(AIMessage(st.session_state.assistant_response, avatar=specialist_avatar))
         #print(f'DEBUG st.session_state.chat_history: {st.session_state.chat_history}')
    

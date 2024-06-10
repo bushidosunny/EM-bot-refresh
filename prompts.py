@@ -97,4 +97,22 @@ consult_disposition = "Hello, can you help with the disposition plan?"
 
 integrate_consultation = "Please integrate the specialist's recommendations into this case"
 
-create_json_prompt = "create json for the patient with any associations such as: name, age, age units, sex, cheif complaint, cheif complaint in one word, lab results, imaging results, differential diagnosis, critical actions"
+create_json_prompt = '''Create a JSON object with the following structure: 
+  "patient": {
+    "name": "Patient's full name (string)",
+    "age": "Patient's age (number)",
+    "age_unit": "Age unit, use 'Y' for years, 'D' for days, 'M' for months (string)",
+    "sex": "Patient's sex, use 'M' for male, 'F' for female (string)", 
+    "chief_complaint": "Patient's chief complaint (string)",
+    "chief_complaint_two_word": "Chief complaint summarized in one to two words (string)",
+    "lab_results": "Patient's lab results (object with test name keys and result values)",
+    "imaging_results": "Patient's imaging results (object with test name keys and result values)",
+    "differential_diagnosis": [
+      {
+        "disease": "Potential diagnosis (string)",
+        "probability": "Probability of this diagnosis (number between 0 and 100%)"
+      }
+    ],
+    "critical_actions": "Critical actions needed for the patient (array of strings)"
+  }
+}'''
