@@ -3,10 +3,12 @@ from streamlit_float import float_css_helper
 from openai import OpenAI
 from langchain_core.messages import HumanMessage, AIMessage
 import os
+import io
 from dotenv import load_dotenv
 from prompts import *
 import json
 from extract_json import extract_json, create_json
+from datetime import datetime
 
 # Load variables
 load_dotenv()
@@ -118,7 +120,8 @@ def initialize_session_state():
         "specialist_input": "",
         "should_rerun": False,
         "user_question_sidebar": "",
-        "old_user_question_sidebar": ""
+        "old_user_question_sidebar": "",
+        "completed_tasks_str": ""
 
     }
 
@@ -146,6 +149,24 @@ def display_header():
         st.set_page_config(page_title=f"EMA", page_icon="🤖")
     st.header("EMA - Emergency Medicine Assistant 🤖🩺")
 
+def display_critical_tasks():
+    if st.session_state.critical_actions:
+        st.subheader(":orange[Critical Actions]")
+        # Create a dictionary to hold the status of each task
+        task_status = {task: False for task in st.session_state.critical_actions}
+
+        # Display the tasks with checkboxes
+        for task in st.session_state.critical_actions:
+            task_status[task] = st.checkbox(f"- :orange[{task}]", value=task_status[task])
+
+        # Check which tasks are completed and save to a string variable
+        completed_tasks = [task for task, status in task_status.items() if status]
+        print (f'DEBUG COMPLETGED TASKS: {completed_tasks}')
+        if completed_tasks != []:
+            st.session_state.completed_tasks_str = "Tasks Completed:" + '.\n'.join(completed_tasks)
+
+
+
 # Sidebar display
 def display_sidebar():
     with st.sidebar:
@@ -154,10 +175,7 @@ def display_sidebar():
         tab1, tab2, tab3, tab4 = st.tabs(["Functions", "Specialists", "Note Analysis", "Update Variables"])
         
         with tab1:
-            if st.session_state.critical_actions:
-                st.subheader(":orange[Critical Actions]")
-                for action in st.session_state.critical_actions:
-                    st.markdown(f"- :orange[{action}]")
+            display_critical_tasks()
             
             if st.session_state.differential_diagnosis:
                 st.subheader("Differential Diagnosis")
@@ -169,10 +187,8 @@ def display_sidebar():
             display_functions_tab()
 
         with tab2:
-            if st.session_state.critical_actions:
-                st.subheader(":orange[Critical Actions]")
-                for action in st.session_state.critical_actions:
-                    st.markdown(f"- :orange[{action}]")
+            #display_critical_tasks(2)
+
             
             if st.session_state.differential_diagnosis:
                 st.subheader("Differential Diagnosis")
@@ -289,10 +305,17 @@ def process_buttons(button1, button2, button3, button4, button5, button6, button
     if button9:
         new_thread()
     if button10:
-        specialist = 'Note Writer'
-        prompt = "this is just a code test for button 10"
-        st.session_state["specialist"] = specialist  # Set the specialist in session state
-        button_input(specialist, prompt)
+        
+        output = io.StringIO()
+
+        for message in st.session_state.chat_history:
+            if isinstance(message, HumanMessage):
+                print(message.content, file=output)
+            else:
+                print(message.content, file=output)
+
+        output_string = output.getvalue()
+        print(f'DEBUG ________________: {output_string}')
     if button11:
         specialist = 'Note Writer'
         prompt = create_hpi
@@ -350,7 +373,8 @@ def choose_specialist_radio():
         st.session_state.button_clicked = False
 
     # Only update if the selected specialist is different
-    if specialist and specialist != st.session_state.specialist and not st.session_state.button_clicked:
+    if specialist and specialist != st.session_state.specialist:
+    #if specialist and specialist != st.session_state.specialist and not st.session_state.button_clicked:
         print(f'DEBUG: Radio button changed specialist to {specialist}')
         st.session_state.specialist = specialist
         st.session_state.assistant_id = specialist_id_caption[specialist]["assistant_id"]
@@ -444,11 +468,28 @@ def handle_user_legal_input(legal_question):
         st.write_stream(generate_response_stream(stream))
     st.session_state.chat_history.append({"role": "legal consultant", "content": assistant_response, "avatar": "https://avatars.dicebear.com/api/avataaars/legal_consultant.svg"})  # Add assistant response to chat history
 
-def parse_json(assistant_response):
-    pt_json = create_json(text=assistant_response)
-    data = json.loads(pt_json)
-    st.session_state.pt_data = data
-    print(f'DEBUG pt_json: {data}')
+def chat_history_string():
+    output = io.StringIO()
+
+    for message in st.session_state.chat_history:
+        if isinstance(message, HumanMessage):
+            print(message.content, file=output)
+        else:
+            print(message.content, file=output)
+
+    output_string = output.getvalue()
+    return output_string
+
+def parse_json(chat_history):
+    pt_json = create_json(text=chat_history)
+    try:
+        data = json.loads(pt_json)
+        st.session_state.pt_data = data
+        print(f'DEBUG pt_json: {data}')
+        st.session_state.differential_diagnosis = data['patient']['differential_diagnosis']
+        st.session_state.critical_actions = data['patient']['critical_actions']
+    except:
+        return
     # Call the extract_json function and capture its return values
     #differential_diagnosis, critical_actions, modified_text = extract_json(assistant_response)
 
@@ -465,8 +506,7 @@ def parse_json(assistant_response):
     #print("Debug: modified_text:", modified_text)
     
     # Assign the return values to the session state
-    st.session_state.differential_diagnosis = data['patient']['differential_diagnosis']
-    st.session_state.critical_actions = data['patient']['critical_actions']
+    
     #st.session_state.assistant_response = modified_text
 
 #@st.cache_data
@@ -522,6 +562,7 @@ def handle_user_input_container():
     input_container = st.container()
     input_container.float(float_css_helper(bottom="50px"))
     with input_container:
+        
         specialist = st.session_state.specialist
         #obtain specialist avatar
         specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
@@ -538,10 +579,16 @@ def handle_user_input_container():
             """, 
             unsafe_allow_html=True
         )
-        user_question = st.chat_input("How may I help you?")
+        user_question = st.chat_input("How may I help you?") 
     process_user_question(user_question, specialist)
 def process_user_question(user_question, specialist):
     if user_question is not None and user_question != "":
+        current_datetime = datetime.now().strftime("%H:%M:%S")
+        user_question = current_datetime + f"""    \n{user_question}. 
+        \n{st.session_state.completed_tasks_str}
+        """
+        st.session_state.completed_tasks_str = ''
+        st.session_state.critical_actions  = []
         st.session_state.specialist = specialist
         specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
         st.session_state.specialist_avatar = specialist_avatar
@@ -554,15 +601,18 @@ def process_user_question(user_question, specialist):
         with st.chat_message("AI", avatar=specialist_avatar):
             assistant_response = get_response(user_question)
             st.session_state.assistant_response = assistant_response
+            
 
-        # extract json information from AI response   
-        parse_json(assistant_response)
+
         #print(f'DEBUG ASSISTANT RESPONSE: {assistant_response}')
 
 
         st.session_state.chat_history.append(AIMessage(st.session_state.assistant_response, avatar=specialist_avatar))
         #print(f'DEBUG st.session_state.chat_history: {st.session_state.chat_history}')
-   
+        # extract json information from AI response   
+        chat_history = chat_history_string()
+        print(f'DEBUG CHAT HISTORY: {chat_history}')
+        parse_json(chat_history)   
 
 
 

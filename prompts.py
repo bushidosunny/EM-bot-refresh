@@ -23,28 +23,25 @@ Please generate the emergency medicine medical note based on the patient case we
     [Do not include vitals sign numbers unless explicitly stated, leave triple asterisks (***) if missing]
     Laboratory Results:
     Imaging:
-    Assessment:
-    Differential Diagnoses:
-    Plan:
-    Disposition:
+    ASSESSMENT: [Provide primary cauase of chief complaint with reasoning]
+    DIFFERENTIAL DIAGNOSISs: [provide liklihood with reasoning]
+    PLAN:
+    DISPOSITION:
     ```"""
 
 create_hpi = """Write just the HPI and ROS. In this format:
     ```
     Chief Complaint:
-
     History of Present Illness:
-
     Review of Systems:
     ```"""
-create_ap = """Write just the assesment, ddx, plan and disposition in this formt:
+create_ap = """Write just the assesment, ddx, plan and disposition in this format:
     ```    
-    ASSESSMENT:
-
-    DIFFERENTIAL DIAGNOSISs:
-
+    ASSESSMENT: 
+    [Provide primary cauase of chief complaint with reasoning]
+    DIFFERENTIAL DIAGNOSISs: 
+    [provide reasoning to why each diagnosis was considered and why no further workup was done in the ED]
     PLAN:
-
     DISPOSITION:
     ```"""
 
@@ -97,8 +94,11 @@ consult_disposition = "Hello, can you help with the disposition plan?"
 
 integrate_consultation = "Please integrate the specialist's recommendations into this case"
 
-create_json_prompt = '''Create a JSON object with the following structure: 
-  "patient": {
+create_json_prompt = '''I am an emergency medicine doctor. I will provide you with a transcript of a conversation with another language model about a patient case. The information in the transcript will become more accurate as the conversation progresses. When analyzing the case, prioritize the information that appears later in the transcript. If there are any conflicting details between earlier and later parts of the conversation, rely on the most recent information provided, as it is likely to be the most accurate and up-to-date. Disregard any contradictory information from earlier in the transcript.
+
+Create a JSON object with the following structure: 
+ {
+ "patient": {
     "name": "Patient's full name (string)",
     "age": "Patient's age (number)",
     "age_unit": "Age unit, use 'Y' for years, 'D' for days, 'M' for months (string)",
@@ -113,6 +113,4 @@ create_json_prompt = '''Create a JSON object with the following structure:
         "probability": "Probability of this diagnosis (number between 0 and 100%)"
       }
     ],
-    "critical_actions": "Critical actions needed for the patient (array of strings)"
-  }
-}'''
+    "critical_actions": "Critical actions needed for the patient (array of strings)"}}'''
