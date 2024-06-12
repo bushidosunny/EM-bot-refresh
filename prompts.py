@@ -1,48 +1,37 @@
 
 create_med_note ="""Write an emergency medicine medical note for the patient encounter we discussed, incorporating the following guidelines:
 1. I may ask for you to write only a section of the note, if not include sections for Chief Complaint, History of Present Illness, Review of Systems, Past Medical History,  Family History, Past Social History, Medications, Allergies, Vitals, Physical Exam, Assessment, Differential Diagnosis, Plan, and Disposition.
-2. For any Review of Systems, Physical Exam findings not explicitly mentioned, assume the expected findings are negative and include them in the note accordingly.
+2. For any Review of Systems, Physical Exam findings, not explicitly mentioned, assume the expected findings are negative and include them in the note accordingly.  But do not do this for vital signs.
 3. Do not include any laboratory results or imaging findings unless they were specifically provided during our discussion.
-4. Under the "Assessment":
-- provide a summary statement of the patient and major problems, 
-- a Numbered list of problems identified, supported by findings from the subjective and objective sections.
-- a Differential diagnoses for new major problems, provide well-reasoned medical decision making based on the available information.
-5. If any additional information is required but was not provided, insert triple asterisks (***) in the appropriate location within the note.
-6. Write the note using standard medical terminology and abbreviations, and format it in a clear, organized manner consistent with emergency department documentation practices.
-Please generate the emergency medicine medical note based on the patient case we discussed, adhering to these instructions.place triple asterisks (***) in the location. structure the note based on the structure provided by triple backticks.
+4. If any additional information is required but was not provided, insert triple asterisks (***) in the appropriate location within the note.
+5. Write the note using standard medical terminology and abbreviations, and format it in a clear, organized manner consistent with emergency department documentation practices.
+6. Include the results of any decision making tools that were used.
+Please generate the emergency medicine medical note based on the patient case we discussed, adhering to these instructions. place triple asterisks (***) in the location. structure the note based on the structure provided by triple backticks.
 
     ```
-    Chief Complaint:
-    History of Present Illness:
-    Review of Systems:
-    Past Medical History:
-    Past Social History:
-    Medications:
-    Allergies:    
-    Physical Examination:[Do not include vitals sign numbers unless explicitly stated, leave triple asterisks (***) if missing]
-    Laboratory Results:
-    Imaging:
-    ASSESSMENT: [Provide primary cauase of chief complaint with reasoning]
-    DIFFERENTIAL DIAGNOSIS: [provide liklihood with reasoning]
-    PLAN:
-    DISPOSITION:
+CHIEF COMPLAINT:
+HISTORY OF PRESENT ILLNESS:
+REVIEW OF SYSTEMS:
+PAST MEDICAL HISTORY:
+PAST SOCIAL HISTORY:
+MEDICATIONS:
+ALLERGIES:
+PHYSICAL EXAMINATION:
+LABORATORY RESULTS:
+IMAGING:
+ASSESSMENT:
+[provide a summary statement of the patient and major problems]
+[Provide primary cause of chief complaint with reasoning]
+DIFFERENTIAL DIAGNOSES:
+[provide reasoning to why each diagnosis was considered and why no further workup was done in the ED, include if probability is high, medium, low, or unlikely.]
+PLAN:
+[Provide a Numbered list of problems identified, plan, include the reasoning discussed.]
+[if patient has normal mental status and is an adult. Explicitly document that the patient (or caretaker) was educated about the condition, treatment plan, and signs of complications that would require immediate medical attention.]
+DISPOSITION:
     ```"""
 
-create_hpi = """Write just the HPI and ROS. In this format:
-    ```
-    Chief Complaint:
-    History of Present Illness:
-    Review of Systems:
-    ```"""
-create_ap = """Write just the assesment, ddx, plan and disposition in this format:
-    ```    
-    ASSESSMENT: 
-    [Provide primary cauase of chief complaint with reasoning]
-    DIFFERENTIAL DIAGNOSISs: 
-    [provide reasoning to why each diagnosis was considered and why no further workup was done in the ED]
-    PLAN:
-    DISPOSITION:
-    ```"""
+create_hpi = """Write just the HPI and ROS"""
+create_ap = """Write just the assesment, ddx, plan and disposition"""
 
 pt_education = """You are an emergency medicine specialist tasked with providing patient education materials. Based on the clinical details provided, generate an easy-to-understand patient education note in the specified language. follow the template separated by triple backticks:
     ```
