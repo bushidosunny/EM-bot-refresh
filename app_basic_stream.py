@@ -257,6 +257,7 @@ def display_functions_tab():
     col1, col2 = st.columns(2)
     with col1:
         button3 = st.button('Full Medical Note')
+        button14 = st.button('Full Note except EMR results')
         button4 = st.button("Pt Education Note")
     with col2:
         button11 = st.button('HPI only')
@@ -280,10 +281,10 @@ def display_functions_tab():
         #button10 = st.button('TEST')
 
     # Process button actions
-    process_buttons(button1, button2, button3, button4, button5, button6, button8, button9, button11, button12, button13)
+    process_buttons(button1, button2, button3, button4, button5, button6, button8, button9, button11, button12, button13, button14)
 
 # Process the buttons
-def process_buttons(button1, button2, button3, button4, button5, button6, button8, button9, button11, button12, button13):
+def process_buttons(button1, button2, button3, button4, button5, button6, button8, button9, button11, button12, button13, button14):
     if button1:
         st.session_state["user_question"] = disposition_analysis
     if button2:
@@ -329,6 +330,11 @@ def process_buttons(button1, button2, button3, button4, button5, button6, button
     if button13:
         specialist = 'Musculoskeletal Systems'
         prompt = pt_plan
+        st.session_state["specialist"] = specialist
+        button_input(specialist, prompt)
+    if button14:
+        specialist = 'Note Writer'
+        prompt = create_full_note_except_results
         st.session_state["specialist"] = specialist
         button_input(specialist, prompt)
     
