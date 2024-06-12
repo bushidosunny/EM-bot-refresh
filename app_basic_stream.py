@@ -9,6 +9,7 @@ from prompts import *
 import json
 from extract_json import extract_json, create_json
 from datetime import datetime
+import pytz
 
 # Load variables
 load_dotenv()
@@ -553,7 +554,8 @@ def handle_user_input_container():
     process_user_question(user_question, specialist)
 def process_user_question(user_question, specialist):
     if user_question is not None and user_question != "":
-        current_datetime = datetime.now().strftime("%H:%M:%S")
+        timezone = pytz.timezone("America/Los_Angeles")
+        current_datetime = datetime.now(timezone).strftime("%H:%M:%S")
         user_question = current_datetime + f"""    \n{user_question}. 
         \n{st.session_state.completed_tasks_str}
         """
