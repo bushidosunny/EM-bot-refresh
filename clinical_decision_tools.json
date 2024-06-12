@@ -1,0 +1,725 @@
+{
+    "Cardiovascular": {
+      "HEART Score": {
+        "purpose": "Risk stratification for patients with chest pain (suspected ACS).",
+        "input_variables": {
+          "History": "0-2 points",
+          "ECG": "0-2 points",
+          "Age": "0-2 points",
+          "Risk Factors": "0-2 points",
+          "Troponin": "0-2 points"
+        },
+        "output": {
+          "type": "Total score (0-10)",
+          "interpretation": {
+            "0-3": "Low risk",
+            "4-6": "Intermediate risk",
+            "7-10": "High risk"
+          }
+        }
+      },
+      "TIMI Risk Score": {
+        "purpose": "Risk of death/MI in unstable angina/NSTEMI.",
+        "input_variables": {
+          "Age ≥65": "1 point",
+          "≥3 CAD risk factors": "1 point",
+          "Known CAD (stenosis >50%)": "1 point",
+          "ASA use in past 7 days": "1 point",
+          "Severe angina (≥2 episodes within 24 hours)": "1 point",
+          "ST changes ≥0.5mm": "1 point",
+          "Positive cardiac marker": "1 point"
+        },
+        "output": {
+          "type": "Total score (0-7)",
+          "interpretation": "Higher scores indicate higher risk."
+        }
+      },
+      "GRACE ACS Risk Score": {
+        "purpose": "Risk of death/MI in ACS.",
+        "input_variables": [
+          "Age",
+          "Heart rate",
+          "Systolic BP",
+          "Creatinine",
+          "Cardiac arrest at admission",
+          "ST segment deviation",
+          "Elevated cardiac enzymes",
+          "Killip class"
+        ],
+        "output": {
+          "type": "Score",
+          "interpretation": "Estimates in-hospital and 6-month mortality risk."
+        }
+      },
+      "CHA2DS2-VASc Score": {
+        "purpose": "Stroke risk in atrial fibrillation.",
+        "input_variables": {
+          "Congestive heart failure": "1 point",
+          "Hypertension": "1 point",
+          "Age ≥75 years": "2 points",
+          "Diabetes mellitus": "1 point",
+          "Stroke/TIA/thromboembolism": "2 points",
+          "Vascular disease": "1 point",
+          "Age 65-74 years": "1 point",
+          "Female sex": "1 point"
+        },
+        "output": {
+          "type": "Total score (0-9)",
+          "interpretation": "Higher scores indicate higher stroke risk."
+        }
+      },
+      "HAS-BLED Score": {
+        "purpose": "Bleeding risk on anticoagulation.",
+        "input_variables": {
+          "Hypertension": "1 point",
+          "Abnormal renal function": "1 point",
+          "Abnormal liver function": "1 point",
+          "Stroke": "1 point",
+          "Bleeding history or predisposition": "1 point",
+          "Labile INR": "1 point",
+          "Elderly (>65 years)": "1 point",
+          "Drugs/alcohol concomitantly": "1 point"
+        },
+        "output": {
+          "type": "Total score (0-9)",
+          "interpretation": {
+            "default": "Higher scores indicate higher bleeding risk.",
+            "≥3": "High risk of bleeding"
+          }
+        }
+      },
+      "CHADS2 Score": {
+        "purpose": "Stroke risk in atrial fibrillation.",
+        "input_variables": {
+          "Congestive heart failure": "1 point",
+          "Hypertension": "1 point",
+          "Age ≥75 years": "1 point",
+          "Diabetes mellitus": "1 point",
+          "Prior Stroke or TIA": "2 points"
+        },
+        "output": {
+          "type": "Total score (0-6)",
+          "interpretation": "Higher scores indicate higher stroke risk."
+        }
+      },
+      "Sgarbossa Criteria": {
+        "purpose": "Diagnose MI in the presence of LBBB.",
+        "input_variables": {
+          "Concordant ST elevation ≥1mm in leads with positive QRS": "5 points",
+          "Concordant ST depression ≥1mm in V1-V3": "3 points",
+          "Excessively discordant ST elevation ≥5mm in leads with negative QRS": "2 points"
+        },
+        "output": {
+          "type": "Total score",
+          "interpretation": "≥3: Suggests acute MI"
+        }
+      },
+      "Marburg Heart Score": {
+        "purpose": "Assess risk in acute coronary syndrome.",
+        "input_variables": {
+          "Age (men ≥55 years, women ≥65 years)": "1 point",
+          "Known clinical vascular disease": "1 point",
+          "Pain worse with exercise": "1 point",
+          "Patient believes pain is cardiac": "1 point",
+          "Pain not reproducible by palpation": "1 point"
+        },
+        "output": {
+          "type": "Total score",
+          "interpretation": {
+            "0-2": "Low risk",
+            "3": "Intermediate risk",
+            "4-5": "High risk"
+          }
+        }
+      },
+      "ABCD2 Score": {
+        "purpose": "Risk of stroke after TIA.",
+        "input_variables": {
+          "Age ≥60 years": "1 point",
+          "Blood pressure ≥140/90 mmHg": "1 point",
+          "Unilateral weakness": "2 points",
+          "Speech impairment without weakness": "1 point",
+          "Duration ≥60 minutes": "2 points",
+          "Duration 10-59 minutes": "1 point",
+          "Diabetes mellitus": "1 point"
+        },
+        "output": {
+          "type": "Total score (0-7)",
+          "interpretation": "Higher scores indicate higher stroke risk."
+        }
+      },
+      "San Francisco Syncope Rule": {
+        "purpose": "Risk stratify patients presenting with syncope to determine need for further evaluation and hospitalization.",
+        "input_variables": {
+            "History of congestive heart failure": "Present / Absent",
+            "Hematocrit": "< 30% (Present) / ≥ 30% (Absent)",
+            "Abnormal ECG": "New changes or non-sinus rhythm (Present) / Absent",
+            "Shortness of breath": "Present / Absent",
+            "Systolic blood pressure at triage": "< 90 mmHg (Present) / ≥ 90 mmHg (Absent)"
+        },
+        "output": {
+            "type": "Rule",
+            "interpretation": "If ANY criteria are present, the patient is considered high-risk for a serious outcome and further evaluation is required. If NONE of the criteria are met, the patient is considered low-risk and may be suitable for outpatient management."
+    }
+      }
+    },
+    "Pulmonary": {
+      "Wells Criteria for Pulmonary Embolism": {
+        "purpose": "Estimate the probability of PE.",
+        "input_variables": [
+          "Previous PE or DVT",
+          "Heart rate >100 bpm",
+          "Recent surgery or immobilization",
+          "Clinical signs of DVT",
+          "Hemoptysis",
+          "Active cancer",
+          "Alternative diagnosis less likely than PE"
+        ],
+        "output": {
+          "type": "Risk category",
+          "interpretation": {
+            "<2 points": "Low risk",
+            "2-6 points": "Intermediate risk",
+            ">6 points": "High risk"
+          }
+        }
+      },
+      "Geneva Score for Pulmonary Embolism": {
+        "purpose": "Estimate the probability of PE (objective elements only).",
+        "input_variables": [
+          "Age >65",
+          "Previous PE or DVT",
+          "Recent surgery or immobilization",
+          "Active cancer",
+          "Unilateral leg pain",
+          "Hemoptysis",
+          "Heart rate"
+        ],
+        "output": {
+          "type": "Risk category",
+          "interpretation": {
+            "0-3 points": "Low risk",
+            "4-10 points": "Intermediate risk",
+            ">10 points": "High risk"
+          }
+        }
+      },
+      "PERC Rule": {
+        "purpose": "Rule out PE without further testing.",
+        "input_variables": [
+          "Age <50",
+          "Pulse <100",
+          "SaO2 >94%",
+          "No unilateral leg swelling",
+          "No hemoptysis",
+          "No recent trauma or surgery",
+          "No prior PE/DVT",
+          "No hormone use"
+        ],
+        "output": {
+          "type": "Rule",
+          "interpretation": "All criteria must be met to rule out PE."
+        }
+      },
+      "CURB-65 Score": {
+        "purpose": "Assess severity of community-acquired pneumonia.",
+        "input_variables": [
+          "Confusion",
+          "Urea >7 mmol/L",
+          "Respiratory rate ≥30 breaths/min",
+          "Blood pressure (SBP <90 mmHg or DBP ≤60 mmHg)",
+          "Age ≥65 years"
+        ],
+        "output": {
+          "type": "Score",
+          "interpretation": "Guides treatment decisions and hospitalization need."
+        }
+      }
+    },
+    "Renal": {
+      "STONE Score": {
+      "purpose": "Estimate the probability of a ureteral stone in patients with flank pain.",
+      "input_variables": {
+        "Sex: Male": "2 points",
+        "Sex: Female": "0 points",
+        "Timing/duration of pain onset: < 6 hours": "3 points",
+        "Timing/duration of pain onset: 6-24 hours": "1 point",
+        "Timing/duration of pain onset: >24 hours": "0 points",
+        "Origin/race: Non-black": "3 points",
+        "Origin/race: Black": "0 points",
+        "Nausea/vomiting: Absent": "0 points",
+        "Nausea/vomiting: Nausea alone": "1 point",
+        "Nausea/vomiting: Vomiting": "2 points",
+        "Erythrocytes on urine dipstick: Present": "3 points",
+        "Erythrocytes on urine dipstick: Absent": "0 points"
+      },
+      "output": {
+        "type": "Total score (0-13)",
+        "risk_stratification": {
+          "0-5": "Low risk",
+          "6-9": "Moderate risk",
+          "10-13": "High risk"
+        },
+        "action": {
+          "Low risk": "Low probability of ureteral stone, CT imaging may not be required. Consider alternative diagnoses.",
+          "Moderate risk": "Intermediate probability. Consider CT imaging based on clinical judgment, other risk factors, and patient preference.",
+          "High risk": "High probability of ureteral stone. Proceed with CT scan if no contraindications exist."
+        }
+      }
+      }
+    },
+    "Trauma": {
+        "NEXUS Criteria": {
+          "purpose": "Determine need for cervical spine imaging in trauma.",
+          "input_variables": {
+            "Midline cervical tenderness": "Absent (1) / Present (0)",
+            "Focal neurologic deficit": "Absent (1) / Present (0)",
+            "Alertness": "Normal (1) / Abnormal (0)",
+            "Intoxication": "Absent (1) / Present (0)",
+            "Painful distracting injury": "Absent (1) / Present (0)"
+          },
+          "output": {
+            "type": "Rule",
+            "interpretation": "If all 5 criteria are met (score of 5), c-spine can be cleared clinically. If any criteria are not met, cervical spine imaging is indicated."
+          }
+        },
+        "Canadian C-Spine Rule": {
+          "purpose": "Determine need for c-spine imaging in alert, stable trauma patients.",
+          "input_variables": {
+            "High-Risk Criteria": {
+              "Age ≥65": "Present (imaging indicated) / Absent",
+              "Dangerous mechanism": "Present (imaging indicated) / Absent",
+              "Paresthesias in extremities": "Present (imaging indicated) / Absent"
+            },
+            "Low-Risk Criteria (only if no high-risk criteria present)": {
+              "Simple rear-end MVC": "Present / Absent",
+              "Sitting position in ED": "Present / Absent",
+              "Ambulatory at any time": "Present / Absent",
+              "Delayed onset neck pain": "Present / Absent",
+              "Absence of midline c-spine tenderness": "Present / Absent"
+            },
+            "Neck Rotation (only if any low-risk criteria present)": {
+              "Active rotation 45° left and right": "Possible (no imaging) / Not Possible (imaging indicated)"
+            }
+          },
+          "output": {
+            "type": "Rule",
+            "interpretation": "If any high-risk criteria are present, c-spine imaging is indicated. If no high-risk criteria, but unable to rotate neck 45° or no low-risk criteria present, imaging is indicated. If any low-risk criteria present and able to rotate neck 45°, c-spine can be cleared clinically."
+          }
+        },
+        "Ottawa Ankle Rules": {
+          "purpose": "Determine need for ankle/foot x-ray after ankle injury.",
+          "input_variables": {
+            "Ankle": {
+              "Point tenderness over posterior edge or tip of either malleolus": "Present / Absent",
+              "Inability to bear weight (4 steps) immediately and in ED": "Present / Absent"
+            },
+            "Foot": {
+              "Point tenderness over 5th metatarsal base or navicular": "Present / Absent",
+              "Inability to bear weight (4 steps) immediately and in ED": "Present / Absent"
+            }
+          },
+          "output": {
+            "type": "Rule",
+            "interpretation": "Ankle x-ray required if either ankle criteria met. Foot x-ray required if either foot criteria met. If none met, x-rays can be avoided."
+          }
+        },
+        "Ottawa Knee Rule": {
+          "purpose": "Determine need for knee x-ray after knee injury.",
+          "input_variables": {
+            "Age ≥55": "Present / Absent",
+            "Isolated tenderness of patella": "Present / Absent",
+            "Tenderness at head of fibula": "Present / Absent",
+            "Inability to flex knee to 90°": "Present / Absent",
+            "Inability to bear weight (4 steps) immediately and in ED": "Present / Absent"
+          },
+          "output": {
+            "type": "Rule",
+            "interpretation": "Knee x-ray required if ANY criteria are met. If none are met, x-ray is not required."
+          }
+        },
+        "Revised Trauma Score (RTS)": {
+          "purpose": "Predict mortality in trauma patients based on initial vital signs.",
+          "input_variables": {
+            "Glasgow Coma Scale (GCS)": "Score (3-15)",
+            "Systolic blood pressure (SBP)": "mmHg (use 0 if SBP=0, 4 if SBP>=89, otherwise use SBP value)",
+            "Respiratory rate (RR)": "Breaths/min (use 0 if RR=0, 4 if 10<=RR<=29, otherwise use RR value)"
+          },
+          "calculation": "RTS = 0.9368 * GCS + 0.7326 * SBP + 0.2908 * RR",
+          "output": {
+            "type": "Score (0-7.84)",
+            "interpretation": "Scores range from 0 (poor prognosis) to 7.84 (excellent prognosis)."
+          }
+        },
+        "Injury Severity Score (ISS)": {
+          "purpose": "Anatomical scoring system to assess overall trauma severity.",
+          "input_variables": "Abbreviated Injury Scale (AIS) scores for all injured body regions",
+          "calculation": "1. Identify the 3 most severely injured body regions based on AIS scores.\n2. Square each of the 3 highest AIS scores.\n3. Sum the 3 squared AIS scores to get the ISS.\n4. If any AIS = 6, ISS is automatically 75.",
+          "output": {
+            "type": "Score (1-75)",
+            "interpretation": "Higher scores indicate greater trauma severity. 75 represents unsurvivable injury."
+          }
+        },
+        "ABC Score": {
+          "purpose": "Guide decision to initiate massive transfusion protocol in trauma.",
+          "input_variables": {
+            "Penetrating mechanism": "Present (1) / Absent (0)",
+            "Positive FAST exam": "Present (1) / Absent (0)",
+            "Arrival SBP ≤ 90 mmHg": "Present (1) / Absent (0)",
+            "Arrival heart rate ≥ 120 bpm": "Present (1) / Absent (0)"
+          },
+          "output": {
+            "type": "Score (0-4)",
+            "interpretation": "0-1: Massive transfusion less likely. 2-4: Massive transfusion more likely."
+          }
+        },
+        "NEXUS Chest CT": {
+          "purpose": "Determine need for chest imaging after blunt trauma.",
+          "input_variables": {
+            "Chest tenderness": "Present / Absent",
+            "Thoracic trauma": "Present / Absent",
+            "Chest wall deformity": "Present / Absent",
+            "GCS < 15": "Present / Absent",
+            "Intoxication": "Present / Absent",
+            "Distracting painful injury": "Present / Absent"
+          },
+          "output": {
+            "type": "Rule",
+            "interpretation": "Do not obtain chest imaging if ALL criteria are absent. If any are present, chest imaging is indicated."
+          }
+        }
+    },
+    "Infectious Disease": {
+        "SIRS Criteria": {
+          "purpose": "Identify systemic inflammatory response syndrome (SIRS), which can indicate presence of infection.",
+          "input_variables": {
+            "Temperature": "> 38°C (100.4°F) or < 36°C (96.8°F) (1 point if met)",
+            "Heart rate": "> 90 beats/min (1 point if met)",
+            "Respiratory rate": "> 20 breaths/min or PaCO2 < 32 mmHg (1 point if met)",
+            "WBC": "> 12,000 cells/μL or < 4,000 cells/μL or > 10% immature bands (1 point if met)"
+          },
+          "output": {
+            "type": "Criteria",
+            "interpretation": "Meeting 2 or more SIRS criteria is considered positive for SIRS."
+          }
+        },
+        "qSOFA Score": {
+          "purpose": "Assess risk of poor outcomes from sepsis outside the ICU setting.",
+          "input_variables": {
+            "Respiratory rate": "≥ 22 breaths/min (1 point if met)",
+            "Altered mentation": "Glasgow Coma Scale < 15 (1 point if met)",
+            "Systolic blood pressure": "≤ 100 mmHg (1 point if met)"
+          },
+          "output": {
+            "type": "Score (0-3)",
+            "interpretation": "A score ≥ 2 indicates higher risk of poor outcome."
+          }
+        },
+        "Centor Criteria": {
+          "purpose": "Estimate the risk of group A streptococcal pharyngitis to guide need for testing/treatment.",
+          "input_variables": {
+            "Tonsillar exudates": "Present (1) / Absent (0)",
+            "Tender anterior cervical adenopathy": "Present (1) / Absent (0)",
+            "Fever": "History or temperature > 38°C (1) / Absent (0)",
+            "Absence of cough": "Present (1) / Absent (0)"
+          },
+          "output": {
+            "type": "Score (0-4)",
+            "interpretation": {
+              "0": "Strep pharyngitis very unlikely, no testing/treatment",
+              "1": "Low risk, no testing/treatment unless other risk factors",
+              "2-3": "Moderate risk, perform rapid strep testing",
+              "4": "High risk, empiric antibiotics or rapid strep testing"
+            }
+          }
+        },
+        "Alvarado Score": {
+          "purpose": "Risk stratify for acute appendicitis to determine need for imaging or surgery.",
+          "input_variables": {
+            "Migration of pain to right lower quadrant": "Present (1) / Absent (0)",
+            "Anorexia": "Present (1) / Absent (0)",
+            "Nausea/vomiting": "Present (1) / Absent (0)",
+            "Tenderness in right lower quadrant": "Present (2) / Absent (0)",
+            "Rebound tenderness": "Present (1) / Absent (0)",
+            "Fever": "Present (1) / Absent (0)"
+          },
+          "output": {
+            "type": "Score (0-10)",
+            "interpretation": {
+              "0-4": "Appendicitis unlikely, discharge",
+              "5-6": "Computed tomography recommended",
+              "7-10": "Probable appendicitis, surgical consultation"
+            }
+          }
+        },
+        "MASCC Score": {
+          "purpose": "Identify low-risk febrile neutropenia patients who may be eligible for outpatient management.",
+          "input_variables": {
+            "Burden of illness": "No/mild symptoms (5) / Moderate symptoms (3) / Severe symptoms (0)",
+            "Hypotension": "Absent (5) / Present (0)",
+            "Chronic obstructive pulmonary disease": "Absent (4) / Present (0)",
+            "Malignancy type and fungal infection": "Solid tumor or no fungal infection (4) / Hematologic malignancy with fungal infection (0)",
+            "Dehydration": "No IV fluids required (3) / IV fluids required (0)",
+            "Outpatient status": "Yes (3) / No (0)",
+            "Age": "< 60 years (2) / ≥ 60 years (0)"
+          },
+          "output": {
+            "type": "Score (0-26)",
+            "interpretation": "A total score ≥ 21 indicates low risk for complications and potential for outpatient management."
+          }
+        },
+        "LRINEC Score": {
+            "purpose": "Assess the risk of necrotizing fasciitis in patients with a soft tissue infection.",
+            "input_variables": {
+                "C-reactive protein (mg/L)": "≤150 (0 points) / 150 (4 points)",
+                "Total white blood cell count (per mm3)": "<15,000 (0 points) / 15,000 - 25,000 (1 point) / 25,000 (2 points)",
+                "Hemoglobin (g/dL)": "≥13.5 (0 points) / 11 - 13.5 (1 point) / <11 (2 points)",
+                "Sodium (mmol/L)": "≥135 (0 points) / <135 (2 points)",
+                "Creatinine (mg/dL)": "≤1.6 (0 points) / 1.6 (2 points)",
+                "Glucose (mg/dL)": "≤180 (0 points) / 180 (1 point)"
+            },
+            "calculation": "Sum points across all categories.",
+            "output": {
+                "type": "Score",
+                "interpretation": "Score ≥ 6 indicates risk of necrotizing fasciitis. Score ≥ 8 indicates high risk."
+            }
+        },
+        "Kocher Criteria": {
+            "purpose": "Distinguish septic arthritis from transient synovitis of the hip in children.",
+            "input_variables": {
+                "Non-weight bearing ability": "Present / Absent",
+                "Fever": "> 38.5°C (101.3°F) (Present) / ≤ 38.5°C (101.3°F) (Absent)",
+                "ESR": "> 40 mm/hr (Present) / ≤ 40 mm/hr (Absent)",
+                "WBC": "> 12,000 cells/mm3 (Present) / ≤ 12,000 cells/mm3 (Absent)"
+            },
+            "output": {
+                "type": "Criteria",
+                "interpretation": "If ALL 4 criteria are negative, the child is at very low risk of septic arthritis in the appropriate clinical setting. If ANY criteria are positive, septic arthritis should be considered."
+            }
+        }
+    },
+    "Neurology": {
+        "Canadian CT Head Rule": {
+          "purpose": "Determine the need for CT imaging in adults with minor head injury.",
+          "input_variables": {
+            "High-Risk Factors (CT required if ANY present)": {
+              "Age ≥65 years": "Present / Absent",
+              "Amnesia before impact ≥30 minutes": "Present / Absent",
+              "Dangerous mechanism of injury": "Pedestrian struck, occupant ejected, fall from elevation (Present) / Absent",
+              "Vomiting ≥2 episodes": "Present / Absent",
+              "Signs of open or depressed skull fracture": "Present / Absent",
+              "GCS score < 15 at 2 hours after injury": "Present / Absent"
+            },
+            "Medium-Risk Factors (CT required if ANY present UNLESS neck rotation possible)": {
+              "Amnesia after impact ≥30 minutes": "Present / Absent",
+              "Headache": "Present / Absent"
+            },
+            "Neck Rotation (only assess if medium-risk factors present)": {
+              "Active rotation 45° left and right": "Possible (no CT) / Not Possible (CT required)"
+            }
+          },
+          "output": {
+            "type": "Rule",
+            "interpretation": "CT is required if any high-risk factors are present. If no high-risk factors but any medium-risk factors, CT is also required unless the patient can actively rotate their neck 45° left and right."
+          }
+        },
+        "PECARN Pediatric Head Injury/Trauma Algorithm": {
+          "purpose": "Guide management and determine need for CT in children with minor head trauma.",
+          "input_variables": {
+            "Age": "< 2 years / ≥ 2 years",
+            "Criteria for CT (age-specific)": {
+              "<2 years": {
+                "High-Risk (CT recommended if ANY present)": {
+                  "GCS ≤ 14": "Present / Absent",
+                  "Palpable skull fracture": "Present / Absent",
+                  "Signs of altered mental status": "Present / Absent"
+                },
+                "Medium-Risk (CT recommended if ANY present and no high-risk)": {
+                  "Occipital/parietal/temporal hematoma": "Present / Absent",
+                  "Loss of consciousness ≥ 5 seconds": "Present / Absent",
+                  "Severe mechanism of injury": "Present / Absent",
+                  "Not acting normally per parent": "Present / Absent"
+                }
+              },
+              "≥2 years": {
+                "High-Risk (CT recommended if ANY present)": {
+                  "GCS ≤ 14": "Present / Absent",
+                  "Signs of basilar skull fracture": "Present / Absent",
+                  "Signs of altered mental status": "Present / Absent"
+                },
+                "Medium-Risk (CT recommended if ANY present and no high-risk)": {
+                  "Loss of consciousness": "Present / Absent",
+                  "Vomiting": "Present / Absent",
+                  "Severe headache": "Present / Absent",
+                  "Severe mechanism of injury": "Present / Absent"
+                }
+              }
+            }
+          },
+          "output": {
+            "type": "Algorithm",
+            "interpretation": "Follow age-specific criteria. CT recommended if any high-risk criteria met. If no high-risk, consider CT if any medium-risk criteria met."
+          }
+        },
+        "NIH Stroke Scale (NIHSS)": {
+          "purpose": "Quantify stroke severity based on a 42-point neurological exam.",
+          "input_variables": {
+            "Level of consciousness": "Score (0-3)",
+            "Horizontal eye movements": "Score (0-2)",
+            "Visual fields": "Score (0-3)",
+            "Facial palsy": "Score (0-3)",
+            "Motor arm (each side)": "Score (0-4)",
+            "Motor leg (each side)": "Score (0-4)",
+            "Limb ataxia (each side)": "Score (0-2)",
+            "Sensory": "Score (0-2)",
+            "Best language": "Score (0-3)",
+            "Dysarthria": "Score (0-2)",
+            "Extinction/inattention": "Score (0-2)"
+          },
+          "calculation": "Sum points across all categories (Total score: 0-42)",
+          "output": {
+            "type": "Score (0-42)",
+            "interpretation": {
+              "0": "No stroke",
+              "1-4": "Minor stroke",
+              "5-15": "Moderate stroke",
+              "16-20": "Moderate/severe stroke",
+              "21-42": "Severe stroke"
+            }
+          }
+        },
+        "Hunt and Hess Scale": {
+          "purpose": "Evaluate severity of subarachnoid hemorrhage from ruptured aneurysm.",
+          "input_variables": "Clinical presentation based on scale description (see below)",
+          "output": {
+            "type": "Grade (I-V)",
+            "interpretation": {
+              "I": "Asymptomatic or mild headache, no neurologic deficits except cranial nerve palsy",
+              "II": "Moderate to severe headache, nuchal rigidity, no neurologic deficits except cranial nerve palsy",
+              "III": "Mild focal neurologic deficit, lethargy or confusion",
+              "IV": "Stupor, moderate-severe hemiparesis, possibly early decerebrate posturing",
+              "V": "Deep coma, decerebrate posturing"
+            }
+          }
+        }
+    },
+    "Gastrointestinal": {
+        "Glasgow-Blatchford Bleeding Score (GBS)": {
+          "purpose": "Determine the need for intervention (endoscopy, transfusion, surgery) in patients with upper gastrointestinal bleeding (UGIB).",
+          "input_variables": {
+            "Blood urea (mmol/L)": {
+              "6.5-7.9": "2 points",
+              "8.0-9.9": "3 points",
+              "10.0-25.0": "4 points",
+              ">=25.0": "6 points"
+            },
+            "Hemoglobin for men (g/L)": {
+              "120-129": "1 point",
+              "100-119": "3 points",
+              "<100": "6 points"
+            },
+            "Hemoglobin for women (g/L)": {
+              "100-119": "1 point",
+              "<100": "6 points"
+            },
+            "Systolic BP (mmHg)": {
+              "100-109": "1 point",
+              "90-99": "2 points",
+              "<90": "3 points"
+            },
+            "Pulse ≥100/min": "1 point",
+            "Melena": "1 point",
+            "Syncope": "2 points",
+            "Hepatic disease": "2 points",
+            "Cardiac failure": "2 points"
+          },
+          "calculation": "Sum points across all categories.",
+          "output": {
+            "type": "Score (0-12+)",
+            "interpretation": "Score of 0 identifies low-risk patients who may not require intervention. Scores ≥6 are associated with >50% risk of needing an intervention."
+          }
+        },
+        "Rockall Score": {
+          "purpose": "Assess risk of mortality and rebleeding after an acute upper gastrointestinal bleed.",
+          "input_variables": {
+            "Clinical Rockall score (pre-endoscopy)": {
+              "Age": "<60 (0 points) / 60-79 (1 point) / ≥80 (2 points)",
+              "Shock (SBP <100, HR >100)": "Present (2 points) / Absent (0 points)",
+              "Comorbidities (IHD, CHF, etc.)": "Present (2 points) / Absent (0 points)"
+            },
+            "Endoscopic findings": {
+              "No lesion": "0 points",
+              "Mallory-Weiss tear": "1 point",
+              "Other diagnosis": "2 points",
+              "Malignancy": "3 points"
+            }
+          },
+          "calculation": "Sum points from clinical and endoscopic findings (Total score: 0-11).",
+          "output": {
+            "type": "Score (0-11)",
+            "interpretation": "Higher scores indicate greater risk of mortality and rebleeding. Score 0-2: Very low risk, may not require endoscopy. Score ≥8: High risk of mortality."
+          }
+        },
+        "Ranson's Criteria": {
+          "purpose": "Evaluate the severity of acute pancreatitis.",
+          "input_variables": {
+            "At admission": {
+              "Age": ">55 years (1 point if met)",
+              "WBC": ">16,000/mm3 (1 point if met)",
+              "Glucose": ">200 mg/dL (1 point if met)",
+              "LDH": ">350 IU/L (1 point if met)",
+              "AST": ">250 IU/L (1 point if met)"
+            },
+            "At 48 hours": {
+              "Hematocrit fall": ">10% (1 point if met)",
+              "BUN rise": ">5 mg/dL (1 point if met)",
+              "Calcium": "<8 mg/dL (1 point if met)",
+              "PaO2": "<60 mmHg (1 point if met)",
+              "Base deficit": ">4 mEq/L (1 point if met)",
+              "Fluid sequestration": ">6L (1 point if met)"
+            }
+          },
+          "calculation": "Sum points from parameters at admission and 48 hours (Total score: 0-11).",
+          "output": {
+            "type": "Score (0-11)",
+            "interpretation": {
+              "0-2": "Mild pancreatitis",
+              "3-4": "15% mortality",
+              "5-6": "40% mortality",
+              "7-11": "~100% mortality"
+            }
+          }
+        }
+    },
+    "Toxicology": {
+        "Rumack-Matthew Nomogram": {
+          "purpose": "Assess the risk of hepatotoxicity and need for N-acetylcysteine (NAC) treatment after a single acute acetaminophen overdose.",
+          "input_variables": {
+            "Serum acetaminophen concentration": "μg/mL or mg/L",
+            "Time since ingestion": "Hours"
+          },
+          "instructions": "1. Obtain the serum acetaminophen concentration and the time since ingestion.\n2. Plot the concentration on the y-axis and the time on the x-axis of the nomogram.\n3. Compare the plotted point to the 'treatment line' on the nomogram.",
+          "output": {
+            "type": "Graphical interpretation",
+            "interpretation": "If the point is above the 150 μg/mL treatment line, this indicates potential hepatotoxicity and NAC treatment is recommended. If the point is below the line, hepatotoxicity is unlikely and NAC is typically not required. A second 'high-risk' line at 300 μg/mL at 4 hours denotes increased risk of liver injury if above this line."
+          },
+          "notes": "The nomogram is most accurate when using levels drawn 4-24 hours after ingestion. Earlier levels may underestimate the peak. This nomogram should not be used for repeated supratherapeutic ingestions."
+        },
+        "Poisoning Severity Score (PSS)": {
+          "purpose": "Provide a standardized method to grade the severity of acute poisonings based on clinical signs and symptoms.",
+          "input_variables": "Clinical signs and symptoms across all organ systems",
+          "instructions": "1. Evaluate all symptoms across organ systems (GI, respiratory, neurological, etc.)\n2. Grade each organ system based on the most severe symptoms observed:\n    - Grade 1 for mild symptoms (e.g., vomiting, diarrhea, cough)\n    - Grade 2 for pronounced symptoms (e.g., pronounced vomiting, bronchospasm, confusion)\n    - Grade 3 for severe symptoms (e.g., respiratory failure, seizures, arrhythmias)\n3. The overall PSS grade is determined by the highest grade in any one organ system.\n4. Grade 4 is assigned if the poisoning directly caused death.",
+          "output": {
+            "type": "Grade (0-4)",
+            "interpretation": {
+              "0": "No symptoms",
+              "1": "Mild, transient, spontaneously resolving symptoms",
+              "2": "Pronounced or prolonged symptoms",
+              "3": "Severe or life-threatening symptoms",
+              "4": "Death"
+            }
+          },
+          "notes": "The PSS is applied retrospectively once the clinical course is complete. It allows standardized grading of severity to compare outcomes across different poisoning types and exposures."
+        }
+    }
+}

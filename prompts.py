@@ -94,6 +94,8 @@ consult_disposition = "Hello, can you help with the disposition plan?"
 
 integrate_consultation = "Please integrate the specialist's recommendations into this case"
 
+apply_decision_tool = "apply any appropriate clinical decision tool for this case"
+
 create_json_prompt = '''I am an emergency medicine doctor. I will provide you with a transcript of a conversation with another language model about a patient case. The information in the transcript will become more accurate as the conversation progresses. When analyzing the case, prioritize the information that appears later in the transcript. If there are any conflicting details between earlier and later parts of the conversation, rely on the most recent information provided, as it is likely to be the most accurate and up-to-date. Disregard any contradictory information from earlier in the transcript.
 
 Create a JSON object with the following structure: 

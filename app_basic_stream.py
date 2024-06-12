@@ -95,10 +95,10 @@ specialist_id_caption = {
     "caption": "EM - Beta testing",
     "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/33/carrot-148456_960_720.png"
   },
-  "Mindfulness Teacher": {
-    "assistant_id": "asst_bnFm27eqedaYK9Ulekh8Yjd9",
+  "Clinical Decision Tools": {
+    "assistant_id": "asst_Pau6T5mMH3cZBnEePso5kFuJ",
     "caption": "Goes Deep",
-    "avatar": "https://cdn.pixabay.com/photo/2013/07/12/19/30/enlightenment-154910_1280.png"
+    "avatar": "https://cdn.pixabay.com/photo/2019/07/02/05/54/tool-4311573_1280.png"
   }
 }
 
@@ -270,18 +270,19 @@ def display_functions_tab():
         button7 = st.button("📞Consult specialist🧑‍⚕️")
     with col2:
         button6 = st.button('➡️➡️I did that, now what?')
+        button8 = st.button('🛠️Apply Clinical Decision Tools')
 
     st.divider()
     col1, col2, col3 = st.columns([1,3,1])
     with col2:
         button9 = st.button('NEW THREAD', type="primary")
-        button10 = st.button('TEST')
+        #button10 = st.button('TEST')
 
     # Process button actions
-    process_buttons(button1, button2, button3, button4, button5, button6, button7, button9, button10, button11, button12, button13)
+    process_buttons(button1, button2, button3, button4, button5, button6, button7, button8, button9, button11, button12, button13)
 
 # Process the buttons
-def process_buttons(button1, button2, button3, button4, button5, button6, button7, button9, button10, button11, button12, button13):
+def process_buttons(button1, button2, button3, button4, button5, button6, button7, button8, button9, button11, button12, button13):
     if button1:
         st.session_state["user_question"] = disposition_analysis
     if button2:
@@ -304,18 +305,12 @@ def process_buttons(button1, button2, button3, button4, button5, button6, button
         button_input(specialist, prompt)
     if button9:
         new_thread()
-    if button10:
-        
-        output = io.StringIO()
+    if button8:
+        specialist = 'Clinical Decision Tools'
+        prompt = apply_decision_tool
+        st.session_state["specialist"] = specialist
+        button_input(specialist, prompt)
 
-        for message in st.session_state.chat_history:
-            if isinstance(message, HumanMessage):
-                print(message.content, file=output)
-            else:
-                print(message.content, file=output)
-
-        output_string = output.getvalue()
-        print(f'DEBUG ________________: {output_string}')
     if button11:
         specialist = 'Note Writer'
         prompt = create_hpi
@@ -416,33 +411,25 @@ def process_other_queries():
 
         # set specialist_avatar for chat history
         specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
-        #print(f'DEBUG: PROCESSS OTHER QUERRIES --- ST-SESSION SPECIALIST : {st.session_state.specialist}')
-        #print(f'DEBUG: SPECIALIST AVATAR: {specialist_avatar}')
         
         # set user_question to sidebar user_question
         user_question = st.session_state.user_question_sidebar
         with st.chat_message("user", avatar=user_avatar_url):
             st.markdown(user_question)
 
-
-
         # add querry to the chat history as human user
         st.session_state.chat_history.append(HumanMessage(user_question, avatar=user_avatar_url))
-        #print(f'DEBUG: HumanMessage: {HumanMessage(user_question, avatar=user_avatar_url)}')
 
         #get ai response
         with st.chat_message("AI", avatar=specialist_avatar):
             assistant_response = get_response(user_question=user_question)
             #st.session_state.assistant_response = assistant_response
-        
-        #print(f'DEBUG: assistnat_response: {assistant_response}')
+
         #append ai response to chat_history
         st.session_state.chat_history.append(AIMessage(assistant_response, avatar=specialist_avatar))
-        #print(f'DEBUG: AIMessage: {AIMessage(assistant_response, avatar=specialist_avatar)}')
+
+        # session_state variable to make sure user_question is not repeated.
         st.session_state.old_user_question_sidebar = user_question
-
-
-        
 
     elif st.session_state["legal_question"]:
         handle_user_legal_input(st.session_state["legal_question"])
@@ -490,24 +477,7 @@ def parse_json(chat_history):
         st.session_state.critical_actions = data['patient']['critical_actions']
     except:
         return
-    # Call the extract_json function and capture its return values
-    #differential_diagnosis, critical_actions, modified_text = extract_json(assistant_response)
 
-    # Check if the extracted values indicate no JSON content
-    #if not differential_diagnosis and not critical_actions:
-        #print("No JSON content found in assistant response.")
-        #st.session_state.assistant_response = modified_text
-        #return
-    
-    # Add debugging print statements
-    #print("Debug: assistant response: ", assistant_response)
-    #print("Debug: differential_diagnosis:", differential_diagnosis)
-    #print("Debug: critical_actions:", critical_actions)
-    #print("Debug: modified_text:", modified_text)
-    
-    # Assign the return values to the session state
-    
-    #st.session_state.assistant_response = modified_text
 
 #@st.cache_data
 def write_note(note_input):    
