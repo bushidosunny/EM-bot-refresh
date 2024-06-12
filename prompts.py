@@ -19,12 +19,11 @@ Please generate the emergency medicine medical note based on the patient case we
     Past Social History:
     Medications:
     Allergies:    
-    Physical Examination:
-    [Do not include vitals sign numbers unless explicitly stated, leave triple asterisks (***) if missing]
+    Physical Examination:[Do not include vitals sign numbers unless explicitly stated, leave triple asterisks (***) if missing]
     Laboratory Results:
     Imaging:
     ASSESSMENT: [Provide primary cauase of chief complaint with reasoning]
-    DIFFERENTIAL DIAGNOSISs: [provide liklihood with reasoning]
+    DIFFERENTIAL DIAGNOSIS: [provide liklihood with reasoning]
     PLAN:
     DISPOSITION:
     ```"""
