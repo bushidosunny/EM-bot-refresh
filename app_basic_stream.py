@@ -268,7 +268,7 @@ def display_functions_tab():
     col1, col2 = st.columns(2)
     with col1:
         button5 = st.button("➡️Next Step Recommendation")
-        button7 = st.button("📞Consult specialist🧑‍⚕️")
+        #button7 = st.button("📞Consult specialist🧑‍⚕️")
     with col2:
         button6 = st.button('➡️➡️I did that, now what?')
         button8 = st.button('🛠️Apply Clinical Decision Tools')
@@ -280,14 +280,17 @@ def display_functions_tab():
         #button10 = st.button('TEST')
 
     # Process button actions
-    process_buttons(button1, button2, button3, button4, button5, button6, button7, button8, button9, button11, button12, button13)
+    process_buttons(button1, button2, button3, button4, button5, button6, button8, button9, button11, button12, button13)
 
 # Process the buttons
-def process_buttons(button1, button2, button3, button4, button5, button6, button7, button8, button9, button11, button12, button13):
+def process_buttons(button1, button2, button3, button4, button5, button6, button8, button9, button11, button12, button13):
     if button1:
         st.session_state["user_question"] = disposition_analysis
     if button2:
-        st.session_state["user_question"] = procedure_checklist
+        specialist = 'Emergency Medicine'
+        prompt = procedure_checklist
+        st.session_state["specialist"] = specialist
+        button_input(specialist, prompt)
     if button3:
         specialist = 'Note Writer'
         prompt = "Write a full medical note on this patient"
@@ -296,22 +299,23 @@ def process_buttons(button1, button2, button3, button4, button5, button6, button
     if button4:
         st.session_state["user_question"] = pt_education + f"\n the patient's instructions needs to be in {st.session_state.patient_language}"
     if button5:
-        st.session_state["user_question"] = "What should i do next here in the emergency department?"
-    if button6:
-        st.session_state["user_question"] = "Ok i did that. Now what?"
-    if button7:
-        specialist = st.session_state.specialist
-        prompt = consult_specialist
+        specialist = 'Emergency Medicine'
+        prompt = "What should i do next here in the emergency department?"
         st.session_state["specialist"] = specialist
         button_input(specialist, prompt)
-    if button9:
-        new_thread()
+    if button6:
+        specialist = 'Emergency Medicine'
+        prompt = "Ok i did that. Now what?"
+        st.session_state["specialist"] = specialist
+        button_input(specialist, prompt)
+    # if button7:
     if button8:
         specialist = 'Clinical Decision Tools'
         prompt = apply_decision_tool
         st.session_state["specialist"] = specialist
         button_input(specialist, prompt)
-
+    if button9:
+        new_thread()
     if button11:
         specialist = 'Note Writer'
         prompt = create_hpi
@@ -391,13 +395,17 @@ def button_input(specialist, prompt):
         print(f'DEBUG: button input - ST-SESSION SPECIALIST : {st.session_state.specialist}')
         specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
         st.session_state.specialist_avatar = specialist_avatar
+        timezone = pytz.timezone("America/Los_Angeles")
+        current_datetime = datetime.now(timezone).strftime("%H:%M:%S")
+        user_question = current_datetime + f"""    \n{user_question}. 
+        \n{st.session_state.completed_tasks_str}
+        """
         st.session_state.user_question_sidebar = user_question
         print(f'DEBUG user_question: {user_question}')
-        #st.session_state.chat_history.append(HumanMessage(user_question, avatar=user_avatar_url))
+        st.session_state.completed_tasks_str = ''
+        st.session_state.critical_actions  = []
+        #refresh page
         st.rerun()
-        #st.session_state.assistant_response = get_response(user_question)
-
-        #st.session_state.chat_history.append(AIMessage(st.session_state.assistant_response, avatar=specialist_avatar))
     st.session_state.button_clicked = False
 
 # Updating the patient language
@@ -431,6 +439,10 @@ def process_other_queries():
 
         # session_state variable to make sure user_question is not repeated.
         st.session_state.old_user_question_sidebar = user_question
+
+        chat_history = chat_history_string()
+        print(f'DEBUG CHAT HISTORY: {chat_history}')
+        parse_json(chat_history) 
 
     elif st.session_state["legal_question"]:
         handle_user_legal_input(st.session_state["legal_question"])
