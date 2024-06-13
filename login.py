@@ -136,3 +136,4 @@ def update_user_config_file():
 if __name__ == '__main__':
     main()
 
+    update_user_config_file()
