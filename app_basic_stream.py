@@ -109,6 +109,9 @@ specialist_id_caption = {
 def initialize_session_state():
     state_keys_defaults = {
         "authentication_status": None,
+        "logout": None,
+        "name": "",
+        "username": "",
         "chat_history": [],
         "user_question": "",
         "legal_question": "",
@@ -614,24 +617,25 @@ def process_user_question(user_question, specialist):
 
 def main():
     initialize_session_state()
+    display_header()
+    
     name, authentication_status, username = authenticator.login('main')
-    if authentication_status:
+    print(f'DEBUG AUTH STATUS: {authentication_status}')
+    
+    if authentication_status == True:
         # User is authenticated, show the app content# Create a thread where the conversation will happen and keep Streamlit from initiating a new session state
         if "thread_id" not in st.session_state:
             thread = client.beta.threads.create()
             st.session_state.thread_id = thread.id
-        update_user_config_file()
-        
-        display_header()
-
-        tab1, tab2= st.tabs(["History", "Notes"])
-        with tab1:
-            display_chat_history() 
-            handle_user_input_container()   
-            process_other_queries() 
+        #update_user_config_file()
+    
+        display_chat_history() 
+        handle_user_input_container()   
+        process_other_queries() 
 
         display_sidebar()
-
+    else:
+        authenticate_user()
   
 
 if __name__ == '__main__':
