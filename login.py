@@ -20,6 +20,7 @@ authenticator = stauth.Authenticate(
 
 def main():
     name, authentication_status, username = authenticator.login('main')
+    register_new_user()
     #button1 = st.button('Register new user')
     #if button1:
         #register_new_user()

@@ -108,6 +108,7 @@ specialist_id_caption = {
 # Initialize session_state variables
 def initialize_session_state():
     state_keys_defaults = {
+        "authentication_status": None,
         "chat_history": [],
         "user_question": "",
         "legal_question": "",
@@ -618,7 +619,7 @@ def main():
         if "thread_id" not in st.session_state:
             thread = client.beta.threads.create()
             st.session_state.thread_id = thread.id
-
+        update_user_config_file()
         initialize_session_state()
         display_header()
 
