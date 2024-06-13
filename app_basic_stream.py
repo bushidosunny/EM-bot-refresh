@@ -1,5 +1,6 @@
 import streamlit as st
 from streamlit_float import float_css_helper
+
 from openai import OpenAI
 from langchain_core.messages import HumanMessage, AIMessage
 import os
@@ -10,6 +11,7 @@ import json
 from extract_json import extract_json, create_json
 from datetime import datetime
 import pytz
+from login import *
 
 # Load variables
 load_dotenv()
@@ -224,7 +226,10 @@ def display_sidebar():
             
         with tab4:
             update_patient_language()
-
+        container = st.container()
+        container.float(float_css_helper(bottom="10px"))
+        with container:
+            authenticate_user()
 def consult_specialist_and_update_ddx(button_name, prompt):
     # Consult the specific specialist
     specialist = st.session_state.specialist
@@ -607,21 +612,23 @@ def process_user_question(user_question, specialist):
 
 
 def main():
-    # Create a thread where the conversation will happen and keep Streamlit from initiating a new session state
-    if "thread_id" not in st.session_state:
-        thread = client.beta.threads.create()
-        st.session_state.thread_id = thread.id
+    name, authentication_status, username = authenticator.login('main')
+    if authentication_status:
+        # User is authenticated, show the app content# Create a thread where the conversation will happen and keep Streamlit from initiating a new session state
+        if "thread_id" not in st.session_state:
+            thread = client.beta.threads.create()
+            st.session_state.thread_id = thread.id
 
-    initialize_session_state()
-    display_header()
+        initialize_session_state()
+        display_header()
 
-    tab1, tab2= st.tabs(["History", "Notes"])
-    with tab1:
-        display_chat_history() 
-        handle_user_input_container()   
-        process_other_queries() 
+        tab1, tab2= st.tabs(["History", "Notes"])
+        with tab1:
+            display_chat_history() 
+            handle_user_input_container()   
+            process_other_queries() 
 
-    display_sidebar()
+        display_sidebar()
 
   
 

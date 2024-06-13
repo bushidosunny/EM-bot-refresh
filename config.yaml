@@ -1,0 +1,39 @@
+cookie:
+  expiry_days: 30
+  key: some_signature_key
+  name: some_cookie_name
+credentials:
+  usernames:
+    guest:
+      email: null
+      failed_login_attempts: 0
+      logged_in: false
+      name: guest
+      password: $2b$12$Tir/PbHVmmnt5kgNxgOwMuxNIb2fv2pJ.q71TW8ekvbugCqkye4yu
+    sumham:
+      email: snd@gmail.com
+      logged_in: false
+      name: Sum ham
+      password: $2b$12$smjdE8GPeQXqsZTxGPL/r.gjT.elMreBfvEtRRuk0Z50IWRCcq60i
+    sunny:
+      email: bushidosunny@gmail.com
+      failed_login_attempts: 0
+      logged_in: false
+      name: Sunny Harris
+      password: $2b$12$sPIjCHMCW/d6ovsQpQm7mOpeRR4jjwVK4AeThq4UwOe5WlhECyElq
+    tester1:
+      email: tester1
+      failed_login_attempts: 0
+      logged_in: true
+      name: tester 1
+      password: $2b$12$iWlVOac3uujRvTrXDi6wructXftKmo/GyQd6SMu5FmyX306kH.yFO
+    tester2:
+      email: tester2
+      failed_login_attempts: 0
+      logged_in: false
+      name: tester 2
+      password: $2b$12$uNaTgvGPG9rMbzOJHYaPQePw0DUfp1qHBrSq6l4O304qani6pKFpm
+pre-authorized:
+  emails:
+  - corcortes@gmail.com
+  - tester@gmail.com
