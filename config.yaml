@@ -9,7 +9,7 @@ credentials:
       failed_login_attempts: 0
       logged_in: false
       name: guest
-      password: $2b$12$Tir/PbHVmmnt5kgNxgOwMuxNIb2fv2pJ.q71TW8ekvbugCqkye4yu
+      password: savelives1
     sumham:
       email: snd@gmail.com
       logged_in: false
@@ -36,4 +36,3 @@ credentials:
 pre-authorized:
   emails:
   - corcortes@gmail.com
-  - tester@gmail.com

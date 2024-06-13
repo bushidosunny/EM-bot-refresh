@@ -17,9 +17,6 @@ authenticator = stauth.Authenticate(
 )
 
 
-def handle_click():
-    st.write("Hyperlink clicked!")
-    register_new_user()
 
 def main():
     name, authentication_status, username = authenticator.login('main')
@@ -66,7 +63,8 @@ def authenticate_user():
             st.write(f'Welcome *{st.session_state["name"]}*')
         with col2:
             authenticator.logout()
-        
+            #if authenticator.logout():
+                #update_user_config_file()
     elif st.session_state["authentication_status"] is False:
         st.error('Username/password is incorrect')
     elif st.session_state["authentication_status"] is None:
