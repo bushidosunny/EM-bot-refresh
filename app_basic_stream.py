@@ -613,6 +613,7 @@ def process_user_question(user_question, specialist):
 
 
 def main():
+    initialize_session_state()
     name, authentication_status, username = authenticator.login('main')
     if authentication_status:
         # User is authenticated, show the app content# Create a thread where the conversation will happen and keep Streamlit from initiating a new session state
@@ -620,7 +621,7 @@ def main():
             thread = client.beta.threads.create()
             st.session_state.thread_id = thread.id
         update_user_config_file()
-        initialize_session_state()
+        
         display_header()
 
         tab1, tab2= st.tabs(["History", "Notes"])

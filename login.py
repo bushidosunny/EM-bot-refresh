@@ -25,6 +25,7 @@ def main():
     #if button1:
         #register_new_user()
     if authentication_status:
+        update_user_config_file()
         # User is authenticated, show the app content
         st.header("EMA - Emergency Medicine Assistant 🤖🩺")
         
