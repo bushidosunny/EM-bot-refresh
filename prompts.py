@@ -63,12 +63,14 @@ disposition_analysis =  f"Analyze the patient's current condition. Assess for sa
 
 procedure_checklist = f"Create a procedure checklist of the procedure that should be done immidately before any other procedure for this patient. 1. title the name of the procedure. 2. provide reasoning why this procedure should be done before other possible procedures. 3. Provide Clear procedural instructions. 4. Possible patient complications to look out for. 5. highlight education points for the patient. Use the following format ```1. Procedure name. 2. Reasoning. 3. Supplies   4. Precedure Instructions  5. Possible Complications 6. Patient Education of the Procedure"
 
-summarize_note = """Carefully review the provided clinical note, paying special attention to the patient's chief complaint, relevant history, key findings from the physical exam and diagnostic tests, the primary diagnosis, and the current treatment plan.
-    Concisely summarize the most important information needed to quickly understand the patient's situation. Answer in bullet points, use as little bullet points necessary to understand the situation enough, each bullet point does not have to be a complete sentance, like 'follow up with GI' or 'outpatient MRI'  are perfect bullet point examples , 
+summarize_note = """Carefully review the provided clinical note or notes pasted into one long string of text provided. 
+  Pay special attention to the patient's chief complaint, relevant history, key findings from the physical exam and diagnostic tests, the primary diagnosis, and the current treatment plan.
+    Concisely summarize the most important information needed to quickly understand the patient's situation. 
+    Answer in bullet points, use as little bullet points necessary to understand the situation enough, each bullet point does not have to be a complete sentance, like 'follow up with GI' or 'outpatient MRI'  are perfect bullet point examples , 
     including:
     -The main reason they sought care (chief complaint)
     -Key aspects of their relevant medical history
-    -Critical findings from the exam and tests
+    -Critical findings from recent exams and tests
     -The primary diagnosis or differential
     -The major components of the current treatment plan
     After the summary, analyze the available information and treatment plan. Identify any potential gaps in the workup, additional tests or referrals to consider, aspects of the plan that may need adjustment, and any other opportunities to optimize the patient's care.
