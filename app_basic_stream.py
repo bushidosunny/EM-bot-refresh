@@ -98,7 +98,7 @@ specialist_id_caption = {
     "caption": "Medical Note Summarizer",
     "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png"
   },
-  "Emergency Medicine beta": {
+  "Bayesian Reasoner": {
     "assistant_id": "asst_GeAw2bIhrATHejogynMmP2VB",
     "caption": "EM - Beta testing",
     "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/33/carrot-148456_960_720.png"
@@ -283,7 +283,7 @@ def display_functions_tab():
     col1, col2 = st.columns(2)
     with col1:
         button5 = st.button("➡️Next Step Recommendation")
-        #button7 = st.button("📞Consult specialist🧑‍⚕️")
+        button7 = st.button("DDX w Bayesian Reasoning")
     with col2:
         button6 = st.button('➡️➡️I did that, now what?')
         button8 = st.button('🛠️Apply Clinical Decision Tools')
@@ -295,10 +295,10 @@ def display_functions_tab():
         #button10 = st.button('TEST')
 
     # Process button actions
-    process_buttons(button1, button2, button3, button4, button5, button6, button8, button9, button11, button12, button13, button14)
+    process_buttons(button1, button2, button3, button4, button5, button6, button7, button8, button9, button11, button12, button13, button14)
 
 # Process the buttons
-def process_buttons(button1, button2, button3, button4, button5, button6, button8, button9, button11, button12, button13, button14):
+def process_buttons(button1, button2, button3, button4, button5, button6, button7, button8, button9, button11, button12, button13, button14):
     if button1:
         st.session_state["user_question"] = disposition_analysis
     if button2:
@@ -323,7 +323,11 @@ def process_buttons(button1, button2, button3, button4, button5, button6, button
         prompt = "Ok i did that. Now what?"
         st.session_state["specialist"] = specialist
         button_input(specialist, prompt)
-    # if button7:
+    if button7:
+        specialist = 'Bayesian Reasoner'
+        prompt = apply_bayesian_reasoning
+        st.session_state["specialist"] = specialist
+        button_input(specialist, prompt)
     if button8:
         specialist = 'Clinical Decision Tools'
         prompt = apply_decision_tool
