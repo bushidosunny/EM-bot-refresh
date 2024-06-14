@@ -305,7 +305,10 @@ def display_functions_tab():
 # Process the buttons
 def process_buttons(button1, button2, button3, button4, button5, button6, button7, button8, button9, button11, button12, button13, button14):
     if button1:
-        st.session_state["user_question"] = disposition_analysis
+        specialist = 'Emergency Medicine'
+        prompt = disposition_analysis
+        st.session_state["specialist"] = specialist
+        button_input(specialist, prompt)
     if button2:
         specialist = 'Emergency Medicine'
         prompt = procedure_checklist
