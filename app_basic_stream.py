@@ -98,6 +98,11 @@ specialist_id_caption = {
     "caption": "Medical Note Summarizer",
     "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png"
   },
+  "Patient Educator": {
+    "assistant_id": "asst_twf42nzGoYLtrHAZeENLcI5d",
+    "caption": "Pt education Note Writer",
+    "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png"
+  },
   "Bayesian Reasoner": {
     "assistant_id": "asst_GeAw2bIhrATHejogynMmP2VB",
     "caption": "EM - Beta testing",
@@ -312,7 +317,11 @@ def process_buttons(button1, button2, button3, button4, button5, button6, button
         st.session_state["specialist"] = specialist
         button_input(specialist, prompt)
     if button4:
-        st.session_state["user_question"] = pt_education + f"\n the patient's instructions needs to be in {st.session_state.patient_language}"
+        specialist = 'Patient Educator'
+        prompt = f"Write a patient education note for this patient in {st.session_state.patient_language}"
+        st.session_state["specialist"] = specialist
+        button_input(specialist, prompt)
+        
     if button5:
         specialist = 'Emergency Medicine'
         prompt = "What should i do next here in the emergency department?"
