@@ -92,8 +92,18 @@ specialist_id_caption = {
     "assistant_id": "asst_Ua6cmp6dpTc33cSpuZxutGsX",
     "caption": "Medical Note Writer",
     "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png"
+  },  
+  "Note Summarizer": {
+    "assistant_id": "asst_c2lPEtkLRILNyl5K7aJ0R38o",
+    "caption": "Medical Note Summarizer",
+    "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png"
   },
-  "Emergency Medicine beta": {
+  "Patient Educator": {
+    "assistant_id": "asst_twf42nzGoYLtrHAZeENLcI5d",
+    "caption": "Pt education Note Writer",
+    "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png"
+  },
+  "Bayesian Reasoner": {
     "assistant_id": "asst_GeAw2bIhrATHejogynMmP2VB",
     "caption": "EM - Beta testing",
     "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/33/carrot-148456_960_720.png"
@@ -271,14 +281,14 @@ def display_functions_tab():
     with col2:
         button11 = st.button('HPI only')
         button12 = st.button('A&P only')
-        button13 = st.button('PT Plan')
+        button13 = st.button('Physical Therapy Plan')
         
 
     st.subheader('🏃‍♂️Flow')
     col1, col2 = st.columns(2)
     with col1:
         button5 = st.button("➡️Next Step Recommendation")
-        #button7 = st.button("📞Consult specialist🧑‍⚕️")
+        button7 = st.button("DDX w Bayesian Reasoning")
     with col2:
         button6 = st.button('➡️➡️I did that, now what?')
         button8 = st.button('🛠️Apply Clinical Decision Tools')
@@ -290,12 +300,15 @@ def display_functions_tab():
         #button10 = st.button('TEST')
 
     # Process button actions
-    process_buttons(button1, button2, button3, button4, button5, button6, button8, button9, button11, button12, button13, button14)
+    process_buttons(button1, button2, button3, button4, button5, button6, button7, button8, button9, button11, button12, button13, button14)
 
 # Process the buttons
-def process_buttons(button1, button2, button3, button4, button5, button6, button8, button9, button11, button12, button13, button14):
+def process_buttons(button1, button2, button3, button4, button5, button6, button7, button8, button9, button11, button12, button13, button14):
     if button1:
-        st.session_state["user_question"] = disposition_analysis
+        specialist = 'Emergency Medicine'
+        prompt = disposition_analysis
+        st.session_state["specialist"] = specialist
+        button_input(specialist, prompt)
     if button2:
         specialist = 'Emergency Medicine'
         prompt = procedure_checklist
@@ -307,7 +320,11 @@ def process_buttons(button1, button2, button3, button4, button5, button6, button
         st.session_state["specialist"] = specialist
         button_input(specialist, prompt)
     if button4:
-        st.session_state["user_question"] = pt_education + f"\n the patient's instructions needs to be in {st.session_state.patient_language}"
+        specialist = 'Patient Educator'
+        prompt = f"Write a patient education note for this patient in {st.session_state.patient_language}"
+        st.session_state["specialist"] = specialist
+        button_input(specialist, prompt)
+        
     if button5:
         specialist = 'Emergency Medicine'
         prompt = "What should i do next here in the emergency department?"
@@ -318,7 +335,11 @@ def process_buttons(button1, button2, button3, button4, button5, button6, button
         prompt = "Ok i did that. Now what?"
         st.session_state["specialist"] = specialist
         button_input(specialist, prompt)
-    # if button7:
+    if button7:
+        specialist = 'Bayesian Reasoner'
+        prompt = apply_bayesian_reasoning
+        st.session_state["specialist"] = specialist
+        button_input(specialist, prompt)
     if button8:
         specialist = 'Clinical Decision Tools'
         prompt = apply_decision_tool
@@ -358,15 +379,22 @@ def display_note_analysis_tab():
 
     col1, col2 = st.columns(2)
     with col1:
-        button7 = st.button("Summarize Note")
+        button7 = st.button("Summarize Note(s)")
     with col2:
         button8 = st.button("Optimize Your Note For Legal Protection")
 
     # Process buttons
     if button7:
-        st.session_state["user_question"] = summarize_note + f' here is the note separated by triple backticks```{note_check}```'
+        specialist = 'Note Summarizer'
+        prompt = f'Summarize this: ```{note_check}```'
+        st.session_state["specialist"] = specialist
+        button_input(specialist, prompt)
     if button8:
-        st.session_state["legal_question"] = optimize_legal_note + f' here is the note separated by triple backticks```{note_check}```'
+        specialist = 'Medical Legal'
+        prompt = optimize_legal_note + f' here is the note separated by triple backticks```{note_check}```'
+        st.session_state["specialist"] = specialist
+        button_input(specialist, prompt)
+
 
 # Choosing the specialty group
 def choose_specialist_radio():

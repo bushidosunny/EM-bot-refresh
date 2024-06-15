@@ -63,12 +63,14 @@ disposition_analysis =  f"Analyze the patient's current condition. Assess for sa
 
 procedure_checklist = f"Create a procedure checklist of the procedure that should be done immidately before any other procedure for this patient. 1. title the name of the procedure. 2. provide reasoning why this procedure should be done before other possible procedures. 3. Provide Clear procedural instructions. 4. Possible patient complications to look out for. 5. highlight education points for the patient. Use the following format ```1. Procedure name. 2. Reasoning. 3. Supplies   4. Precedure Instructions  5. Possible Complications 6. Patient Education of the Procedure"
 
-summarize_note = """Carefully review the provided clinical note, paying special attention to the patient's chief complaint, relevant history, key findings from the physical exam and diagnostic tests, the primary diagnosis, and the current treatment plan.
-    Concisely summarize the most important information needed to quickly understand the patient's situation. Answer in bullet points, use as little bullet points necessary to understand the situation enough, each bullet point does not have to be a complete sentance, like 'follow up with GI' or 'outpatient MRI'  are perfect bullet point examples , 
+summarize_note = """Carefully review the provided clinical note or notes pasted into one long string of text provided. 
+  Pay special attention to the patient's chief complaint, relevant history, key findings from the physical exam and diagnostic tests, the primary diagnosis, and the current treatment plan.
+    Concisely summarize the most important information needed to quickly understand the patient's situation. 
+    Answer in bullet points, use as little bullet points necessary to understand the situation enough, each bullet point does not have to be a complete sentance, like 'follow up with GI' or 'outpatient MRI'  are perfect bullet point examples , 
     including:
     -The main reason they sought care (chief complaint)
     -Key aspects of their relevant medical history
-    -Critical findings from the exam and tests
+    -Critical findings from recent exams and tests
     -The primary diagnosis or differential
     -The major components of the current treatment plan
     After the summary, analyze the available information and treatment plan. Identify any potential gaps in the workup, additional tests or referrals to consider, aspects of the plan that may need adjustment, and any other opportunities to optimize the patient's care.
@@ -76,13 +78,14 @@ summarize_note = """Carefully review the provided clinical note, paying special 
     Ensure your summary and analysis are accurate, logical and grounded in the provided information. Maintain a professional tone and avoid speculation beyond what can be reasonably concluded from the clinical details provided."""    
 
 consult_specialist = "Hello, can you look at this case and give general recommendations on managing this patient?"
-consult_diagnosis = "Hello, can you help me on the differential diagnosis?"
+consult_diagnosis = "Hello, can you help think of any other diagnoses?"
 consult_treatment = "Hello, can you help with the treatment plan?"
 consult_disposition = "Hello, can you help with the disposition plan?"
 
 integrate_consultation = "Please integrate the specialist's recommendations into this case"
 
 apply_decision_tool = "apply any appropriate clinical decision tools for this case"
+apply_bayesian_reasoning = "apply the prevalence to the differential diagnosis of this case"
 
 create_json_prompt = '''I am an emergency medicine doctor. I will provide you with a transcript of a conversation with another language model about a patient case. The information in the transcript will become more accurate as the conversation progresses. When analyzing the case, prioritize the information that appears later in the transcript. If there are any conflicting details between earlier and later parts of the conversation, rely on the most recent information provided, as it is likely to be the most accurate and up-to-date. Disregard any contradictory information from earlier in the transcript.
 
