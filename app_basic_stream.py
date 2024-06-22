@@ -289,6 +289,7 @@ def display_functions_tab():
     with col1:
         button5 = st.button("➡️Next Step Recommendation")
         button7 = st.button("DDX w Bayesian Reasoning")
+        button10 = st.button("Challenge DDX")
     with col2:
         button6 = st.button('➡️➡️I did that, now what?')
         button8 = st.button('🛠️Apply Clinical Decision Tools')
@@ -300,10 +301,10 @@ def display_functions_tab():
         #button10 = st.button('TEST')
 
     # Process button actions
-    process_buttons(button1, button2, button3, button4, button5, button6, button7, button8, button9, button11, button12, button13, button14)
+    process_buttons(button1, button2, button3, button4, button5, button6, button7, button8, button9, button10, button11, button12, button13, button14)
 
 # Process the buttons
-def process_buttons(button1, button2, button3, button4, button5, button6, button7, button8, button9, button11, button12, button13, button14):
+def process_buttons(button1, button2, button3, button4, button5, button6, button7, button8, button9, button10, button11, button12, button13, button14):
     if button1:
         specialist = 'Emergency Medicine'
         prompt = disposition_analysis
@@ -365,6 +366,11 @@ def process_buttons(button1, button2, button3, button4, button5, button6, button
     if button14:
         specialist = 'Note Writer'
         prompt = create_full_note_except_results
+        st.session_state["specialist"] = specialist
+        button_input(specialist, prompt)
+    if button10:
+        specialist = 'General'
+        prompt = "Consider the patient's case, the patient's timeline of events. Doubt the current differential diagnosis. Find ways to critque it. Consider alternative explanations. Refine the DDX"
         st.session_state["specialist"] = specialist
         button_input(specialist, prompt)
     
