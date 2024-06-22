@@ -31,7 +31,7 @@ specialist_id_caption = {
   "Emergency Medicine": {
     "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
     "caption": "EM, Peds EM, Toxicology, Wilderness",
-    "avatar": "https://cdn.pixabay.com/photo/2017/03/31/23/11/robot-2192617_1280.png"
+    "avatar": "https://i.ibb.co/C7TFJJp/logo3.png"
   },
   "Neurological": {
     "assistant_id": "asst_caM9P1caoAjFRvSAmT6Y6mIz",
@@ -163,8 +163,18 @@ def display_header():
         sex = st.session_state.pt_data['patient']["sex"]
         st.set_page_config(page_title=f"{age}{age_units}{sex} {cc}", page_icon="🤖")
     else:
-        st.set_page_config(page_title=f"EMA", page_icon="🤖")
-    st.header("EMA - Emergency Medicine Assistant 🤖🩺")
+        st.set_page_config(page_title=f"EMMA", page_icon="🤖")
+    st.markdown(
+            f"""
+            <div style="text-align: center;">
+                <h2>
+                    <span style="color:coral;">Emergency Medicine </span>                    
+                    <img src="https://i.ibb.co/C7TFJJp/logo3.png" alt="Avatar" style="width:80px;height:80px;border-radius:20%;">
+                    Main Assistant 
+                </h2>
+            </div>
+            """, 
+            unsafe_allow_html=True)
 
 def display_critical_tasks():
     if st.session_state.critical_actions:
@@ -187,7 +197,15 @@ def display_critical_tasks():
 # Sidebar display
 def display_sidebar():
     with st.sidebar:
-        st.markdown("<h1 style='margin-top: -60px;text-align: center;'>EMA 🤖</h1>", unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <div style="text-align: center;">
+                <h2>                   
+                    <img src="https://i.ibb.co/C7TFJJp/logo3.png" alt="Avatar" style="width:80px;height:80px;border-radius:20%;"> 
+                </h2>
+            </div>
+            """, 
+            unsafe_allow_html=True)
         
         tab1, tab2, tab3, tab4 = st.tabs(["Functions", "Specialists", "Note Analysis", "Update Variables"])
         
@@ -413,7 +431,7 @@ def choose_specialist_radio():
         selected_specialist = specialities[0]
 
     # Assign a unique key to the st.radio widget
-    specialist = st.radio("**:red[Choose Your Specialty Group]**", specialities, 
+    specialist = st.radio("**:coral[Choose Your Specialty Group]**", specialities, 
                           captions=captions, 
                           index=specialities.index(selected_specialist),
                           key="choose_specialist_radio")
@@ -605,7 +623,7 @@ def handle_user_input_container():
                 <h6>
                     Specialty Group: 
                     <img src="{specialist_avatar}" alt="Avatar" style="width:30px;height:30px;border-radius:50%;">
-                    <span style="color:red;">{specialist}</span>
+                    <span style="color:coral;">{specialist}</span>
                 </h6>
             </div>
             """, 
