@@ -388,7 +388,7 @@ def process_buttons(button1, button2, button3, button4, button5, button6, button
         button_input(specialist, prompt)
     if button10:
         specialist = 'General'
-        prompt = "Consider the patient's case, the patient's timeline of events. Doubt the current differential diagnosis. Find ways to critque it. Consider alternative explanations. Refine the DDX"
+        prompt = "Consider the patient's case, the patient's timeline of events. Doubt the current differential diagnosis. Find ways to critque it. Consider alternative explanations. Recreate the DDX"
         st.session_state["specialist"] = specialist
         button_input(specialist, prompt)
     
