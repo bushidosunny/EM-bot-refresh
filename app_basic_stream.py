@@ -161,9 +161,9 @@ def display_header():
         age = st.session_state.pt_data['patient']["age"]
         age_units = st.session_state.pt_data['patient']["age_unit"]
         sex = st.session_state.pt_data['patient']["sex"]
-        st.set_page_config(page_title=f"{age}{age_units}{sex} {cc}", page_icon="🤖")
+        st.set_page_config(page_title=f"{age}{age_units}{sex} {cc}", page_icon="🤖", initial_sidebar_state="collapsed")
     else:
-        st.set_page_config(page_title=f"EMMA", page_icon="🤖")
+        st.set_page_config(page_title=f"EMMA", page_icon="🤖", initial_sidebar_state="collapsed")
     st.markdown(
             f"""
             <div style="text-align: center;">
@@ -388,7 +388,7 @@ def process_buttons(button1, button2, button3, button4, button5, button6, button
         button_input(specialist, prompt)
     if button10:
         specialist = 'General'
-        prompt = "Consider the patient's case, the patient's timeline of events. Doubt the current differential diagnosis. Find ways to critque it. Consider alternative explanations. Recreate the DDX"
+        prompt = challenge_ddx
         st.session_state["specialist"] = specialist
         button_input(specialist, prompt)
     

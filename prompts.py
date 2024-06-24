@@ -32,7 +32,7 @@ DISPOSITION:
 create_full_note_except_results = """Write a full note except: 'VITALS', 'LABORATORY RESULTS', 'IMAGING'. put one triple asterisk (***) where the 'LABORATORY RESULTS' would have been."""
 create_hpi = """Write just the CHIEF COMPLAINT, HISTORY OF PRESENT ILLNESS,REVIEW OF SYSTEM, SPAST MEDICAL HISTORY, PAST SOCIAL HISTORY, MEDICATIONS and PHYSICAL EXAMINATION"""
 create_ap = """Write just the assesment, ddx, plan and disposition"""
-
+challenge_ddx = "Consider the patient's case, the patient's timeline of events. Doubt the current differential diagnosis. How does one diagnose the disease considered and does this patient fit? Consider alternative explanations. Recreate the DDX"
 pt_education = """You are an emergency medicine specialist tasked with providing patient education materials. Based on the clinical details provided, generate an easy-to-understand patient education note in the specified language. follow the template separated by triple backticks:
     ```
     Diagnoses:
@@ -78,7 +78,7 @@ summarize_note = """Carefully review the provided clinical note or notes pasted 
     Ensure your summary and analysis are accurate, logical and grounded in the provided information. Maintain a professional tone and avoid speculation beyond what can be reasonably concluded from the clinical details provided."""    
 
 consult_specialist = "Hello, can you look at this case and give general recommendations on managing this patient?"
-consult_diagnosis = "Hello, What do you think is the proper differential diagnosis?"
+consult_diagnosis = "Hello, reevaluate the DDX, consider other diagnoses"
 consult_treatment = "Hello, can you help with the treatment plan?"
 consult_disposition = "Hello, can you help with the disposition plan?"
 
