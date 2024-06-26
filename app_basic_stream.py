@@ -31,7 +31,7 @@ specialist_id_caption = {
   "Emergency Medicine": {
     "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
     "caption": "EM, Peds EM, Toxicology, Wilderness",
-    "avatar": "https://i.ibb.co/C7TFJJp/logo3.png"
+    "avatar": "https://i.ibb.co/LnrQp8p/Designer-17.jpg"
   },
   "Neurological": {
     "assistant_id": "asst_caM9P1caoAjFRvSAmT6Y6mIz",
@@ -168,9 +168,9 @@ def display_header():
             f"""
             <div style="text-align: center;">
                 <h2>
-                    <span style="color:coral;">Emergency Medicine </span>                    
-                    <img src="https://i.ibb.co/C7TFJJp/logo3.png" alt="Avatar" style="width:80px;height:80px;border-radius:20%;">
-                    Main Assistant 
+                    <span style="color:deepskyblue;">Emergency Medicine </span>                    
+                    <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:80px;height:80px;border-radius:20%;">
+                    Main Assistant
                 </h2>
             </div>
             """, 
@@ -200,8 +200,10 @@ def display_sidebar():
         st.markdown(
             f"""
             <div style="text-align: center;">
-                <h2>                   
-                    <img src="https://i.ibb.co/C7TFJJp/logo3.png" alt="Avatar" style="width:80px;height:80px;border-radius:20%;"> 
+                <h2>
+                    <span style="color:deepskyblue;">Emergency Medicine </span>                    
+                    <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:80px;height:80px;border-radius:20%;">
+                    Main Assistant
                 </h2>
             </div>
             """, 
@@ -431,7 +433,7 @@ def choose_specialist_radio():
         selected_specialist = specialities[0]
 
     # Assign a unique key to the st.radio widget
-    specialist = st.radio("**:coral[Choose Your Specialty Group]**", specialities, 
+    specialist = st.radio("**:black[Choose Your Specialty Group]**", specialities, 
                           captions=captions, 
                           index=specialities.index(selected_specialist),
                           key="choose_specialist_radio")
@@ -623,7 +625,7 @@ def handle_user_input_container():
                 <h6>
                     Specialty Group: 
                     <img src="{specialist_avatar}" alt="Avatar" style="width:30px;height:30px;border-radius:50%;">
-                    <span style="color:coral;">{specialist}</span>
+                    <span style="color:deepskyblue;">{specialist}</span>
                 </h6>
             </div>
             """, 
