@@ -68,13 +68,16 @@ summarize_note = """Carefully review the provided clinical note or notes pasted 
     Concisely summarize the most important information needed to quickly understand the patient's situation. 
     Answer in bullet points, use as little bullet points necessary to understand the situation enough, each bullet point does not have to be a complete sentance, like 'follow up with GI' or 'outpatient MRI'  are perfect bullet point examples , 
     including:
-    -The main reason they sought care (chief complaint)
-    -Key aspects of their relevant medical history
-    -Critical findings from recent exams and tests
-    -The primary diagnosis or differential
-    -The major components of the current treatment plan
-    After the summary, analyze the available information and treatment plan. Identify any potential gaps in the workup, additional tests or referrals to consider, aspects of the plan that may need adjustment, and any other opportunities to optimize the patient's care.
-    Provide your recommendations in a clear, actionable manner. Explain your rationale, citing specific information from the note as needed.
+    Summary:
+    - Write a brief assessment of the patient with only significant information, such as relevant PMH, present illness, current vitals and abnormal exam findings.  Add a timeline if there are multiple events.  
+    - Highlight releavant Critical findings from recent exams and tests
+    - The primary diagnosis or differential
+    - The major components of the current treatment plan
+
+    Actions to Consider:
+    - Analyze the available information and treatment plan. Identify any potential gaps in the workup, additional tests or referrals to consider, aspects of the plan that may need adjustment, and any other opportunities to optimize the patient's care.
+    - Provide your recommendations in a clear, actionable manner. Explain your rationale, citing specific information from the note as needed.
+
     Ensure your summary and analysis are accurate, logical and grounded in the provided information. Maintain a professional tone and avoid speculation beyond what can be reasonably concluded from the clinical details provided."""    
 
 consult_specialist = "Hello, can you look at this case and give general recommendations on managing this patient?"
@@ -107,3 +110,5 @@ Create a JSON object with the following structure:
       }
     ],
     "critical_actions": "Critical actions needed for the patient (array of strings)"}}'''
+
+next_step = "Sequentially, what are the next steps I should do in the ED?"

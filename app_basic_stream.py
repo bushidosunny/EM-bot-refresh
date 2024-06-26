@@ -297,23 +297,23 @@ def display_functions_tab():
     with col1:
         button3 = st.button('Full Medical Note')
         button14 = st.button('Full Note except EMR results')
-        button4 = st.button("Pt Education Note")
+        button4 = st.button("🙍Pt Education Note")
     with col2:
         button11 = st.button('HPI only')
         button12 = st.button('A&P only')
-        button13 = st.button('Physical Therapy Plan')
+        button13 = st.button('💪Physical Therapy Plan')
         
 
     st.subheader('🏃‍♂️Flow')
     col1, col2 = st.columns(2)
     with col1:
         button5 = st.button("➡️Next Step Recommendation")
-        button7 = st.button("Critical Thinking w Bayesian Reasoning")
-        button10 = st.button("Challenge DDX")
+        
+        button10 = st.button("🤔Challenge the DDX")
     with col2:
-        button6 = st.button('➡️➡️I did that, now what?')
+        #button6 = st.button('➡️➡️I did that, now what?')
         button8 = st.button('🛠️Apply Clinical Decision Tools')
-
+        button7 = st.button("🧠Critical Thinking w Bayesian Reasoning")
     st.divider()
     col1, col2, col3 = st.columns([1,3,1])
     with col2:
@@ -321,10 +321,10 @@ def display_functions_tab():
         #button10 = st.button('TEST')
 
     # Process button actions
-    process_buttons(button1, button2, button3, button4, button5, button6, button7, button8, button9, button10, button11, button12, button13, button14)
+    process_buttons(button1, button2, button3, button4, button5, button7, button8, button9, button10, button11, button12, button13, button14)
 
 # Process the buttons
-def process_buttons(button1, button2, button3, button4, button5, button6, button7, button8, button9, button10, button11, button12, button13, button14):
+def process_buttons(button1, button2, button3, button4, button5, button7, button8, button9, button10, button11, button12, button13, button14):
     if button1:
         specialist = 'Emergency Medicine'
         prompt = disposition_analysis
@@ -348,14 +348,14 @@ def process_buttons(button1, button2, button3, button4, button5, button6, button
         
     if button5:
         specialist = 'Emergency Medicine'
-        prompt = "What should i do next here in the emergency department?"
+        prompt = next_step
         st.session_state["specialist"] = specialist
         button_input(specialist, prompt)
-    if button6:
-        specialist = 'Emergency Medicine'
-        prompt = "Ok i did that. Now what?"
-        st.session_state["specialist"] = specialist
-        button_input(specialist, prompt)
+    #if button6:
+        #specialist = 'Emergency Medicine'
+        #prompt = "Ok i did that. Now what?"
+        #st.session_state["specialist"] = specialist
+        #button_input(specialist, prompt)
     if button7:
         specialist = 'Bayesian Reasoner'
         prompt = apply_bayesian_reasoning
