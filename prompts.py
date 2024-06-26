@@ -78,14 +78,14 @@ summarize_note = """Carefully review the provided clinical note or notes pasted 
     Ensure your summary and analysis are accurate, logical and grounded in the provided information. Maintain a professional tone and avoid speculation beyond what can be reasonably concluded from the clinical details provided."""    
 
 consult_specialist = "Hello, can you look at this case and give general recommendations on managing this patient?"
-consult_diagnosis = "Hello, reevaluate the DDX, consider other diagnoses"
+consult_diagnosis = "Hello, please evaluate the DDX"
 consult_treatment = "Hello, can you help with the treatment plan?"
 consult_disposition = "Hello, can you help with the disposition plan?"
 
 integrate_consultation = "Please integrate the specialist's recommendations into this case"
 
 apply_decision_tool = "apply any appropriate clinical decision tools for this case"
-apply_bayesian_reasoning = "Use Bayesian Reasoning on the differential diagnosis of this case"
+apply_bayesian_reasoning = "Evaluate the DDX"
 
 create_json_prompt = '''I am an emergency medicine doctor. I will provide you with a transcript of a conversation with another language model about a patient case. The information in the transcript will become more accurate as the conversation progresses. When analyzing the case, prioritize the information that appears later in the transcript. If there are any conflicting details between earlier and later parts of the conversation, rely on the most recent information provided, as it is likely to be the most accurate and up-to-date. Disregard any contradictory information from earlier in the transcript.
 

@@ -104,7 +104,7 @@ specialist_id_caption = {
     "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png"
   },
   "Bayesian Reasoner": {
-    "assistant_id": "asst_GeAw2bIhrATHejogynMmP2VB",
+    "assistant_id": "asst_Ffad1oXsVwaa6R3sp012H9bx",
     "caption": "EM - Beta testing",
     "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/33/carrot-148456_960_720.png"
   },
@@ -308,7 +308,7 @@ def display_functions_tab():
     col1, col2 = st.columns(2)
     with col1:
         button5 = st.button("➡️Next Step Recommendation")
-        button7 = st.button("DDX w Bayesian Reasoning")
+        button7 = st.button("Critical Thinking w Bayesian Reasoning")
         button10 = st.button("Challenge DDX")
     with col2:
         button6 = st.button('➡️➡️I did that, now what?')
