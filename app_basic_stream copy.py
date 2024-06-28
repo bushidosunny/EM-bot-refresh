@@ -16,7 +16,6 @@ from presidio_analyzer import AnalyzerEngine, RecognizerRegistry, PatternRecogni
 from presidio_anonymizer import AnonymizerEngine
 from presidio_analyzer.predefined_recognizers import SpacyRecognizer, EmailRecognizer, PhoneRecognizer, UsLicenseRecognizer, UsSsnRecognizer
 
-
 # Load variables
 load_dotenv()
 ema_v2 = "asst_na7TnRA4wkDbflTYKzo9kmca"
@@ -590,7 +589,7 @@ def generate_response_stream(stream):
                     yield delta.text.value
 
 def get_response(user_question):
-    print(f'DEBUG get_response --- user_question: {user_question}')
+    #print(f'DEBUG get_response --- user_question: {user_question}')
     client.beta.threads.messages.create(thread_id=st.session_state.thread_id, role="user", content=user_question)
     response_placeholder = st.empty()  # Placeholder for streaming response text
     response_text = ""  # To accumulate response text
@@ -641,11 +640,10 @@ def handle_user_input_container():
             """, 
             unsafe_allow_html=True
         )
-        user_question = st.chat_input("How may I help you?") 
-        if user_question:
-            user_question = anonymize_text(user_question)
-        
-    process_user_question(user_question, specialist)
+        raw_user_question = st.chat_input("How may I help you?") 
+        if raw_user_question:
+            user_question = anonymize_text(raw_user_question)
+            process_user_question(user_question, specialist)
 def process_user_question(user_question, specialist):
     if user_question is not None and user_question != "":
         timezone = pytz.timezone("America/Los_Angeles")
@@ -677,8 +675,9 @@ def process_user_question(user_question, specialist):
         #print(f'DEBUG st.session_state.chat_history: {st.session_state.chat_history}')
         # extract json information from AI response   
         chat_history = chat_history_string()
-        print(f'DEBUG CHAT HISTORY: {chat_history}')
+        #print(f'DEBUG CHAT HISTORY: {chat_history}')
         parse_json(chat_history)   
+
 
 def anonymize_text(user_question):
     # Define a pattern for MRN (adjust this regex pattern to match your specific MRN format)
@@ -718,9 +717,8 @@ def anonymize_text(user_question):
     results = analyzer.analyze(
         text=user_question, 
         language='en',
-        allow_list=allow_list,
-        context=emergency_dept_context,
-        score_threshold=0.7)
+        allow_list=allow_list, 
+        score_threshold=0.4)
 
     # Anonymize text
     #anonymized_text = anonymizer.anonymize(text=user_question, analyzer_results=results)
@@ -729,7 +727,7 @@ def anonymize_text(user_question):
     # Anonymize the text based on the analysis results
     anonymized_text = anonymizer.anonymize(text=user_question, analyzer_results=results)
     
-    return anonymized_text.text
+    print(f'DEBUG HIPAA: {anonymized_text.text}')
 
 def main():
     initialize_session_state()

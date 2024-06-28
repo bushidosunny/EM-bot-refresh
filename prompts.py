@@ -109,6 +109,67 @@ Create a JSON object with the following structure:
         "probability": "Probability of this diagnosis (number between 0 and 100%)"
       }
     ],
-    "critical_actions": "Critical actions needed for the patient (array of strings)"}}'''
+    "critical_actions": "Critical actions or Critical Next Steps needed for the patient (array of strings)"}}'''
 
 next_step = "Sequentially, what are the next steps I should do in the ED?"
+
+allowed_list = ["yesterday", "today","Lungs", "Pseudotumor Cerebri", "Extraocular", "tomorrow", "morning", "afternoon", "evening", "Na", "rales", "rhonchi", "daily", "tomorrow", "withdrawal", 
+                "Gastrointestinal", "morning", "difficulty", "Wernicke", "this morning", "Musculoskeletal", "Denies dysuria", "hematuria",
+                "hematuria Musculoskeletal"]
+
+emergency_dept_context = {
+    "PERSON": ["Dr.", "Nurse", "Paramedic", "EMT", "Patient"],
+    
+    "MEDICAL_CONDITION": [
+        "Trauma", "Cardiac Arrest", "Myocardial Infarction", "Stroke", "Sepsis",
+        "Pneumonia", "Fracture", "Laceration", "Concussion", "Anaphylaxis",
+        "Overdose", "Intoxication", "Appendicitis", "Pulmonary Embolism",
+        "Acute Abdomen", "Meningitis", "Seizure", "Asthma Exacerbation",
+        "Diabetic Ketoacidosis", "Hypertensive Emergency"
+    ],
+    
+    "SYMPTOM": [
+        "Chest Pain", "Shortness of Breath", "Abdominal Pain", "Headache",
+        "Dizziness", "Nausea", "Vomiting", "Fever", "Cough", "Back Pain",
+        "Altered Mental Status", "Syncope", "Weakness", "Palpitations"
+    ],
+    
+    "PROCEDURE": [
+        "Intubation", "CPR", "Defibrillation", "Cardioversion", "Central Line",
+        "Lumbar Puncture", "Thoracentesis", "Paracentesis", "Chest Tube",
+        "Fracture Reduction", "Wound Closure", "Rapid Sequence Intubation",
+        "Procedural Sedation", "Cardiovascular Monitoring"
+    ],
+    
+    "MEDICATION": [
+        "Epinephrine", "Morphine", "Ketamine", "Propofol", "Rocuronium",
+        "Aspirin", "Heparin", "tPA", "Antibiotics", "Naloxone", "Nitroglycerin",
+        "Albuterol", "Insulin", "Vasopressors", "Antidotes", "Cyclobenzaprine"
+    ],
+    
+    "DIAGNOSTIC_TEST": [
+        "CT Scan", "X-ray", "Ultrasound", "MRI", "ECG", "EKG", "Troponin",
+        "CBC", "BMP", "Lactate", "Blood Gas", "Toxicology Screen",
+        "D-dimer", "Urinalysis"
+    ],
+    
+    "MEDICAL_EQUIPMENT": [
+        "Ventilator", "Defibrillator", "Monitor", "IV Pump", "Crash Cart",
+        "Laryngoscope", "Bag Valve Mask", "Oxygen Tank", "Suction Device",
+        "Stretcher", "Cervical Collar", "Splint", "Tourniquet"
+    ],
+    
+    "TRIAGE_TERMS": [
+        "Triage", "ESI Level", "Chief Complaint", "Vital Signs", "Glasgow Coma Scale",
+        "FAST Assessment", "ABCDE Assessment"
+    ],
+    
+    "TIME_CRITICAL": [
+        "STEMI", "Stroke Alert", "Trauma Alert", "Code Blue", "Sepsis Alert"
+    ],
+    
+    "ABBREVIATIONS": [
+        "ED", "ER", "ICU", "BP", "HR", "RR", "SpO2", "GCS", "FAST", "ABCDE",
+        "CPR", "AED", "IV", "IM", "IO", "NGT", "Foley", "EMS", "MVA"
+    ]
+}
