@@ -284,7 +284,7 @@ def consult_specialist_and_update_ddx(button_name, prompt):
     specialist = st.session_state.specialist
     button_input(specialist, prompt)
 
-    # If necessary, temporarily switch to an EM agent
+    """# If necessary, temporarily switch to an EM agent
     if needs_em_update_for(button_name):
         temp_specialist = "Emergency Medicine"
         st.session_state.specialist = temp_specialist
@@ -295,7 +295,7 @@ def consult_specialist_and_update_ddx(button_name, prompt):
 
     # Resetting the specialist back if it was changed
     if st.session_state.specialist == temp_specialist:
-        st.session_state.specialist = specialist
+        st.session_state.specialist = specialist"""
 
 # Sidebar tabs and functions
 def display_functions_tab():
