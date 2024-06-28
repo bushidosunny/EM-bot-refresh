@@ -107,6 +107,11 @@ specialist_id_caption = {
     "caption": "Pt education Note Writer",
     "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png"
   },
+  "Dr. Longevity": {
+    "assistant_id": "asst_sRjFUQFCD0dNOl7513qb4gGv",
+    "caption": "Cutting edge on Longevity and Healthspan Focused",
+    "avatar": "https://cdn.pixabay.com/photo/2019/07/02/05/54/tool-4311573_1280.png"
+  },
   "Bayesian Reasoner": {
     "assistant_id": "asst_Ffad1oXsVwaa6R3sp012H9bx",
     "caption": "EM - Beta testing",
