@@ -34,22 +34,22 @@ user_avatar_url = "https://cdn.pixabay.com/photo/2016/12/21/07/36/profession-192
 specialist_id_caption = {
   "Emergency Medicine": {
     "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
-    "caption": "EM, Peds EM, Toxicology, Wilderness",
+    "caption": "👨‍⚕️EM, Peds EM, ☠️Toxicology, Wilderness",
     "avatar": "https://i.ibb.co/LnrQp8p/Designer-17.jpg"
   },
   "Neurological": {
     "assistant_id": "asst_caM9P1caoAjFRvSAmT6Y6mIz",
-    "caption": "Neurology, Neurosurgery, Psychiatry",
+    "caption": "🧠Neurology, Neurosurgery, Psychiatry",
     "avatar": "https://cdn.pixabay.com/photo/2018/11/21/02/04/graphic-3828723_1280.png"
   },
   "Sensory Systems (Eyes, Ears, Nose, Throat)": {
     "assistant_id": "asst_UB1VTD6NyYbb1xTrUueb3xlI",
-    "caption": "Ophthalmology, ENT",
+    "caption": "👁️Ophthalmology, ENT",
     "avatar": "https://cdn.imgbin.com/17/1/11/imgbin-mr-potato-head-toy-child-infant-computer-icons-toy-GdJDP1cicFXdWJHbgSanRhnFQ.jpg"
   },
   "Cardiovascular and Respiratory": {
     "assistant_id": "asst_bH6wKFfCMVBiH3yUkM0DWdFk",
-    "caption": "Cardiology, Cardiovascular Surgery, Vascular Surgery, Pulmonology, Thoracic Surgery",
+    "caption": "❤️Cardiology, Cardiovascular Surgery, Vascular Surgery, 🫁Pulmonology, Thoracic Surgery",
     "avatar": "https://cdn.pixabay.com/photo/2017/02/15/20/58/ekg-2069872_1280.png"
   },
   "Gastrointestinal Systems": {
@@ -59,7 +59,7 @@ specialist_id_caption = {
   },
   "Renal and GU Systems": {
     "assistant_id": "asst_SV4dNDe8sX0drryIVhQFeJj3",
-    "caption": "Nephrology, Gynecology, Urology, Obstetrics",
+    "caption": "🫘Nephrology, Gynecology, Urology, 🤰Obstetrics",
     "avatar": "https://cdn.pixabay.com/photo/2022/09/20/10/27/urology-7467570_960_720.png"
   },
   "Dermatology and Plastic Surgery": {
@@ -69,7 +69,7 @@ specialist_id_caption = {
   },
   "Musculoskeletal Systems": {
     "assistant_id": "asst_d9cMY1Sxwz0dUsKJXjuZMoiM",
-    "caption": "Sports Med, Orthopedics, PM&R, Rheumatology, Physical Therapy",
+    "caption": "🏈Sports Med, 🦴Orthopedics, PM&R, Rheumatology, 💪Physical Therapy",
     "avatar": "https://cdn.pixabay.com/photo/2015/12/09/22/19/muscle-1085672_1280.png"
   },
   "General": {
@@ -79,22 +79,22 @@ specialist_id_caption = {
   },
   "Pediatrics": {
     "assistant_id": "asst_cVQwzy87fwOvTnb66zsvVB5L",
-    "caption": "Pediatrics, Neonatology, Pediatric Surgery",
+    "caption": "👶Pediatrics, Neonatology, Pediatric Surgery",
     "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/15/man-148077_1280.png"
   },
   "Infectious Disease": {
     "assistant_id": "asst_40hUiBxEhoylT6dCEqhssCiI",
-    "caption": "Infectious Disease, Epidemiology",
+    "caption": "🦠Infectious Disease, Epidemiology",
     "avatar": "https://cdn.pixabay.com/photo/2020/04/18/08/33/coronavirus-5058247_1280.png"
   }, 
   "Medical Legal": {
     "assistant_id": "asst_ZI3rML4v8eG1vhQ3Fis5ikOd",
-    "caption": "Legal Consultant",
+    "caption": "⚖️Legal Consultant",
     "avatar": "https://cdn.pixabay.com/photo/2017/01/31/17/34/comic-characters-2025788_1280.png"
   },
   "Note Writer": {
     "assistant_id": "asst_Ua6cmp6dpTc33cSpuZxutGsX",
-    "caption": "Medical Note Writer",
+    "caption": "📝Medical Note Writer",
     "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png"
   },  
   "Note Summarizer": {
@@ -119,13 +119,23 @@ specialist_id_caption = {
   },
   "Clinical Decision Tools": {
     "assistant_id": "asst_Pau6T5mMH3cZBnEePso5kFuJ",
-    "caption": "Goes Deep",
+    "caption": "Most Common Clinical Decision Tools used in the ED",
     "avatar": "https://cdn.pixabay.com/photo/2019/07/02/05/54/tool-4311573_1280.png"
   },
-  "DDX Beta": {
+  "DDX Beta A": {
     "assistant_id": "asst_8Ib5ndZJivEOhwvfx4Gqzjc3",
     "caption": "EM - Beta testing",
     "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/33/carrot-148456_960_720.png"
+  },
+  "DDX Beta B": {
+    "assistant_id": "asst_L74hbYKMs4OsKy0EA30mmY1s",
+    "caption": "EM - Beta testing",
+    "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/33/carrot-148456_960_720.png"
+  },
+  "Cardiology Clinic": {
+    "assistant_id": "asst_m4Yispc9GIdwGFsyz2KNT8c5",
+    "caption": "Cardiologis in Clinic - Beta testing",
+    "avatar": "https://cdn.pixabay.com/photo/2017/02/15/20/58/ekg-2069872_1280.png"
   }
   
 }
@@ -153,7 +163,8 @@ def initialize_session_state():
         "should_rerun": False,
         "user_question_sidebar": "",
         "old_user_question_sidebar": "",
-        "completed_tasks_str": ""
+        "completed_tasks_str": "",
+        "follow_up_steps":""
 
     }
 
@@ -167,7 +178,7 @@ def initialize_session_state():
         st.session_state.specialist = primary_specialist
         st.session_state.assistant_id = specialist_id_caption[primary_specialist]["assistant_id"]
         st.session_state.specialist_avatar = specialist_id_caption[primary_specialist]["avatar"]
-        print(f'DEBUG: Initial specialist set to {primary_specialist}')
+
 
 # Setup the main page display and header
 def display_header():
@@ -193,21 +204,45 @@ def display_header():
 
 def display_critical_tasks():
     if st.session_state.critical_actions:
-        st.subheader(":orange[Critical Actions]")
+        st.subheader(":blue[Critical Actions]")
         # Create a dictionary to hold the status of each task
         task_status = {task: False for task in st.session_state.critical_actions}
 
         # Display the tasks with checkboxes
         for task in st.session_state.critical_actions:
-            task_status[task] = st.checkbox(f"- :orange[{task}]", value=task_status[task])
+            key = f"critical_{task}"  # Create a unique key for each checkbox
+            task_status[task] = st.checkbox(f"- :blue[{task}]", value=task_status[task], key=key)
 
         # Check which tasks are completed and save to a string variable
         completed_tasks = [task for task, status in task_status.items() if status]
-        print (f'DEBUG COMPLETGED TASKS: {completed_tasks}')
-        if completed_tasks != []:
-            st.session_state.completed_tasks_str = "Tasks Completed:" + '.\n'.join(completed_tasks)
 
+        if completed_tasks:
+            st.session_state.completed_tasks_str = "Tasks Completed: " + '. '.join(completed_tasks)
 
+def display_follow_up_tasks():
+    if st.session_state.follow_up_steps:
+        st.subheader(":yellow[Possible Follow-Up Steps]")
+        # Create a dictionary to hold the status of each task
+        task_status = {task: False for task in st.session_state.follow_up_steps}
+
+        # Display the tasks with checkboxes
+        for task in st.session_state.follow_up_steps:
+            key = f"follow_up_{task}"  # Create a unique key for each checkbox
+            task_status[task] = st.checkbox(f"- :yellow[{task}]", value=task_status[task], key=key)
+
+        # Check which tasks are completed and save to a string variable
+        completed_tasks = [task for task, status in task_status.items() if status]
+
+        if completed_tasks:
+            st.session_state.completed_tasks_str = "Tasks Completed: " + '. '.join(completed_tasks)
+
+def display_ddx():
+    if st.session_state.differential_diagnosis:
+        st.subheader("Differential Diagnosis")
+        for diagnosis in st.session_state.differential_diagnosis:
+            disease = diagnosis['disease']
+            probability = diagnosis['probability']
+            st.markdown(f"- {disease} - {probability}%")    
 
 # Sidebar display
 def display_sidebar():
@@ -215,11 +250,11 @@ def display_sidebar():
         st.markdown(
             f"""
             <div style="text-align: center;">
-                <h2>
-                    <span style="color:deepskyblue;">Emergency Medicine </span>                    
-                    <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:80px;height:80px;border-radius:20%;">
-                    Main Assistant
-                </h2>
+                <h1>
+                    <span style="color:deepskyblue;"> </span>                    
+                    <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:50px;height:50px;border-radius:20%;">
+                    EMMA
+                </h1>
             </div>
             """, 
             unsafe_allow_html=True)
@@ -227,15 +262,10 @@ def display_sidebar():
         tab1, tab2, tab3, tab4 = st.tabs(["Functions", "Specialists", "Note Analysis", "Update Variables"])
         
         with tab1:
+            display_ddx()
             display_critical_tasks()
-            
-            if st.session_state.differential_diagnosis:
-                st.subheader("Differential Diagnosis")
-                for diagnosis in st.session_state.differential_diagnosis:
-                    disease = diagnosis['disease']
-                    probability = diagnosis['probability']
-                    st.markdown(f"- {disease} - {probability}%")
-                st.divider()
+            display_follow_up_tasks()
+            st.divider()
             display_functions_tab()
 
         with tab2:
@@ -459,7 +489,7 @@ def choose_specialist_radio():
     # Only update if the selected specialist is different
     if specialist and specialist != st.session_state.specialist:
     #if specialist and specialist != st.session_state.specialist and not st.session_state.button_clicked:
-        print(f'DEBUG: Radio button changed specialist to {specialist}')
+
         st.session_state.specialist = specialist
         st.session_state.assistant_id = specialist_id_caption[specialist]["assistant_id"]
         st.session_state.specialist_avatar = specialist_id_caption[specialist]["avatar"]
@@ -476,7 +506,7 @@ def button_input(specialist, prompt):
     user_question = prompt
     if user_question is not None and user_question != "":
         st.session_state.specialist = specialist
-        print(f'DEBUG: button input - ST-SESSION SPECIALIST : {st.session_state.specialist}')
+
         specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
         st.session_state.specialist_avatar = specialist_avatar
         timezone = pytz.timezone("America/Los_Angeles")
@@ -485,7 +515,7 @@ def button_input(specialist, prompt):
         \n{st.session_state.completed_tasks_str}
         """
         st.session_state.user_question_sidebar = user_question
-        print(f'DEBUG user_question: {user_question}')
+
         st.session_state.completed_tasks_str = ''
         st.session_state.critical_actions  = []
         #refresh page
@@ -525,7 +555,7 @@ def process_other_queries():
         st.session_state.old_user_question_sidebar = user_question
 
         chat_history = chat_history_string()
-        print(f'DEBUG CHAT HISTORY: {chat_history}')
+
         parse_json(chat_history) 
 
     elif st.session_state["legal_question"]:
@@ -569,9 +599,9 @@ def parse_json(chat_history):
     try:
         data = json.loads(pt_json)
         st.session_state.pt_data = data
-        print(f'DEBUG pt_json: {data}')
         st.session_state.differential_diagnosis = data['patient']['differential_diagnosis']
         st.session_state.critical_actions = data['patient']['critical_actions']
+        st.session_state.follow_up_steps = data['patient']['follow_up_steps']
     except:
         return
 
@@ -595,7 +625,6 @@ def generate_response_stream(stream):
                     yield delta.text.value
 
 def get_response(user_question):
-    print(f'DEBUG get_response --- user_question: {user_question}')
     client.beta.threads.messages.create(thread_id=st.session_state.thread_id, role="user", content=user_question)
     response_placeholder = st.empty()  # Placeholder for streaming response text
     response_text = ""  # To accumulate response text
@@ -672,17 +701,10 @@ def process_user_question(user_question, specialist):
         with st.chat_message("AI", avatar=specialist_avatar):
             assistant_response = get_response(user_question)
             st.session_state.assistant_response = assistant_response
-            
-
-
-        #print(f'DEBUG ASSISTANT RESPONSE: {assistant_response}')
-
 
         st.session_state.chat_history.append(AIMessage(st.session_state.assistant_response, avatar=specialist_avatar))
-        #print(f'DEBUG st.session_state.chat_history: {st.session_state.chat_history}')
         # extract json information from AI response   
         chat_history = chat_history_string()
-        print(f'DEBUG CHAT HISTORY: {chat_history}')
         parse_json(chat_history)   
 
 def anonymize_text(user_question):
@@ -727,8 +749,6 @@ def anonymize_text(user_question):
         context=emergency_dept_context,
         score_threshold=0.7)
 
-    # Anonymize text
-    #anonymized_text = anonymizer.anonymize(text=user_question, analyzer_results=results)
     anonymizer = AnonymizerEngine()
     
     # Anonymize the text based on the analysis results
@@ -739,16 +759,14 @@ def anonymize_text(user_question):
 def main():
     initialize_session_state()
     display_header()
-    
+
+    # Authentication with streamlit authenticator 
     name, authentication_status, username = authenticator.login('main')
-    print(f'DEBUG AUTH STATUS: {authentication_status}')
-    
     if authentication_status == True:
         # User is authenticated, show the app content# Create a thread where the conversation will happen and keep Streamlit from initiating a new session state
         if "thread_id" not in st.session_state:
             thread = client.beta.threads.create()
             st.session_state.thread_id = thread.id
-        #update_user_config_file()
     
         display_chat_history() 
         handle_user_input_container()   

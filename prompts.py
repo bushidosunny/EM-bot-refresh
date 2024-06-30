@@ -93,23 +93,25 @@ apply_bayesian_reasoning = "Evaluate the DDX"
 create_json_prompt = '''I am an emergency medicine doctor. I will provide you with a transcript of a conversation with another language model about a patient case. The information in the transcript will become more accurate as the conversation progresses. When analyzing the case, prioritize the information that appears later in the transcript. If there are any conflicting details between earlier and later parts of the conversation, rely on the most recent information provided, as it is likely to be the most accurate and up-to-date. Disregard any contradictory information from earlier in the transcript.
 
 Create a JSON object with the following structure: 
- {
- "patient": {
-    "name": "Patient's full name (string)",
-    "age": "Patient's age (number)",
-    "age_unit": "Age unit, use 'Y' for years, 'D' for days, 'M' for months (string)",
-    "sex": "Patient's sex, use 'M' for male, 'F' for female (string)", 
-    "chief_complaint": "Patient's chief complaint (string)",
-    "chief_complaint_two_word": "Chief complaint summarized in one to two words (string)",
-    "lab_results": "Patient's lab results (object with test name keys and result values)",
-    "imaging_results": "Patient's imaging results (object with test name keys and result values)",
-    "differential_diagnosis": [
-      {
-        "disease": "Potential diagnosis (string)",
-        "probability": "Probability of this diagnosis (number between 0 and 100%)"
-      }
-    ],
-    "critical_actions": "Critical actions or Critical Next Steps needed for the patient (array of strings)"}}'''
+{
+   "patient":{
+      "name":"Patient's full name (string)",
+      "age":"Patient's age (number)",
+      "age_unit":"Age unit, use 'Y' for years, 'D' for days, 'M' for months (string)",
+      "sex":"Patient's sex, use 'M' for male, 'F' for female (string)",
+      "chief_complaint":"Patient's chief complaint (string)",
+      "chief_complaint_two_word":"Chief complaint summarized in one to two words (string)",
+      "lab_results":"Patient's lab results (object with test name keys and result values)",
+      "imaging_results":"Patient's imaging results (object with test name keys and result values)",
+      "differential_diagnosis":[
+         {
+            "disease":"Potential diagnosis (string)",
+            "probability":"Probability of this diagnosis (number between 0 and 100%)"
+         }
+      ],
+      "critical_actions":"Critical actions or Critical Next Steps needed for the patient (array of strings)",
+      "follow_up_steps":"include all Suggested Follow-Up Steps (array of strings)"
+   }'''
 
 next_step = "Sequentially, what are the next steps I should do in the ED?"
 
