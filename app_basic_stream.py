@@ -676,8 +676,8 @@ def handle_user_input_container():
             unsafe_allow_html=True
         )
         user_question = st.chat_input("How may I help you?") 
-        if user_question:
-            user_question = anonymize_text(user_question)
+        #if user_question:
+            #user_question = anonymize_text(user_question)
         
     process_user_question(user_question, specialist)
 def process_user_question(user_question, specialist):
