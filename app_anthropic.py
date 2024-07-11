@@ -1,8 +1,8 @@
 import streamlit as st
 from streamlit_float import float_css_helper
-
-from openai import OpenAI
-from langchain_core.messages import HumanMessage, AIMessage
+from anthropic import Anthropic
+from langchain_anthropic import ChatAnthropic
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 import os
 import io
 from dotenv import load_dotenv
@@ -20,13 +20,17 @@ from presidio_analyzer.predefined_recognizers import SpacyRecognizer, EmailRecog
 # Load variables
 load_dotenv()
 ema_v2 = "asst_na7TnRA4wkDbflTYKzo9kmca"
-api_key = os.getenv("OPENAI_API_KEY")
+open_ai_api_key = os.getenv("OPENAI_API_KEY")
+api_key = os.getenv("ANTHROPIC_API_KEY")
 if not api_key:
     st.error("API Key not found! Please check your environment variables.")
 legal_attorney = "asst_ZI3rML4v8eG1vhQ3Fis5ikOd"
 note_writer = 'asst_Ua6cmp6dpTc33cSpuZxutGsX'
 
-client = OpenAI(api_key=api_key)
+anthropic = Anthropic(api_key=api_key)
+
+# Initialize the model
+model = ChatAnthropic(model="claude-3-5-sonnet-20240620", temperature=0.5, max_tokens=4096)
 
 # Define the avatar URLs
 user_avatar_url = "https://cdn.pixabay.com/photo/2016/12/21/07/36/profession-1922360_1280.png"
@@ -35,7 +39,8 @@ specialist_id_caption = {
   "Emergency Medicine": {
     "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
     "caption": "👨‍⚕️EM, Peds EM, ☠️Toxicology, Wilderness",
-    "avatar": "https://i.ibb.co/LnrQp8p/Designer-17.jpg"
+    "avatar": "https://i.ibb.co/LnrQp8p/Designer-17.jpg",
+    "system_instructions": emma_system
   },
   "Neurological": {
     "assistant_id": "asst_caM9P1caoAjFRvSAmT6Y6mIz",
@@ -95,7 +100,8 @@ specialist_id_caption = {
   "Note Writer": {
     "assistant_id": "asst_Ua6cmp6dpTc33cSpuZxutGsX",
     "caption": "📝Medical Note Writer",
-    "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png"
+    "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png",
+    "system_instructions": note_writer_system
   },  
   "Note Summarizer": {
     "assistant_id": "asst_c2lPEtkLRILNyl5K7aJ0R38o",
@@ -105,7 +111,8 @@ specialist_id_caption = {
   "Patient Educator": {
     "assistant_id": "asst_twf42nzGoYLtrHAZeENLcI5d",
     "caption": "Pt education Note Writer",
-    "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png"
+    "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png",
+    "system_instructions": patient_educator_system
   },
   "Dr. Longevity": {
     "assistant_id": "asst_sRjFUQFCD0dNOl7513qb4gGv",
@@ -115,7 +122,8 @@ specialist_id_caption = {
   "Bayesian Reasoner": {
     "assistant_id": "asst_Ffad1oXsVwaa6R3sp012H9bx",
     "caption": "EM - Beta testing",
-    "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/33/carrot-148456_960_720.png"
+    "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/33/carrot-148456_960_720.png",
+    "system_instructions": critical_system
   },
   "Clinical Decision Tools": {
     "assistant_id": "asst_Pau6T5mMH3cZBnEePso5kFuJ",
@@ -164,8 +172,9 @@ def initialize_session_state():
         "user_question_sidebar": "",
         "old_user_question_sidebar": "",
         "completed_tasks_str": "",
-        "follow_up_steps":""
-
+        "follow_up_steps":"",
+        "messages":[],
+        "system_instructions": emma_system
     }
 
     if "initialized" not in st.session_state:
@@ -178,6 +187,7 @@ def initialize_session_state():
         st.session_state.specialist = primary_specialist
         st.session_state.assistant_id = specialist_id_caption[primary_specialist]["assistant_id"]
         st.session_state.specialist_avatar = specialist_id_caption[primary_specialist]["avatar"]
+        st.session_state.system_instructions = specialist_id_caption[primary_specialist]["system_instructions"]
 
 
 # Setup the main page display and header
@@ -493,6 +503,7 @@ def choose_specialist_radio():
         st.session_state.specialist = specialist
         st.session_state.assistant_id = specialist_id_caption[specialist]["assistant_id"]
         st.session_state.specialist_avatar = specialist_id_caption[specialist]["avatar"]
+        st.session_state.system_instructions = specialist_id_caption[specialist]["system_instructions"]
         # No need to call st.rerun() here
         st.rerun()
 
@@ -501,6 +512,7 @@ def button_input(specialist, prompt):
     st.session_state.button_clicked = True
     #call the specialist
     st.session_state.assistant_id = specialist_id_caption[specialist]["assistant_id"]
+    st.session_state.system_instructions = specialist_id_caption[specialist]["system_instructions"]
  
     # set st.sesssion_state.user_question_sidebar for process_other_queries() 
     user_question = prompt
@@ -545,7 +557,7 @@ def process_other_queries():
 
         #get ai response
         with st.chat_message("AI", avatar=specialist_avatar):
-            assistant_response = get_response(user_question=user_question)
+            assistant_response = get_response(user_question, st.session_state.messages)
             #st.session_state.assistant_response = assistant_response
 
         #append ai response to chat_history
@@ -570,17 +582,6 @@ def new_thread():
     st.session_state.chat_history = []
     st.rerun()
 
-@st.cache_data
-def handle_user_legal_input(legal_question):    
-    # Append user message to chat history
-    st.session_state.chat_history.append({"role": "user", "content": legal_question, "avatar": user_avatar_url})
-        
-    client.beta.threads.messages.create(thread_id=st.session_state.thread_id, role="user", content=legal_question)
-
-    with client.beta.threads.runs.stream(thread_id=st.session_state.thread_id, assistant_id=legal_attorney) as stream:
-        assistant_response = "".join(generate_response_stream(stream))
-        st.write_stream(generate_response_stream(stream))
-    st.session_state.chat_history.append({"role": "legal consultant", "content": assistant_response, "avatar": "https://avatars.dicebear.com/api/avataaars/legal_consultant.svg"})  # Add assistant response to chat history
 
 def chat_history_string():
     output = io.StringIO()
@@ -606,42 +607,54 @@ def parse_json(chat_history):
         return
 
 
-#@st.cache_data
-def write_note(note_input):    
-    # Append user message to chat history
-    st.session_state.chat_history.append({"role": "user", "content": note_input, "avatar": user_avatar_url})
-        
-    client.beta.threads.messages.create(thread_id=st.session_state.thread_id, role="user", content=note_input)
 
-    with client.beta.threads.runs.stream(thread_id=st.session_state.thread_id, assistant_id=note_writer) as stream:
-        assistant_response = "".join(generate_response_stream(stream))
-        st.write_stream(generate_response_stream(stream))
 # Function to generate the response stream
-def generate_response_stream(stream):
-    for response in stream:
-        if response.event == 'thread.message.delta':
-            for delta in response.data.delta.content:
-                if delta.type == 'text':
-                    yield delta.text.value
+def generate_response_stream(response):
+    for content in response.content:
+        if content.type == 'text':
+            yield content.text
+            
+def chat_message_history():
+    chat = ''
+    for index, message in enumerate(st.session_state.chat_history, start=1):
+        if isinstance(message, dict) and 'content' in message:
+            content = message['content']
+        elif hasattr(message, 'content'):
+            content = message.content
+        else:
+            content = str(message)
+        
+        prefix = 'User: ' if index % 2 != 0 else 'Assistant: '
+        chat += f"{prefix}{content}\n"
 
-def get_response(user_question):
-    client.beta.threads.messages.create(thread_id=st.session_state.thread_id, role="user", content=user_question)
-    response_placeholder = st.empty()  # Placeholder for streaming response text
-    response_text = ""  # To accumulate response text
+def get_response(user_question, message_history):
+    response_placeholder = st.empty()
+    response_text = ""
+    
+    
+    #message = HumanMessage(system=st.session_state.system_instructions,
+             #content=user_question)
+    
+    # Create system message
+    system_message = SystemMessage(content=st.session_state.system_instructions)
 
-    # Stream response from the assistant
-    with client.beta.threads.runs.stream(thread_id=st.session_state.thread_id, assistant_id=st.session_state.assistant_id) as stream:
-        for chunk in stream:
-            if chunk.event == 'thread.message.delta':  # Check if it is the delta message
-                for delta in chunk.data.delta.content:
-                    if delta.type == 'text':
-                        response_text += delta.text.value  # Append new text fragment to response text
-                        response_placeholder.markdown(response_text)  # Update the placeholder with new response text as markdown
+
+    # Create user message
+    user_message = HumanMessage(content=user_question + chat_history_string())
+
+    # Combine messages
+    messages = [system_message, user_message]
+
+    # Get the response
+    response = model.invoke(messages)
+
+    # Print the response
+    response_placeholder.markdown(response.content)
 
     return response_text
 
 def display_chat_history():    
-    st.empty()  # Clear existing chat messages
+    #st.empty()  # Clear existing chat messages
     for message in st.session_state.chat_history:
         if isinstance(message, HumanMessage):
             avatar_url = message.avatar
@@ -693,19 +706,23 @@ def process_user_question(user_question, specialist):
         specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
         st.session_state.specialist_avatar = specialist_avatar
         
+        # Add user message to the session state
+        st.session_state.messages.append({"role": "user", "content": user_question})
         st.session_state.chat_history.append(HumanMessage(user_question, avatar=user_avatar_url))
 
         with st.chat_message("user", avatar=user_avatar_url):
             st.markdown(user_question)
         
         with st.chat_message("AI", avatar=specialist_avatar):
-            assistant_response = get_response(user_question)
+            assistant_response = get_response(user_question, st.session_state.messages)
             st.session_state.assistant_response = assistant_response
 
+        # Add assistant response to the session state
+        st.session_state.messages.append({"role": "assistant", "content": assistant_response})
         st.session_state.chat_history.append(AIMessage(st.session_state.assistant_response, avatar=specialist_avatar))
-        # extract json information from AI response   
+
         chat_history = chat_history_string()
-        parse_json(chat_history)   
+        parse_json(chat_history)    
 
 def anonymize_text(user_question):
     # Define a pattern for MRN (adjust this regex pattern to match your specific MRN format)
@@ -761,20 +778,20 @@ def main():
     display_header()
 
     # Authentication with streamlit authenticator 
-    name, authentication_status, username = authenticator.login('main')
-    if authentication_status == True:
+    # name, authentication_status, username = authenticator.login('main')
+    # if authentication_status == True:
         # User is authenticated, show the app content# Create a thread where the conversation will happen and keep Streamlit from initiating a new session state
-        if "thread_id" not in st.session_state:
-            thread = client.beta.threads.create()
-            st.session_state.thread_id = thread.id
+        #if "thread_id" not in st.session_state:
+            #thread = client.beta.threads.create()
+            #st.session_state.thread_id = thread.id
     
-        display_chat_history() 
-        handle_user_input_container()   
-        process_other_queries() 
+    display_chat_history() 
+    handle_user_input_container()   
+    process_other_queries() 
 
-        display_sidebar()
-    else:
-        authenticate_user()
+    display_sidebar()
+    #else:
+        #authenticate_user()
   
 
 if __name__ == '__main__':
