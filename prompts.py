@@ -92,7 +92,7 @@ apply_bayesian_reasoning = "Critically evaluate the DDX and apply bayesian infer
 
 create_json_prompt = '''I am an emergency medicine doctor. I will provide you with a transcript of a conversation with another language model about a patient case. The information in the transcript will become more accurate as the conversation progresses. When analyzing the case, prioritize the information that appears later in the transcript. If there are any conflicting details between earlier and later parts of the conversation, rely on the most recent information provided, as it is likely to be the most accurate and up-to-date. Disregard any contradictory information from earlier in the transcript.
 
-Create a JSON object with the following structure: 
+Create a JSON object with the following structure. Do not enclose it in tripple backticks: 
 {
    "patient":{
       "name":"Patient's full name (string)",
@@ -101,8 +101,8 @@ Create a JSON object with the following structure:
       "sex":"Patient's sex, use 'M' for male, 'F' for female (string)",
       "chief_complaint":"Patient's chief complaint (string)",
       "chief_complaint_two_word":"Chief complaint summarized in one to two words (string)",
-      "lab_results":"Patient's lab results (object with test name keys and result values)",
-      "imaging_results":"Patient's imaging results (object with test name keys and result values)",
+      "lab_results":"Patient's lab results (object with test name keys and result values, objects must have results to be included)",
+      "imaging_results":"Patient's imaging results (object with test name keys and result values, do not include tests if they have no results)",
       "differential_diagnosis":[
          {
             "disease":"Potential diagnosis (string)",
@@ -183,48 +183,53 @@ test_case2 = """A 50-year-old man presented to the emergency department with a 1
         There were no other significant outdoor or animal exposures or travel outside of the Midwest, including international travel. He had no history of homelessness, incarceration, or intravenous drug use.
         """
 
-emma_system = """As an emergency medicine specialist, I will provide you with details about a patient case. We are located in Modesto California. If I'm not asking about a specific case, just answer the question. Otherwise, please follow these steps:
+emma_system = """Always respond using Markdown formatting. As an emergency medicine specialist in Modesto, California, I will provide details about patient cases. If I'm not asking about a specific case, simply answer the question. Otherwise, follow these steps:
 
-        1. Write a brief assessment, in one sentence, of the patient with only significant information, such as relevant PMH, present illness, current vitals and exam findings.  Add a timeline if there are multiple events.  
+## 1. Brief Assessment
+Provide a concise, one-sentence assessment of the patient, including:
+- Relevant PMH
+- Present illness
+- Current vitals
+- Exam findings
+- Timeline (if multiple events)
 
-        2. **Generate a Differential Diagnosis**:
-        - Generate a differential diagnosis list based on the provided information.
+## 2. Differential Diagnosis
+Generate a comprehensive list based on provided information, including potential concurrent conditions.
 
-        2. **Generate a Differential Diagnosis**:
-        - Generate a comprehensive differential diagnosis list based on the provided information, including potential concurrent conditions.
+For each diagnosis:
+- Consider ongoing patient data
+- Identify strong and weak evidence
+- Identify strong contradictory factors
+- Give special attention to:
+  - Definitive test results (high sensitivity and specificity)
+  - Pathognomonic signs or symptoms
+  - Absence of critical symptoms
+- Provide reasoning
+- Provide likelihood percentage (100% for sufficient/pathognomonic evidence)
 
-        2a. For each diagnosis:
-        - Consider ongoing patient data.
-        - Identify strong and weak evidence.
-        - Identify strong contradictory factors that can rule out the diagnosis or drastically reduce the likelihood.
-        - Give special attention to:
-            - Definitive test results (e.g., high sensitivity and specificity).
-            - Pathognomonic signs or symptoms confirming the diagnosis.
-            - Absence of critical symptoms typically associated with the condition.
-        - Provide reasoning.
-        - Provide a likelihood as a percentage given the evidence, with 100% reserved for diagnoses supported by sufficient or pathognomonic evidence.
+### Consider Concurrent Conditions
+Evaluate potential combinations of remaining diseases that could explain symptoms.
 
-        2b. **Consider Concurrent Conditions**:
-        - Evaluate and incorporate potential combinations of remaining diseases that could explain the symptoms into the differential diagnosis list.
+## 3. High-Risk Diagnoses
+Identify dangerous diagnoses requiring urgent workup before potential discharge. Explain why these are considered high-risk.
 
-        3. Identify any dangerous diagnoses that require urgent workup before potential discharge. Explain why these are considered high-risk.
+## 4. Suggested Follow-Up Steps
+- **Additional Questions**: List further questions to refine diagnosis and understand long-term management needs
+- **Physical Examinations**: Suggest additional physical examinations
+- **Clinical Decision Tools**: Recommend applicable tools
+- **Lab Tests**: Recommend relevant tests to narrow down the diagnosis
+- **Imaging Studies**: Suggest appropriate imaging (e.g., ECG, echocardiogram, stress test, MRI, CT)
+- **Monitoring and Lifestyle**: Include monitoring strategies and lifestyle changes
 
-        4. **Suggested Follow-Up Steps**:
-        - **Additional Questions**: List any further questions to ask the patient to refine the diagnosis and understand long-term management needs.
-        - **Physical Examinations**: Suggest additional physical examinations to perform.
-        - **Clinical Decisions Tools**:Recommend any Clinical Decisions Tools that are applicable
-        - **Lab Tests**: Recommend relevant lab tests to narrow down the diagnosis.
-        - **Imaging Studies**: Suggest appropriate imaging studies (e.g., ECG, echocardiogram, stress test, MRI, CT).
-        - **Monitoring and Lifestyle**: Include monitoring strategies and lifestyle changes as part of the follow-up plan.
+## 5. Interventions
+Recommend medications or procedures for managing the patient's condition.
 
-        5. Recommend interventions such as medications or procedures for managing the patient's condition.
+## 6. Critical Actions
+Highlight any critical actions that must be taken or considered before dispositioning the patient. Exclude actions already done or mentioned as considered.
 
-        6. Highlight any critical actions that must be taken or at least considered before dispositioning the patient. Remove any actions that have already been done or mentioned as considered.
-
-        7. Provide interesting academic insights related to the differential diagnoses, such as mechanisms of action or practical medical nuances. Do not include basic educational points.
-
-        Please respond in the format specified above, without citations.
-        """
+## 7. Academic Insights
+Provide interesting academic insights related to the differential diagnoses, such as mechanisms of action or practical medical nuances. Exclude basic educational points.
+"""
 
 
 

@@ -602,6 +602,7 @@ def parse_json(chat_history):
         st.session_state.differential_diagnosis = data['patient']['differential_diagnosis']
         st.session_state.critical_actions = data['patient']['critical_actions']
         st.session_state.follow_up_steps = data['patient']['follow_up_steps']
+        
     except:
         return
 

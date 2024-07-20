@@ -81,7 +81,7 @@ def create_json(text):
                 "content": create_json_prompt + "```" + text + "```" ,
             }
         ],
-        model="gpt-3.5-turbo",
+        model="gpt-4o-mini",
         temperature=0.0
     )
     json_data = response.choices[0].message.content
