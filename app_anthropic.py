@@ -8,7 +8,7 @@ import io
 from dotenv import load_dotenv
 from prompts import *
 import json
-from extract_json import extract_json, create_json
+from extract_json import create_json
 from datetime import datetime
 import pytz
 from login import *
@@ -18,6 +18,8 @@ from presidio_analyzer.predefined_recognizers import SpacyRecognizer, EmailRecog
 from pymongo import MongoClient, ASCENDING, TEXT, DESCENDING
 from pymongo.errors import DuplicateKeyError
 from bson import ObjectId, Regex
+from streamlit_searchbox import st_searchbox
+from fuzzywuzzy import fuzz
 
 
 #def generate_session_id():
@@ -289,30 +291,26 @@ def load_chat_history(collection_name):
     return chat_history_string
 
 # search sessions via keywords    
+
 def search_sessions(user_id, keywords):
     collections = db.list_collection_names()
     user_sessions = [col for col in collections if col.startswith(f'user_{user_id}_session_')]
-    
     results = []
+
+    if not keywords.strip():
+        return results
+
     for collection_name in user_sessions:
         # Check existing indexes
         existing_indexes = db[collection_name].index_information()
         text_index = next((index for index in existing_indexes.values() if any('text' in field for field in index['key'])), None)
-        
+
         # Prepare the query
-        regex_query = {
-            "$or": [
-                {"content": Regex(f".*{keyword}.*", "i")} for keyword in keywords.split()
-            ] + [
-                {"patient_cc": Regex(f".*{keyword}.*", "i")} for keyword in keywords.split()
-            ] + [
-                {"ddx": Regex(f".*{keyword}.*", "i")} for keyword in keywords.split()
-            ]
-        }
-        
+        content_query = {"content": Regex(f".*{keywords}.*", "i")}
+
         # Combine queries
-        combined_query = {"$and": [{"type": "chat_history"}, regex_query]}
-        
+        combined_query = {"$and": [{"type": "chat_history"}, content_query]}
+
         projection = {
             "collection_name": {"$literal": collection_name},
             "timestamp": 1,
@@ -321,27 +319,27 @@ def search_sessions(user_id, keywords):
             "ddx": 1,
             "sender": 1,
         }
-        
+
         # Execute the query
         collection_results = list(db[collection_name].find(combined_query, projection)
                                   .sort("timestamp", DESCENDING)
                                   .limit(10))  # Limit results per collection
-        
+
         # If text index exists, perform text search separately and merge results
         if text_index:
             text_query = {"$text": {"$search": keywords}}
             text_results = list(db[collection_name].find({"$and": [{"type": "chat_history"}, text_query]}, projection)
                                 .sort([("score", {"$meta": "textScore"})])
                                 .limit(10))
-            
+
             # Merge results, removing duplicates
             collection_results = list({r["_id"]: r for r in collection_results + text_results}.values())
-        
+
         results.extend(collection_results)
-    
+
     # Sort all results by timestamp
     results.sort(key=lambda x: x['timestamp'], reverse=True)
-    
+
     return results[:20]  # Return top 20 overall results
 
 def update_indexes(collection_name):
@@ -388,25 +386,53 @@ def initialize_text_indexes():
 
 
 def display_search_results(results):
-    print(f'DEBUG DISPLAY_SEARCH_RESULTS: {results}')
+    #print(f'DEBUG DISPLAY_SEARCH_RESULTS: {results}')
     for i, result in enumerate(results):
         # st.write(f"**Session:** {result['collection_name']}")
-        st.write(f"**Date:** {result['timestamp']}")
+        st.write(f"**Date:** {result['timestamp'].strftime('%Y-%m-%d %H:%M')}")
         try:
-            st.write(f"{result['patient_cc']} - **{result['ddx'][0]['disease']}**")
+            if st.button(f"{result['patient_cc']} - **{result['ddx'][0]['disease']}**",
+                        help="click to load session",
+                        type='primary'):
+                session_name = load_session_from_search(result)
+                print(f'DEBUG DISPLAY_SEARCH_RESULTS - YOU NEED THIS FORMAT TO LOAD SESSION CORRECTLY: {session_name}')
+                return session_name
         except:
-            st.write('no DDX available')
+            st.write("no info")
+        #try:
+            #st.write(f"{result['patient_cc']} - **{result['ddx'][0]['disease']}**")
+        #except:
+            #st.write('no DDX available')
+        
         with st.expander("See Details..."):
             st.write(f"{result['content']}")
         #st.write(f"**Relevance Score:** {result['score']:.2f}")
         
-        if st.button(f"Load Session {i+1}"):
-            session_name = load_session_from_search(result)
-            return session_name
-            #st.rerun()
+        
+            
         
         st.write("---")
 
+
+def search_sessions_for_searchbox(search_term):
+    if not search_term.strip():
+        return []
+    
+    results = search_sessions(st.session_state.username, search_term)
+    
+    # Calculate relevance scores
+    scored_results = []
+    for r in results:
+        score = fuzz.partial_ratio(search_term.lower(), r['patient_cc'].lower())
+        scored_results.append((score, r))
+    
+    # Sort by score, then by original order (assuming timestamp indicates importance)
+    sorted_results = sorted(scored_results, key=lambda x: (-x[0], -x[1]['timestamp'].timestamp()))
+    
+    return [
+        (f"{r['timestamp'].strftime('%Y.%m.%d %H:%M')} - {r['patient_cc']} - {r['ddx'][0]['disease']}", r)
+        for score, r in sorted_results if 'timestamp' in r and 'patient_cc' in r and 'ddx' in r and r['ddx']
+    ]
 
 
 #############################################################################
@@ -721,8 +747,8 @@ def display_sidebar():
             user_id = st.session_state.username
             user_sessions = list_user_sessions(user_id)
             # print(f'DEBUG USER SESSIONS: name: {user_id} user session:{user_sessions}')
-            if 'should_rerun' in st.session_state and st.session_state.should_rerun:
-                st.session_state.should_rerun = False
+            #if 'should_rerun' in st.session_state and st.session_state.should_rerun:
+                #st.session_state.should_rerun = False
                 #st.rerun()
             if user_sessions:
                 # Sort sessions by timestamp, newest first
@@ -731,7 +757,7 @@ def display_sidebar():
                 
                 
                 
-                session_name = st.selectbox("Select a session to load:", 
+                session_name = st.selectbox("Select a recent session to load:", 
                             options=["Select a session..."] + list(session_options.keys()),
                             index=0,
                             key="session_selectbox") # Set index to 0 to select the placeholder by default
@@ -742,14 +768,53 @@ def display_sidebar():
                     del st.session_state.selected_session  # Clear the selection after using it
 
                 # Search function
-                search_query = st.text_input("Search sessions:")
 
-                if search_query:
-                    results = search_sessions(st.session_state.username, search_query)
-                    session_name = display_search_results(results)
+                ######## basic search ########
+                #search_query = st.text_input("Search sessions:")
+
+                #if search_query:
+                    ##results = search_sessions(st.session_state.username, search_query)
+                   # session_name = display_search_results(results)
+                   # print(f'DEBUG BASIC SEARCH SESSION_NAME: {session_name}')
+
+                ####### streamlit-searchbox versions #########
+                
+                selected_session = st_searchbox(
+                    search_sessions_for_searchbox,
+                    key="session_searchbox",
+                    label="Search sessions",
+                    placeholder="Type to search for sessions...",
+                    default_use_searchterm=False,
+                    rerun_on_update=False,
+                    style_overrides = {
+                                    "dropdown": {
+                                        "width": "100%",
+                                        "max-height": "400px",
+                                        "overflow-y": "auto"
+                                    },
+                                    "searchbox": {
+                                        "menuList": {
+                                            "maxHeight": "1000px"
+                                        }
+                                    }
+                                }
+                )
+                print(f'DEBUG STREMLIT SEARCHBOX SEARCH_RESULTS: {selected_session}')
+                
+
+                if selected_session:
+                    session_name = load_session_from_search(selected_session)
+                    if session_name:
+                        st.success(f"Session Loaded")
+                        # Add any additional logic you need when a session is selected
+                    else:
+                        st.error("Failed to load the selected session.")
+                    print(f'DEBUG STREMLIT SEARCHBOX SESSION_NAME: {session_name}')             
+
 
                 # Check if a real session is selected (not the placeholder)
                 if session_name != "Select a session..." and session_name:
+                    #st.success(f"Loaded session: {session_name}")
                     collection_name = session_options[session_name]
                     st.session_state.session_id = collection_name
                     print(f'DEBUG SESSSION ID FROM SESSTION STATE: {collection_name}')
@@ -764,7 +829,7 @@ def display_sidebar():
                     # Load mongo DB collection after selection
                     st.session_state.collection_name = collection_name
 
-                    st.write(f"Data for session {session_name}:")
+                    st.write(f"**Data of session: {session_name}**")
                     
                     # Display Differential Diagnosis (ddx)
                     with st.expander("Differential Diagnosis (ddx)"):
