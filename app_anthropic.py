@@ -178,7 +178,7 @@ class User:
 ###################### GOOGLE OAUTH ##############################################################
 def get_redirect_uri():
     if os.getenv('ENVIRONMENT') == 'production':
-        return urljoin('https://em-bot-ef123b005ca5.herokuapp.com/', '/')
+        return 'https://em-bot-ef123b005ca5.herokuapp.com/'
     else:
         return 'http://localhost:8501/'
     
