@@ -7,447 +7,423 @@ import os
 import io
 from dotenv import load_dotenv
 from prompts import *
+from extract_json import *
 import json
-from extract_json import create_json
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
-from login import *
-from presidio_analyzer import AnalyzerEngine, RecognizerRegistry, PatternRecognizer, Pattern
-from presidio_anonymizer import AnonymizerEngine
-from presidio_analyzer.predefined_recognizers import SpacyRecognizer, EmailRecognizer, PhoneRecognizer, UsLicenseRecognizer, UsSsnRecognizer
-from pymongo import MongoClient, ASCENDING, TEXT, DESCENDING
-from pymongo.errors import DuplicateKeyError
-from bson import ObjectId, Regex
+from pymongo import MongoClient, ASCENDING, TEXT, DESCENDING, UpdateOne
+from pymongo.errors import BulkWriteError, ServerSelectionTimeoutError, OperationFailure, ConfigurationError#,DuplicateKeyError, BulkWriteError, InvalidName, 
+from bson import ObjectId#, Regex
 from streamlit_searchbox import st_searchbox
-from fuzzywuzzy import fuzz
+from streamlit_mic_recorder import mic_recorder
+from deepgram import DeepgramClient, PrerecordedOptions
+from streamlit.components.v1 import html
+from typing import List, Dict, Any, Optional, Tuple
+import logging
+import secrets
+from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build
+from urllib.parse import urljoin
 
+st.set_page_config(page_title="EMMA", page_icon="🤖", initial_sidebar_state="collapsed", layout="wide")
 
-#def generate_session_id():
-    #return secrets.token_urlsafe(16)
-
-
-
-# Load variables
+#login_username = "Sunny"
+# Load environment variables
 load_dotenv()
-ema_v2 = "asst_na7TnRA4wkDbflTYKzo9kmca"
-open_ai_api_key = os.getenv("OPENAI_API_KEY")
-api_key = os.getenv("ANTHROPIC_API_KEY")
-if not api_key:
-    st.error("API Key not found! Please check your environment variables.")
-#legal_attorney = "asst_ZI3rML4v8eG1vhQ3Fis5ikOd"
-#note_writer = 'asst_Ua6cmp6dpTc33cSpuZxutGsX'
 
-anthropic = Anthropic(api_key=api_key)
+# Constants
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
+MONGODB_URI = os.getenv("MONGODB_ATLAS_URI")
+#print(f'MONGODB_URI: {MONGODB_URI}')
+DB_NAME = 'emma-dev'
+SCOPES = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile', 'openid']
+#REDIRECT_URI = 'http://localhost:8501/'
+SECRET_KEY = secrets.token_hex(32)
+CLIENT_SECRET_JSON = json.loads(os.getenv('CLIENT_SECRET_JSON'))
 
-#############################################################################
-                          ### Mongo DB section ###
+# Initialize Anthropic client
+anthropic = Anthropic(api_key=ANTHROPIC_API_KEY)
 
 # Initialize MongoDB connection
-#@st.cache_resource
-def init_connection():
-    return MongoClient('mongodb://localhost:27017/')
+@st.cache_resource
+def init_mongodb_connection():
+    return MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000, maxPoolSize=50)
 
-client = init_connection()
-db = client['emma']
+try:
+    # MongoDB setup
+    client = MongoClient(MONGODB_URI)
+    db = client[DB_NAME]
+    users_collection = db['users']
+    sessions_collection = db['sessions']
+    custom_buttons_collection = db['custom_buttons']
+    layouts_collection = db['layouts']
+    themes_collection = db['themes']
+    shared_templates_collection = db['shared_templates']
+    shared_buttons_collection = db['shared_buttons']
+    shared_layouts_collection = db['shared_layouts']
+    client.admin.command('ping')
+    print("Successfully connected to MongoDB")
+    
+except (ServerSelectionTimeoutError, OperationFailure, ConfigurationError) as err:
+    st.error(f"Error connecting to MongoDB Atlas: {err}")
+    st.stop()
 
-# Create a new session collection
-def create_session_collection():
-    user_id = st.session_state.username
-    # print(f'DEBUG USER-ID: {user_id}')
-    session_id = ObjectId()
-    st.session_state.session_id = session_id
-    collection_name = f'user_{user_id}_session_{session_id}'
-    st.session_state.collection_name = collection_name
-    if collection_name not in db.list_collection_names():
-        db.create_collection(collection_name)
-        db[collection_name].create_index([("timestamp", ASCENDING), ("test_name", ASCENDING)], unique=True)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-        # Initialize text indexes for the new collection
-        initialize_text_indexes()
-        st.session_state.collection_name = collection_name
+class User:
+    def __init__(self, google_id: str, email: str, name: str, family_name: str, picture: Optional[str] = None, _id: Optional[ObjectId] = None):
+        self._id = _id or ObjectId()
+        self.google_id = google_id
+        self.email = email
+        self.name = name
+        self.family_name = family_name
+        self.picture = picture
+        self.created_at = datetime.now()
+        self.last_login = datetime.now()
+        self.login_count = 0
+        self.last_active = datetime.now()
+        self.total_session_time = 0
+        self.preferences = {"note_templates": []}
+        self.recordings_count = 0
+        self.transcriptions_count = 0
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "_id": self._id,
+            "google_id": self.google_id,
+            "email": self.email,
+            "name": self.name,
+            "family_name": self.family_name,
+            "picture": self.picture,
+            "created_at": self.created_at,
+            "last_login": self.last_login,
+            "login_count": self.login_count,
+            "last_active": self.last_active,
+            "total_session_time": self.total_session_time,
+            "preferences": self.preferences,
+            "recordings_count": self.recordings_count,
+            "transcriptions_count": self.transcriptions_count
+        }
 
-
-
-# Retrieve documents from a session collection
-def get_documents_by_session(session_id):
-    collection_name = st.session_state.collection_name
-    return list(db[collection_name].find({}).sort("timestamp", ASCENDING))
-
-
-# Function to save chat message
-def save_ai_message(user_id, sender, message, specialist="ai"):
-    chat_document = {
-        "type": "ai_input",
-        "specialist": specialist,
-        "user_id": user_id,
-        "sender": sender,
-        "message": message,
-        "timestamp": datetime.now(),
-        "patient_cc": st.session_state.patient_cc
-    }
-    try:
-        db[st.session_state.collection_name].insert_one(chat_document)
-    except DuplicateKeyError:
-        #update the existing document instead:
-        db[st.session_state.collection_name].update_one(
-            {"timestamp": chat_document["timestamp"], "test_name": chat_document["test_name"]},
-            {"$set": chat_document},
-            upsert=True
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'User':
+        user = cls(
+            google_id=data["google_id"],
+            email=data["email"],
+            name=data["name"],
+            family_name=data["family_name"],
+            picture=data.get("picture"),
+            _id=data.get("_id")
         )
+        user.created_at = data.get("created_at", user.created_at)
+        user.last_login = data.get("last_login", user.last_login)
+        user.login_count = data.get("login_count", 0)
+        user.last_active = data.get("last_active", user.last_active)
+        user.total_session_time = data.get("total_session_time", 0)
+        user.preferences = data.get("preferences", {"note_templates": []})
+        user.recordings_count = data.get("recordings_count", 0)
+        user.transcriptions_count = data.get("transcriptions_count", 0)
+        return user
 
-def save_user_message(user_id, sender, message):
-    chat_document = {
-        "type": "user_input",
-        "user_id": user_id,
-        "sender": sender,
-        "message": message,
-        "timestamp": datetime.now(),
+    def update_login(self) -> None:
+        self.last_login = datetime.now()
+        self.login_count += 1
+        print(f'DEBUG USER.UPDATE_LOGIN: {self.login_count}')
+
+    def update_activity(self) -> None:
+        self.last_active = datetime.now()
+
+    def add_session_time(self, duration: int) -> None:
+        self.total_session_time += duration
+
+    def increment_recordings(self) -> None:
+        self.recordings_count += 1
+
+    def increment_transcriptions(self) -> None:
+        self.transcriptions_count += 1
+
+    def add_note_template(self, title: str, template_type: str, content: str) -> None:
+        template = {
+            "id": str(ObjectId()),
+            "title": title,
+            "type": template_type,
+            "content": content
         }
+        self.preferences["note_templates"].append(template)
+
+    def get_note_template(self, template_id: str) -> Optional[Dict[str, Any]]:
+        return next((t for t in self.preferences["note_templates"] if t["id"] == template_id), None)
+
+    def get_note_templates(self) -> List[Dict[str, Any]]:
+        return self.preferences.get("note_templates", [])
+
+    def update_note_template(self, template_id: str, title: Optional[str] = None, template_type: Optional[str] = None, content: Optional[str] = None) -> None:
+        template = self.get_note_template(template_id)
+        if template:
+            if title:
+                template["title"] = title
+            if template_type:
+                template["type"] = template_type
+            if content:
+                template["content"] = content
+
+    def delete_note_template(self, template_id: str) -> None:
+        self.preferences["note_templates"] = [t for t in self.preferences["note_templates"] if t["id"] != template_id]
+         
+
+
+
+###################### GOOGLE OAUTH ##############################################################
+def get_redirect_uri():
+    if os.getenv('ENVIRONMENT') == 'production':
+        return urljoin('https://em-bot-ef123b005ca5.herokuapp.com/', '/')
+    else:
+        return 'http://localhost:8501/'
+    
+def google_login() -> None:
+    # Create a Flow instance from the client secrets file
+    flow = Flow.from_client_config(
+        client_config=CLIENT_SECRET_JSON,
+        scopes=SCOPES,
+        redirect_uri=get_redirect_uri()
+    )
+
+    # Get the authorization URL
+    authorization_url, _ = flow.authorization_url(prompt='consent')
+
+    # HTML for the Google Sign-In button using the official image
+    html = f"""
+    <style>
+        body {{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+        }}
+        .container {{
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }}
+        .title {{
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }}
+        .subtitle {{
+            font-size: 1.2em;
+            margin-bottom: 40px;
+        }}
+        .google-btn {{
+            display: inline-block;
+            width: 191px;
+            height: 46px;
+            background-image: url('https://developers.google.com/static/identity/images/branding_guideline_sample_lt_rd_lg.svg');
+            background-repeat: no-repeat;
+            background-size: 191px 46px;
+            border: none;
+            cursor: pointer;
+        }}
+        .google-btn:hover {{
+            box-shadow: 0 0 8px 4px rgba(4, 182, 234, 0.3);
+            border-radius: 20px;
+            background-image: url('https://developers.google.com/static/identity/images/branding_guideline_sample_lt_rd_lg.svg');
+            
+        }}
+        .google-btn:active {{
+            background-image: url('https://developers.google.com/static/identity/images/branding_guideline_sample_lt_rd_lg.svg');
+        }}
+    </style>
+    <div class="container">
+        <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:200px;height:200px;border-radius:20%;">
+        <div class="title">Welcome to EMMA</div>
+        <div class="subtitle">Your Emergency Medicine main assistant</div>
+        <a href="{authorization_url}" target="_self">
+            <div class="google-btn"></div>
+        </a>
+    </div>
+    """
+
+    # Display the button
+    st.markdown(html, unsafe_allow_html=True)
+    
+        
+def google_callback() -> Optional[User]:
+    if 'code' not in st.query_params:
+        st.error("Authorization code not found. Please try logging in again.")
+        return None
+
     try:
-        db[st.session_state.collection_name].insert_one(chat_document)
-    except DuplicateKeyError:
-        #update the existing document instead:
-        db[st.session_state.collection_name].update_one(
-            {"timestamp": chat_document["timestamp"], "test_name": chat_document["test_name"]},
-            {"$set": chat_document},
-            upsert=True
+        flow = Flow.from_client_secrets_file(
+            'client_secret.json',
+            scopes=SCOPES,
+            redirect_uri=REDIRECT_URI
         )
+        print(f'DEBUG GOOGLE CALLBACK FLOW: {flow}')
+        flow.fetch_token(code=st.query_params['code'])
+        credentials = flow.credentials
+        print(f'DEBUG GOOGLE CALLBACK CREDENTIALS: {credentials}')
 
-def save_case_details(user_id, doc_type, content=None):
-    document = {
-        "type": doc_type,
-        "user_id": user_id,
-        "ddx": st.session_state.differential_diagnosis,
-        "content": content,
-        "patient_cc": st.session_state.patient_cc,
-        "timestamp": datetime.now(),
-        }
-    query = {
-        "type": doc_type,
-        "user_id": user_id,
-    }
-    
-    update = {
-        "$set": document
-    }
-    
-    try:
-        result = db[st.session_state.collection_name].update_one(query, update, upsert=True)
+        user_info_service = build('oauth2', 'v2', credentials=credentials, cache_discovery=False)
+        print(f'DEBUG GOOGLE CALLBACK: {user_info_service}')
+        google_user_info = user_info_service.userinfo().get().execute()
+        print(f'DEBUG GOOGLE CALLBACK GOOGLE USER INFO: {google_user_info}')
+        #st.session_state.session_state.user_photo_url = google_user_info['picture']
+        #st.session_state.session_state.username = google_user_info['name']
         
-        if result.matched_count > 0:
-            print("Existing ddx document updated successfully.")
-        elif result.upserted_id:
-            print("New ddx document inserted successfully.")
-        else:
-            print("No changes made to the database.")
+        #print(f'DEBUG GOOGLE CALLBACK GOOGLE USER PHOTO URL: {st.session_state.session_state.user_photo_url}')
+        user = get_or_create_user(google_user_info)
+        print(f'DEBUG GOOGLE CALLBACK   USER: {user}')
+        session_token, expiration = create_session(str(user._id))
+        print(f'DEBUG GOOGLE CALLBACK SESSIONT TOKEN AND USER: {session_token}')
+        st.session_state['session_token'] = session_token
+        st.session_state['user'] = user
+        print(f'DEBUG GOOGLE CALLBACK SESSIONT TOKEN AND USER: {session_token} and {user}')
+        # Update query parameters
+        st.query_params['session'] = session_token
+        st.query_params['session_expiry'] = expiration.isoformat()
+        
+        # Remove the 'code' parameter
+        del st.query_params['code']
+        
+        return user
     except Exception as e:
-        print(f"An error occurred: {str(e)}")
+        logger.error(f"Error during token fetch: {str(e)}")
+        st.error("An error occurred during authentication. Please try logging in again.")
+        # Clear any existing session data
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        return None
 
-def save_note_details(user_id, message):
-    chat_document = {
-        "type": "clinical_note",
+def init_db() -> None:
+    users_collection.create_index([("google_id", ASCENDING)], unique=True)
+    users_collection.create_index([("email", ASCENDING)], unique=True)
+
+def get_or_create_user(google_user_info: Dict[str, Any]) -> User:
+    existing_user = users_collection.find_one({"google_id": google_user_info['id']})
+    print(f'DEBUG get_or_create_user -------existing_user: {existing_user}')
+    if existing_user:
+        user = User.from_dict(existing_user)
+        user.update_login()
+        user.picture = google_user_info.get('picture')
+        if "note_templates" not in user.preferences:
+            user.preferences["note_templates"] = []
+        users_collection.update_one(
+            {"_id": user._id},
+            {"$set": {
+                "last_login": user.last_login,
+                "login_count": user.login_count,
+                "preferences": user.preferences,
+                "picture": user.picture
+            }}
+        )
+    else:
+        user = User(
+            google_id=google_user_info['id'],
+            email=google_user_info['email'],
+            name=google_user_info['name'],
+            family_name=google_user_info['family_name'],
+            picture=google_user_info.get('picture')
+        )
+        user.update_login()
+        result = users_collection.insert_one(user.to_dict())
+        user._id = result.inserted_id
+    
+    # Update session state with user information
+    st.session_state.session_state.user = user
+    st.session_state.session_state.user_id = user.google_id
+    st.session_state.session_state.username = user.name
+    st.session_state.session_state.family_name = user.family_name
+    st.session_state.session_state.user_photo_url = user.picture
+    
+    return user
+
+
+def save_user(user: User) -> None:
+    user_dict = user.to_dict()
+    print(f'DEBUT SAVE')
+    if '_id' in user_dict:
+        del user_dict['_id']
+    users_collection.update_one(
+        {"google_id": user.google_id},
+        {"$set": user_dict},
+        upsert=True
+    )
+
+
+def update_user_activity(user: User) -> None:
+    user.update_activity()
+    users_collection.update_one(
+        {"_id": user._id},
+        {"$set": {"last_active": user.last_active}}
+    )
+
+
+def save_user_preferences(user: User) -> None:
+    users_collection.update_one(
+        {"_id": user._id},
+        {"$set": {"preferences": user.preferences}}
+    )
+
+def add_note_template(user: User, title: str, template_type: str, content: str) -> None:
+    user.add_note_template(title, template_type, content)
+    save_user_preferences(user)
+
+def get_user_note_templates(user: User) -> List[Dict[str, Any]]:
+    return user.get_note_templates()
+
+def update_note_template(user: User, template_id: str, title: Optional[str] = None, template_type: Optional[str] = None, content: Optional[str] = None) -> None:
+    user.update_note_template(template_id, title, template_type, content)
+    save_user_preferences(user)
+
+def delete_note_template(user: User, template_id: str) -> None:
+    user.delete_note_template(template_id)
+    save_user_preferences(user)
+
+def create_session(user_id: str) -> tuple[str, datetime]:
+    session_token = secrets.token_urlsafe(32)
+    expiration = datetime.utcnow() + timedelta(days=1)
+    sessions_collection.insert_one({
+        "token": session_token,
         "user_id": user_id,
-        "specialist": st.session_state.specialist,
-        "message": message,
-        "timestamp": datetime.now(),
-        }
-    db[st.session_state.collection_name].insert_one(chat_document)
+        "expires": expiration
+    })
+    return session_token, expiration
 
-# Function to perform conditional upsert
-def conditional_upsert_test_result(user_id, test_name, result, sequence_number):
-    collection = db[st.session_state.collection_name]
-    query = {"test_name": test_name, "sequence_number": sequence_number}
-    try:
-        existing_doc = collection.find_one(query)
-        
-        if existing_doc:
-            existing_result = existing_doc.get("result", "").lower()
-            if existing_result in ["not provided", "not performed yet", "not specified"] or existing_result != result.lower():
-                # Update if the existing result is one of the special cases or if it's different
-                new_sequence_number = existing_doc.get("sequence_number", 0) + 1
-                new_doc = {
-                    "type": "test_result",
-                    "user_id": user_id,
-                    "test_name": test_name,
-                    "result": result,
-                    "sequence_number": new_sequence_number,
-                    "timestamp": datetime.now()
-                }
-                collection.insert_one(new_doc)
-                print(f"New test result inserted for {test_name} with sequence number {new_sequence_number}.")
-            else:
-                print(f"Test result for {test_name} is unchanged. No update needed.")
-        else:
-            # If no existing document, insert a new one
-            new_doc = {
-                "type": "test_result",
-                "user_id": user_id,
-                "test_name": test_name,
-                "result": result,
-                "sequence_number": sequence_number,
-                "timestamp": datetime.now()
-            }
-            collection.insert_one(new_doc)
-            print(f"New test result inserted for {test_name} with sequence number {sequence_number}.")
-    
-    except Exception as e:
-        print(f"An error occurred while processing {test_name}: {str(e)}")
+def get_user_from_session(session_token: str) -> Optional[User]:
+    session = sessions_collection.find_one({
+        "token": session_token,
+        "expires": {"$gt": datetime.utcnow()}
+    })
+    if session:
+        user_data = users_collection.find_one({"_id": ObjectId(session["user_id"])})
+        if user_data:
+            return User.from_dict(user_data)
+    return None
 
-# Insert a test result
-def insert_test_result(user_id, test_name, result):
-    document = {
-        "type": "test_result",
-        "user_id": user_id,
-        "test_name": test_name,
-        "result": result,
-        "timestamp": datetime.now()
-    }
-    try:
-        db[st.session_state.collection_name].insert_one(document)
-        print("Test result inserted successfully.")
-    except DuplicateKeyError:
-        print("Duplicate test result detected. Insertion skipped.")
+def get_current_user() -> Optional[User]:
+    session_token = st.session_state.get('session_token')
+    if session_token:
+        return get_user_from_session(session_token)
+    return None
 
-# list all sessions for a specific user.
-def list_user_sessions(user_id):
-    collections = db.list_collection_names()
-    user_sessions = [col for col in collections if col.startswith(f'user_{user_id}_session_')]
-    session_details = []
-    
-    for session in user_sessions:
-        session_id = session.split('_')[-1]
-        collection_name = f'user_{user_id}_session_{session_id}'
-        ddx_doc = db[collection_name].find_one({"type": "ddx"})
-        
-        if ddx_doc:
-            timestamp = ddx_doc.get("timestamp", None)
-            date_str = timestamp.strftime("%Y.%m.%d %H:%M") if timestamp else "Unknown Date"
-            patient_cc = ddx_doc.get("patient_cc", "Unknown CC")
-            ddx_array = ddx_doc.get("ddx", [])
-            disease_name = ddx_array[0]["disease"] if ddx_array else "Unknown Disease"
-            session_name = f"{date_str} - {patient_cc} - {disease_name}"
-            session_details.append({"collection_name": collection_name, "session_name": session_name})
-        else:
-            session_details.append({"collection_name": collection_name, "session_name": session_id})
-    
-    return session_details
+def clear_session(session_token: str) -> None:
+    sessions_collection.delete_one({"token": session_token})
 
-def sort_user_sessions_by_time(sessions):
-    def parse_session_date(session):
-        try:
-            # Try to parse the date from the session name
-            date_str = session['session_name'].split(' - ')[0]
-            return datetime.strptime(date_str, "%Y.%m.%d %H:%M")
-        except (ValueError, IndexError):
-            # If parsing fails, return a minimum datetime value
-            return datetime.min
-
-    return sorted(sessions, key=parse_session_date, reverse=True)
-
-# load data from a selected session.
-def load_session_data(collection_name):
-    documents = list(db[collection_name].find({}).sort("timestamp", ASCENDING))
-    categorized_data = {
-        "ddx": [],
-        "test_result": [],
-        "clinical_note": [],
-        "chat_history": []
-    }
-    for doc in documents:
-        doc_type = doc.get('type')
-        if doc_type == "ddx":
-            categorized_data["ddx"].append(doc)
-        elif doc_type == "test_result":
-            categorized_data["test_result"].append(doc)
-        elif doc_type == "clinical_note":
-            categorized_data["clinical_note"].append(doc)
-        elif doc_type in ["user_input", "ai_input"]:
-            categorized_data["chat_history"].append(doc)
-    return categorized_data
-
-# load chat_history after selecting a session
-def load_chat_history(collection_name):
-    print(f'DEBUG LOAD_CHAT_HISTORY WAS RAN!!!!')
-    query = {"type": {"$in": ["user_input", "ai_input"]}}
-    projection = {"message": 1, "sender": 1, "timestamp": 1, "_id": 0}
-
-    # Execute the query and store results in a list
-    chat_history = list(db[collection_name].find(query, projection).sort("timestamp", 1))
-
-    # Format the chat history as a string
-    formatted_chat_history = []
-    for entry in chat_history:
-        role = "Human" if entry['sender'] == "Human" else "AI"
-        formatted_entry = f"{role}: {entry['message']}"
-        formatted_chat_history.append(formatted_entry)
-
-    # Join the formatted entries into a single string
-    chat_history_string = "\n\n".join(formatted_chat_history)
-
-    # Store the formatted chat history in the session state
-    st.session_state.clean_chat_history = chat_history_string
-    print(f'DEBUG LOAD_CHAT_HISTORY CLEAN_CHAT_HISTORY result: {chat_history_string}')
-    return chat_history_string
-
-# search sessions via keywords    
-
-def search_sessions(user_id, keywords):
-    collections = db.list_collection_names()
-    user_sessions = [col for col in collections if col.startswith(f'user_{user_id}_session_')]
-    results = []
-
-    if not keywords.strip():
-        return results
-
-    for collection_name in user_sessions:
-        # Check existing indexes
-        existing_indexes = db[collection_name].index_information()
-        text_index = next((index for index in existing_indexes.values() if any('text' in field for field in index['key'])), None)
-
-        # Prepare the query
-        content_query = {"content": Regex(f".*{keywords}.*", "i")}
-
-        # Combine queries
-        combined_query = {"$and": [{"type": "chat_history"}, content_query]}
-
-        projection = {
-            "collection_name": {"$literal": collection_name},
-            "timestamp": 1,
-            "content": 1,
-            "patient_cc": 1,
-            "ddx": 1,
-            "sender": 1,
-        }
-
-        # Execute the query
-        collection_results = list(db[collection_name].find(combined_query, projection)
-                                  .sort("timestamp", DESCENDING)
-                                  .limit(10))  # Limit results per collection
-
-        # If text index exists, perform text search separately and merge results
-        if text_index:
-            text_query = {"$text": {"$search": keywords}}
-            text_results = list(db[collection_name].find({"$and": [{"type": "chat_history"}, text_query]}, projection)
-                                .sort([("score", {"$meta": "textScore"})])
-                                .limit(10))
-
-            # Merge results, removing duplicates
-            collection_results = list({r["_id"]: r for r in collection_results + text_results}.values())
-
-        results.extend(collection_results)
-
-    # Sort all results by timestamp
-    results.sort(key=lambda x: x['timestamp'], reverse=True)
-
-    return results[:20]  # Return top 20 overall results
-
-def update_indexes(collection_name):
-    # Drop the existing text index
-    db[collection_name].drop_index("message_text_patient_cc_text_content_text_test_name_text_result_text")
-
-    # Create a new text index with the desired fields
-    db[collection_name].create_index([("content", TEXT), ("patient_cc", TEXT), ("ddx", TEXT)])
-
-def load_session_from_search(result):
-    collection_name = result['collection_name']
-    user_sessions = list_user_sessions(st.session_state.username)
-    session_options = {session['session_name']: session['collection_name'] for session in user_sessions}
-    
-    # Find the session name that corresponds to the collection name
-    session_name = next((name for name, coll in session_options.items() if coll == collection_name), None)
-    
-    if session_name:
-        return session_name
-
-def initialize_text_indexes():
-    collections = db.list_collection_names()
-    for collection_name in collections:
-        if collection_name.startswith('user_'):
-            # Check if a text index already exists
-            existing_indexes = db[collection_name].index_information()
-            text_index = next((index for index in existing_indexes.values() if any('text' in field for field in index['key'])), None)
-            
-            if not text_index:
-                try:
-                    db[collection_name].create_index([
-                        ("type", ASCENDING),
-                        ("content", TEXT),
-                        ("patient_cc", TEXT),
-                        ("ddx", TEXT),
-                        ("sender", ASCENDING),
-                        ("timestamp", DESCENDING)
-                    ], background=True, name="content_patient_cc_ddx_text_index")
-                    print(f"Text index created for collection: {collection_name}")
-                except Exception as e:
-                    print(f"Error creating index for collection {collection_name}: {str(e)}")
-            else:
-                print(f"Text index already exists for collection: {collection_name}")
-
-
-def display_search_results(results):
-    #print(f'DEBUG DISPLAY_SEARCH_RESULTS: {results}')
-    for i, result in enumerate(results):
-        # st.write(f"**Session:** {result['collection_name']}")
-        st.write(f"**Date:** {result['timestamp'].strftime('%Y-%m-%d %H:%M')}")
-        try:
-            if st.button(f"{result['patient_cc']} - **{result['ddx'][0]['disease']}**",
-                        help="click to load session",
-                        type='primary'):
-                session_name = load_session_from_search(result)
-                print(f'DEBUG DISPLAY_SEARCH_RESULTS - YOU NEED THIS FORMAT TO LOAD SESSION CORRECTLY: {session_name}')
-                return session_name
-        except:
-            st.write("no info")
-        #try:
-            #st.write(f"{result['patient_cc']} - **{result['ddx'][0]['disease']}**")
-        #except:
-            #st.write('no DDX available')
-        
-        with st.expander("See Details..."):
-            st.write(f"{result['content']}")
-        #st.write(f"**Relevance Score:** {result['score']:.2f}")
-        
-        
-            
-        
-        st.write("---")
-
-
-def search_sessions_for_searchbox(search_term):
-    if not search_term.strip():
-        return []
-    
-    results = search_sessions(st.session_state.username, search_term)
-    
-    # Calculate relevance scores
-    scored_results = []
-    for r in results:
-        score = fuzz.partial_ratio(search_term.lower(), r['patient_cc'].lower())
-        scored_results.append((score, r))
-    
-    # Sort by score, then by original order (assuming timestamp indicates importance)
-    sorted_results = sorted(scored_results, key=lambda x: (-x[0], -x[1]['timestamp'].timestamp()))
-    
-    return [
-        (f"{r['timestamp'].strftime('%Y.%m.%d %H:%M')} - {r['patient_cc']} - {r['ddx'][0]['disease']}", r)
-        for score, r in sorted_results if 'timestamp' in r and 'patient_cc' in r and 'ddx' in r and r['ddx']
-    ]
-
-
-#############################################################################
+def update_user_session_time(user: User, duration: timedelta) -> None:
+    user.add_session_time(duration)
+    users_collection.update_one(
+        {"_id": user._id},
+        {"$set": {"total_session_time": user.total_session_time}}
+    )
 
 
 
+########################################################################################################
 
-
-# Initialize the model
-model = ChatAnthropic(model="claude-3-5-sonnet-20240620", temperature=0.5, max_tokens=4096)
-
-# Define the avatar URLs
-user_avatar_url = "https://cdn.pixabay.com/photo/2016/12/21/07/36/profession-1922360_1280.png"
-
-specialist_id_caption = {
+specialist_data = {
   "Emergency Medicine": {
     "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
     "caption": "👨‍⚕️EM, Peds EM, ☠️Toxicology, Wilderness",
@@ -487,12 +463,14 @@ specialist_id_caption = {
   "Musculoskeletal Systems": {
     "assistant_id": "asst_d9cMY1Sxwz0dUsKJXjuZMoiM",
     "caption": "🏈Sports Med, 🦴Orthopedics, PM&R, Rheumatology, 💪Physical Therapy",
-    "avatar": "https://cdn.pixabay.com/photo/2015/12/09/22/19/muscle-1085672_1280.png"
+    "avatar": "https://cdn.pixabay.com/photo/2015/12/09/22/19/muscle-1085672_1280.png",
+    "system_instructions": musculoskeletal_system
   },
   "General": {
     "assistant_id": "asst_K2QHe4VfHGdyrrfTCiyctzyY",
     "caption": "ICU, Internal Medicine, HemOnc, Endocrinology",
-    "avatar": "https://cdn.pixabay.com/photo/2013/07/12/18/59/doctor-154130_1280.png"
+    "avatar": "https://cdn.pixabay.com/photo/2013/07/12/18/59/doctor-154130_1280.png",
+    "system_instructions": general_medicine_system
   },
   "Pediatrics": {
     "assistant_id": "asst_cVQwzy87fwOvTnb66zsvVB5L",
@@ -545,12 +523,14 @@ specialist_id_caption = {
   "DDX Beta A": {
     "assistant_id": "asst_8Ib5ndZJivEOhwvfx4Gqzjc3",
     "caption": "EM - Beta testing",
-    "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/33/carrot-148456_960_720.png"
+    "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/33/carrot-148456_960_720.png",
+    "system_instructions": critical_system
   },
   "DDX Beta B": {
     "assistant_id": "asst_L74hbYKMs4OsKy0EA30mmY1s",
     "caption": "EM - Beta testing",
-    "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/33/carrot-148456_960_720.png"
+    "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/33/carrot-148456_960_720.png",
+    "system_instructions": ddx_emma_v2
   },
   "Cardiology Clinic": {
     "assistant_id": "asst_m4Yispc9GIdwGFsyz2KNT8c5",
@@ -560,119 +540,651 @@ specialist_id_caption = {
   
 }
 
-# Initialize session_state variables
+
+class SessionState:
+    def __init__(self):
+        self.user_id = None
+        self.authentication_status = None
+        self.logout = None
+        self.collection_name = ""
+        self.name = ""
+        self.username = ""
+        self.family_name = ""
+        self.chat_history = []
+        self.user_question = ""
+        self.legal_question = ""
+        self.note_input = ""
+        self.json_data = {}
+        self.pt_data = {}
+        self.user_photo_url = ""
+        self.differential_diagnosis = []
+        self.danger_diag_list = {}
+        self.critical_actions = {}
+        self.follow_up_steps = {}
+        self.completed_tasks_str = ""
+        self.sidebar_state = 1
+        self.assistant_response = ""
+        self.patient_language = "English"
+        self.specialist_input = ""
+        self.should_rerun = False
+        self.user_question_sidebar = ""
+        self.old_user_question_sidebar = ""
+        self.messages = []
+        self.system_instructions = emma_system
+        self.pt_title = ""
+        self.patient_cc = ""
+        self.clean_chat_history = ""
+        self.specialist = list(specialist_data.keys())[0]
+        self.assistant_id = specialist_data[self.specialist]["assistant_id"]
+        self.specialist_avatar = specialist_data[self.specialist]["avatar"]
+        self.session_id = None
+
+
 def initialize_session_state():
-    state_keys_defaults = {
-        "authentication_status": None,
-        "logout": None,
-        "collection_name" :"",
-        "name": "",
-        "username": "Sunny",
-        "chat_history": [],
-        "user_question": "",
-        "legal_question": "",
-        "note_input": "",
-        "json_data": {},
-        "pt_data": {},
-        "differential_diagnosis": {},
-        "danger_diag_list": {},
-        "critical_actions": {},
-        "sidebar_state": 1,
-        "assistant_response": "",
-        "patient_language": "English",
-        "specialist_input": "",
-        "should_rerun": False,
-        "user_question_sidebar": "",
-        "old_user_question_sidebar": "",
-        "completed_tasks_str": "",
-        "follow_up_steps":"",
-        "messages":[],
-        "system_instructions": emma_system,
-        "pt_title": "",
-        "patient_cc":"",
-        "clean_chat_history":""
-    }
-
-    if "initialized" not in st.session_state:
-        st.session_state.initialized = True
-        for key, default in state_keys_defaults.items():
-            if key not in st.session_state:
-                st.session_state[key] = default
-
-        primary_specialist = list(specialist_id_caption.keys())[0]
-        st.session_state.specialist = primary_specialist
-        st.session_state.assistant_id = specialist_id_caption[primary_specialist]["assistant_id"]
-        st.session_state.specialist_avatar = specialist_id_caption[primary_specialist]["avatar"]
-        st.session_state.system_instructions = specialist_id_caption[primary_specialist]["system_instructions"]
+    
+    if "session_state" not in st.session_state:
+        st.session_state.session_state = SessionState()
+        print(f'DEEBUG INITALIZE SESSIONT STATE SESSIONSTATE: {st.session_state.session_state}')
 
 
-# Setup the main page display and header
-def display_header():
-    if st.session_state.pt_data != {}:
-        cc = st.session_state.pt_data['patient']["chief_complaint_two_word"]
-        age = st.session_state.pt_data['patient']["age"]
-        age_units = st.session_state.pt_data['patient']["age_unit"]
-        sex = st.session_state.pt_data['patient']["sex"]
-        st.session_state.patient_cc = f"{age}{age_units}{sex} {cc}"
-        st.set_page_config(page_title=f"{st.session_state.patient_cc}", page_icon="🤖", initial_sidebar_state="collapsed")
+def create_new_session():
+    user_id = st.session_state.session_state.user_id  # Use Google ID instead of username
+    session_id = ObjectId()
+    st.session_state.session_state.session_id = str(session_id)
+    collection_name = f'user_{user_id}_session_{session_id}'
+    print(f'CREATE_SESSION_COLLECTION COLLECTION_NAME:{collection_name}')
+    st.session_state.session_state.collection_name = collection_name
+    
+    with client.start_session() as session:
+        with session.start_transaction():
+            if collection_name not in db.list_collection_names():
+                db.create_collection(collection_name)
+                db[collection_name].create_index([("timestamp", ASCENDING), ("test_name", ASCENDING)], unique=True)
+                initialize_text_indexes(collection_name)
+    return collection_name
+
+def initialize_text_indexes(collection_name):
+    existing_indexes = db[collection_name].index_information()
+    text_index_exists = any('text' in str(index.get('key')) for index in existing_indexes.values())
+    
+    if not text_index_exists:
+        try:
+            db[collection_name].create_index([
+                ("type", ASCENDING),
+                ("content", TEXT),
+                ("patient_cc", TEXT),
+                ("ddx", TEXT),
+                ("sender", ASCENDING),
+                ("timestamp", DESCENDING)
+            ], background=True, name="content_patient_cc_ddx_text_index")
+            print(f"Text index created for collection: {collection_name}")
+        except Exception as e:
+            st.error(f"Error creating text index for collection {collection_name}: {str(e)}")
     else:
-        st.set_page_config(page_title=f"EMMA", page_icon="🤖", initial_sidebar_state="collapsed")
+        print(f"Text index already exists for collection: {collection_name}")
+
+
+def validate_chat_document(document):
+    required_fields = ['type', 'user_id', 'sender', 'message', 'timestamp']
+    for field in required_fields:
+        if field not in document:
+            raise ValueError(f"Missing required field: {field}")
+    
+    if not isinstance(document['timestamp'], datetime):
+        raise ValueError("Timestamp must be a datetime object")
+    
+    if document['type'] not in ['user_input', 'ai_input']:
+        raise ValueError("Invalid document type")
+
+
+
+def save_messages(user_id, messages):
+    if not st.session_state.session_state.collection_name:
+        create_new_session()
+    
+    collection = db[st.session_state.session_state.collection_name]
+    bulk_operations = []
+    
+    for message in messages:
+        chat_document = {
+            "type": message['type'],
+            "user_id": user_id,
+            "sender": message['sender'],
+            "message": message['message'],
+            "timestamp": datetime.now(),
+            "patient_cc": st.session_state.session_state.patient_cc
+        }
+        if 'specialist' in message:
+            chat_document["specialist"] = message['specialist']
+        
+        bulk_operations.append(UpdateOne(
+            {"timestamp": chat_document["timestamp"], "test_name": chat_document.get("test_name")},
+            {"$set": chat_document},
+            upsert=True
+        ))
+    
+    try:
+        result = collection.bulk_write(bulk_operations, ordered=False)
+        print(f"Bulk write operation: {result.upserted_count} inserted, {result.modified_count} modified")
+    except BulkWriteError as bwe:
+        st.warning(f"Bulk write operation partially failed: {bwe.details}")
+
+def save_user_message(user_id, sender, message):
+    save_messages(user_id, [{
+        'type': 'user_input',
+        'sender': sender,
+        'message': message
+    }])
+
+def save_ai_message(user_id, sender, message, specialist="ai"):
+    save_messages(user_id, [{
+        'type': 'ai_input',
+        'sender': sender,
+        'message': message,
+        'specialist': specialist
+    }])
+
+def save_case_details(user_id, doc_type, content=None):
+    document = {
+        "type": doc_type,
+        "user_id": user_id,
+        "ddx": st.session_state.session_state.differential_diagnosis,
+        "content": content,
+        "patient_cc": st.session_state.session_state.patient_cc,
+        "timestamp": datetime.now(),
+    }
+    query = {
+        "type": doc_type,
+        "user_id": user_id,
+    }
+    update = {"$set": document}
+    try:
+        result = db[st.session_state.session_state.collection_name].update_one(query, update, upsert=True)
+        if result.matched_count > 0:
+            print("Existing ddx document updated successfully.")
+        elif result.upserted_id:
+            print("New ddx document inserted successfully.")
+        else:
+            print("No changes made to the database.")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+def save_note_details(user_id, message):
+    chat_document = {
+        "type": "clinical_note",
+        "user_id": user_id,
+        "specialist": st.session_state.session_state.specialist,
+        "message": message,
+        "timestamp": datetime.now(),
+    }
+    db[st.session_state.session_state.collection_name].insert_one(chat_document)
+
+def conditional_upsert_test_result(user_id, test_name, result, sequence_number):
+    collection = db[st.session_state.session_state.collection_name]
+    query = {"test_name": test_name, "sequence_number": sequence_number}
+    try:
+        existing_doc = collection.find_one(query)
+        if existing_doc:
+            existing_result = existing_doc.get("result", "").lower()
+            if existing_result in ["not provided", "not performed yet", "not specified"] or existing_result != result.lower():
+                new_sequence_number = existing_doc.get("sequence_number", 0) + 1
+                new_doc = {
+                    "type": "test_result",
+                    "user_id": user_id,
+                    "test_name": test_name,
+                    "result": result,
+                    "sequence_number": new_sequence_number,
+                    "timestamp": datetime.now()
+                }
+                collection.insert_one(new_doc)
+                print(f"New test result inserted for {test_name} with sequence number {new_sequence_number}.")
+            else:
+                print(f"Test result for {test_name} is unchanged. No update needed.")
+        else:
+            new_doc = {
+                "type": "test_result",
+                "user_id": user_id,
+                "test_name": test_name,
+                "result": result,
+                "sequence_number": sequence_number,
+                "timestamp": datetime.now()
+            }
+            collection.insert_one(new_doc)
+            print(f"New test result inserted for {test_name} with sequence number {sequence_number}.")
+    except Exception as e:
+        print(f"An error occurred while processing {test_name}: {str(e)}")
+
+def get_user_from_session(session_token: str) -> Optional[User]:
+    session = sessions_collection.find_one({
+        "token": session_token,
+        "expires": {"$gt": datetime.utcnow()}
+    })
+    if session:
+        user_data = users_collection.find_one({"_id": ObjectId(session["user_id"])})
+        if user_data:
+            return User.from_dict(user_data)
+    return None
+
+def clear_session(session_token: str) -> None:
+    sessions_collection.delete_one({"token": session_token})
+
+def list_user_sessions(user_id: str):
+    collections = db.list_collection_names()
+    user_sessions = [col for col in collections if col.startswith(f'user_{user_id}')]
+    session_details = []
+    
+    for session in user_sessions:
+        session_id = session.split('_')[-1]
+        collection_name = f'user_{user_id}_session_{session_id}'
+        
+        pipeline = [
+            {"$match": {"type": "ddx"}},
+            {"$sort": {"timestamp": -1}},
+            {"$limit": 1},
+            {"$project": {
+                "timestamp": 1,
+                "patient_cc": 1,
+                "ddx": {"$ifNull": ["$ddx", []]}  # Ensure ddx is always an array
+            }},
+            {"$project": {
+                "timestamp": 1,
+                "patient_cc": 1,
+                "disease": {"$arrayElemAt": [{"$ifNull": ["$ddx.disease", []]}, 0]}  # Safely get first disease
+            }}
+        ]
+        
+        try:
+            result = list(db[collection_name].aggregate(pipeline))
+            
+            if result:
+                doc = result[0]
+                timestamp = doc.get("timestamp")
+                date_str = timestamp.strftime("%Y.%m.%d %H:%M") if timestamp else "Unknown Date"
+                patient_cc = doc.get("patient_cc", "Unknown CC")
+                disease_name = doc.get("disease", "Unknown Disease")
+                session_name = f"{date_str} - {patient_cc} - {disease_name}"
+                session_details.append({"collection_name": collection_name, "session_name": session_name})
+            else:
+                session_details.append({"collection_name": collection_name, "session_name": session_id})
+        except Exception as e:
+            print(f"Error processing session {session_id}: {str(e)}")
+            session_details.append({"collection_name": collection_name, "session_name": session_id})
+    
+    return session_details
+
+def sort_user_sessions_by_time(sessions):
+    def parse_session_date(session):
+        try:
+            date_str = session['session_name'].split(' - ')[0]
+            return datetime.strptime(date_str, "%Y.%m.%d %H:%M")
+        except (ValueError, IndexError):
+            return datetime.min
+    return sorted(sessions, key=parse_session_date, reverse=True)
+
+@st.cache_data
+def load_session_data(collection_name):
+    documents = list(db[collection_name].find({}).sort("timestamp", ASCENDING))
+    categorized_data = {
+        "ddx": [],
+        "test_result": [],
+        "clinical_note": [],
+        "chat_history": []
+    }
+    for doc in documents:
+        doc_type = doc.get('type')
+        if doc_type == "ddx":
+            categorized_data["ddx"].append(doc)
+        elif doc_type == "test_result":
+            categorized_data["test_result"].append(doc)
+        elif doc_type == "clinical_note":
+            categorized_data["clinical_note"].append(doc)
+        elif doc_type in ["user_input", "ai_input"]:
+            categorized_data["chat_history"].append(doc)
+    return categorized_data
+
+def delete_session_data(collection_name):
+    db.drop_collection(collection_name)
+
+def load_chat_history(collection_name):
+    st.session_state.session_state.chat_history = []
+    st.session_state.session_state.differential_diagnosis = []
+    query = {"type": {"$in": ["user_input", "ai_input"]}}
+    projection = {"message": 1, "sender": 1, "timestamp": 1, "_id": 0}
+    chat_history = list(db[collection_name].find(query, projection).sort("timestamp", 1))
+    formatted_chat_history = []
+    for entry in chat_history:
+        role = "Human" if entry['sender'] == "Human" else "AI"
+        formatted_entry = f"{role}: {entry['message']}"
+        formatted_chat_history.append(formatted_entry)
+    chat_history_string = "\n\n".join(formatted_chat_history)
+    st.session_state.session_state.clean_chat_history = chat_history_string
+    return chat_history_string
+
+def search_sessions(user_id, keywords):
+    collections = db.list_collection_names()
+    user_sessions = [col for col in collections if col.startswith(f'user_{user_id}_session_')]
+    results = []
+    
+    if not keywords.strip():
+        return results
+    
+    for collection_name in user_sessions:
+        pipeline = [
+            {"$match": {
+                "$and": [
+                    {"type": "chat_history"},
+                    {"$text": {"$search": keywords}}
+                ]
+            }},
+            {"$project": {
+                "collection_name": {"$literal": collection_name},
+                "timestamp": 1,
+                "content": 1,
+                "patient_cc": 1,
+                "ddx": 1,
+                "sender": 1,
+                "score": {"$meta": "textScore"}
+            }},
+            {"$sort": {"score": -1}},
+            {"$limit": 10}
+        ]
+        
+        try:
+            collection_results = list(db[collection_name].aggregate(pipeline))
+            results.extend(collection_results)
+        except Exception as e:
+            st.error(f"Error searching collection {collection_name}: {str(e)}")
+    
+    results.sort(key=lambda x: x['timestamp'], reverse=True)
+    return results[:20]
+
+def search_sessions_for_searchbox(search_term):
+    if not search_term.strip():
+        return []
+    
+    user_id = st.session_state.session_state.username
+    collections = db.list_collection_names()
+    user_sessions = [col for col in collections if col.startswith(f'user_{user_id}_session_')]
+    
+    results = []
+    for collection_name in user_sessions:
+        pipeline = [
+            {"$match": {
+                "$and": [
+                    {"type": "chat_history"},
+                    {"$text": {"$search": search_term}}
+                ]
+            }},
+            {"$project": {
+                "collection_name": {"$literal": collection_name},
+                "timestamp": 1,
+                "patient_cc": 1,
+                "ddx": 1,
+                "score": {"$meta": "textScore"}
+            }},
+            {"$sort": {"score": -1}},
+            {"$limit": 10}
+        ]
+        
+        try:
+            collection_results = list(db[collection_name].aggregate(pipeline))
+            results.extend(collection_results)
+        except Exception as e:
+            st.error(f"Error searching collection {collection_name}: {str(e)}")
+    
+    results.sort(key=lambda x: x['score'], reverse=True)
+    
+    return [
+        (f"{r['timestamp'].strftime('%Y.%m.%d %H:%M')} - {r['patient_cc']} - {r['ddx'][0]['disease']}", r)
+        for r in results if 'timestamp' in r and 'patient_cc' in r and 'ddx' in r and r['ddx']
+    ]
+
+def load_session_from_search(result):
+    if not result:
+        return None
+    
+    # Check if result is a tuple (as returned by search_sessions_for_searchbox)
+    if isinstance(result, tuple) and len(result) == 2:
+        collection_name = result[1].get('collection_name')
+    # If it's a dictionary (direct result from search_sessions)
+    elif isinstance(result, dict):
+        collection_name = result.get('collection_name')
+    else:
+        st.error(f"Unexpected result format: {result}")
+        return None
+
+    if not collection_name:
+        st.error(f"No collection name found in result: {result}")
+        return None
+
+    user_sessions = list_user_sessions(st.session_state.session_state.username)
+    session_options = {session['session_name']: session['collection_name'] for session in user_sessions}
+    session_name = next((name for name, coll in session_options.items() if coll == collection_name), None)
+    
+    if session_name:
+        return session_name
+    
+    st.error(f"No matching session found for collection: {collection_name}")
+    return None
+
+def archive_old_sessions(user_id, days_threshold=30):
+    current_time = datetime.now()
+    archive_threshold = current_time - timedelta(days=days_threshold)
+    
+    collections = db.list_collection_names()
+    user_sessions = [col for col in collections if col.startswith(f'user_{user_id}_session_')]
+    
+    for collection_name in user_sessions:
+        last_activity = db[collection_name].find_one(sort=[("timestamp", -1)])
+        
+        if last_activity and last_activity['timestamp'] < archive_threshold:
+            archive_collection_name = f"archive_{collection_name}"
+            
+            with client.start_session() as session:
+                with session.start_transaction():
+                    db[archive_collection_name].insert_many(db[collection_name].find())
+                    db[collection_name].drop()
+            
+            st.info(f"Archived old session: {collection_name}")
+
+
+
+def transcribe_audio(audio_file):
+    try:
+        deepgram = DeepgramClient(DEEPGRAM_API_KEY)
+        options = PrerecordedOptions(
+            model="nova-2-medical",
+            language="en",
+            intents=False, 
+            smart_format=True, 
+            punctuate=True, 
+            paragraphs=True, 
+            diarize=True, 
+            filler_words=True, 
+            sentiment=False, 
+        )
+        source = {'buffer': audio_file, 'mimetype': 'audio/wav'}
+        response = deepgram.listen.rest.v("1").transcribe_file(source, options)
+        return response
+    except Exception as e:
+        st.error(f"Error: {str(e)}")
+        return None
+
+def record_audio():
+    audio_data = mic_recorder(
+        start_prompt="🔵Record",
+        stop_prompt="🔴Stop",
+        just_once=True,
+        callback=None
+    )
+    if audio_data:
+        audio_bytes = io.BytesIO(audio_data['bytes'])
+        audio_bytes.seek(0)
+        raw_transcript = transcribe_audio(audio_bytes)
+        if raw_transcript:
+            transcript = raw_transcript['results']['channels'][0]['alternatives'][0]['paragraphs']['transcript']
+            specialist = 'Emergency Medicine'
+            st.session_state.session_state.specialist = specialist
+            prompt = f"{transcript_prompt} '''{transcript}'''" 
+            user_question = prompt
+            return user_question
+    return None
+
+# Initialize the model
+model = ChatAnthropic(model="claude-3-5-sonnet-20240620", temperature=0.5, max_tokens=4096)
+
+# Define the avatar URLs
+user_avatar_url = "https://cdn.pixabay.com/photo/2016/12/21/07/36/profession-1922360_1280.png"
+
+def get_response(user_question: str) -> str:
+    with st.spinner("Waiting for EMMA's response..."):
+        response_placeholder = st.empty()
+        
+        chat_history = st.session_state.session_state.clean_chat_history
+        system_instructions = st.session_state.session_state.system_instructions
+
+        if isinstance(system_instructions, list):
+            system_instructions = "\n".join(system_instructions)
+
+        system_prompt = system_instructions.format(
+            REQUESTED_SECTIONS='ALL',
+            FILL_IN_EXPECTED_FINDINGS='fill in the normal healthy findings and include them in the note accordingly'
+        )
+        system_message = SystemMessage(content=system_prompt)
+        
+        user_content = f"Chat History:\n{chat_history} \n\n User:{user_question}"
+        user_message = HumanMessage(content=user_content)
+        
+        messages = [system_message, user_message]
+
+        # LLM Model Response
+        response = model.invoke(messages)
+        response_text = response.content
+
+        response_placeholder.markdown(response_text)
+        
+        return response_text
+
+def display_header():
+
+
     st.markdown(
+        f"""
+        <div style="text-align: center;">
+            <h2>
+                <span style="color: #04B6EA;">Emergency Medicine </span>                    
+                <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:80px;height:80px;border-radius:20%;">
+                Main Assistant
+            </h2>
+        </div>
+        """, 
+        unsafe_allow_html=True)
+
+def display_critical_tasks():
+    #print(f'DEBUG SS TATE CRITICAL ACTIONS:{st.session_state.session_state.critical_actions}')
+    if st.session_state.session_state.critical_actions:
+        st.markdown(f"<h5>❗Critical Actions</h5>", unsafe_allow_html=True)
+        tasks = st.session_state.session_state.critical_actions.keys() if isinstance(st.session_state.session_state.critical_actions, dict) else st.session_state.session_state.critical_actions
+        
+        for task in tasks:
+            key = f"critical_{task}"
+            if st.checkbox(f"❗{task}", key=key):
+                if task not in st.session_state.session_state.completed_tasks_str:
+                    st.session_state.session_state.completed_tasks_str += f"Completed: {task}. "
+
+def display_follow_up_tasks():
+    if st.session_state.session_state.follow_up_steps:
+        st.markdown(f"<h5>Possible Follow-Up Steps</h5>", unsafe_allow_html=True)
+        tasks = st.session_state.session_state.follow_up_steps.keys() if isinstance(st.session_state.session_state.follow_up_steps, dict) else st.session_state.session_state.follow_up_steps
+        
+        for task in tasks:
+            key = f"follow_up_{task}"
+            if st.checkbox(f"- :yellow[{task}]", key=key):
+                if task not in st.session_state.session_state.completed_tasks_str:
+                    st.session_state.session_state.completed_tasks_str += f"Followed up: {task}. "
+        
+def update_completed_tasks():
+    completed_tasks = [task for task, status in st.session_state.session_state.items() if task.startswith("critical_") and status]
+    st.session_state.session_state.completed_tasks_str = "Tasks Completed: " + '. '.join(completed_tasks) if completed_tasks else ""
+
+
+
+def display_ddx():
+    ddx_container = st.empty()
+    with ddx_container.container():
+        if st.session_state.session_state.differential_diagnosis:
+            st.markdown("### Differential Diagnosis")
+            for i, diagnosis in enumerate(st.session_state.session_state.differential_diagnosis, 1):
+                st.markdown(f"**{i}.** **{diagnosis['disease']}** - {diagnosis['probability']}%")  
+
+def display_pt_headline():
+    if st.session_state.session_state.pt_data != {}:
+        try:
+            #print(f'DEBUG DISPLAY HEADER ST.SESSION TATE.PT DATA: {st.session_state.session_state.pt_data}')
+            cc = st.session_state.session_state.pt_data["chief_complaint_two_word"]
+            age = st.session_state.session_state.pt_data["age"]
+            age_units = st.session_state.session_state.pt_data["age_unit"]
+            if st.session_state.session_state.pt_data["sex"] == "Unknown":
+                sex = ""
+            else:
+                sex = st.session_state.session_state.pt_data["sex"]
+            st.session_state.session_state.patient_cc = f"{age}{age_units} {sex} with {cc}"
+            
+            st.markdown("""
+            <style>
+            .patient-cc {
+                text-align: center;
+                font-size: 25px;
+                font-weight: none;
+                font-style: normal;
+                color: #048DEA;
+                background-color: none;
+                border-radius: 10px;
+                padding: 0px;
+                border: none;
+                box-shadow: none;
+                text-shadow: none;
+                letter-spacing: none;
+                line-height: 1.5;
+                word-spacing: 5px;
+                text-transform: none;
+                text-decoration: none;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
+            st.markdown(f"<h5 class='patient-cc'>{st.session_state.session_state.patient_cc}</h5>", unsafe_allow_html=True)
+
+
+
+        except KeyError as e:
+            st.error(f"Missing key in patient data: {e}")
+            st.title("EMMA")
+
+
+def logout_user():
+    #st.write(st.session_state.session_state.user_photo_url)
+    colL,colR = st.columns([2,1])
+    with colL:
+        st.markdown(
             f"""
             <div style="text-align: center;">
-                <h2>
-                    <span style="color:deepskyblue;">Emergency Medicine </span>                    
-                    <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:80px;height:80px;border-radius:20%;">
-                    Main Assistant
-                </h2>
+                <h4>                  
+                    <img src="{st.session_state.session_state.user_photo_url}" style="width:30px;height:30px;border-radius:50%;">
+                    Dr. {st.session_state.session_state.family_name}
+                </h4>
             </div>
             """, 
             unsafe_allow_html=True)
+    with colR:
+        # Add a unique key to the logout button
+        if st.button("Logout", key="logout_button"):
+            clear_session(st.session_state.get('session_token'))
+            st.session_state.clear()
+            st.query_params.clear()
+            st.rerun()
 
-def display_critical_tasks():
-    if st.session_state.critical_actions:
-        st.subheader(":blue[Critical Actions]")
-        # Create a dictionary to hold the status of each task
-        task_status = {task: False for task in st.session_state.critical_actions}
 
-        # Display the tasks with checkboxes
-        for task in st.session_state.critical_actions:
-            key = f"critical_{task}"  # Create a unique key for each checkbox
-            task_status[task] = st.checkbox(f"- :blue[{task}]", value=task_status[task], key=key)
-
-        # Check which tasks are completed and save to a string variable
-        completed_tasks = [task for task, status in task_status.items() if status]
-
-        if completed_tasks:
-            st.session_state.completed_tasks_str = "Tasks Completed: " + '. '.join(completed_tasks)
-
-def display_follow_up_tasks():
-    if st.session_state.follow_up_steps:
-        st.subheader(":yellow[Possible Follow-Up Steps]")
-        # Create a dictionary to hold the status of each task
-        task_status = {task: False for task in st.session_state.follow_up_steps}
-
-        # Display the tasks with checkboxes
-        for task in st.session_state.follow_up_steps:
-            key = f"follow_up_{task}"  # Create a unique key for each checkbox
-            task_status[task] = st.checkbox(f"- :yellow[{task}]", value=task_status[task], key=key)
-
-        # Check which tasks are completed and save to a string variable
-        completed_tasks = [task for task, status in task_status.items() if status]
-
-        if completed_tasks:
-            st.session_state.completed_tasks_str = "Tasks Completed: " + '. '.join(completed_tasks)
-
-def display_ddx():
-    if st.session_state.differential_diagnosis:
-        st.subheader("Differential Diagnosis")
-        #save_case_details(st.session_state.username)
-        for diagnosis in st.session_state.differential_diagnosis:
-            disease = diagnosis['disease']
-            probability = diagnosis['probability']
-            st.markdown(f"- {disease} - {probability}%")    
-
-# Sidebar display
 def display_sidebar():
     with st.sidebar:
         st.markdown(
@@ -687,673 +1199,563 @@ def display_sidebar():
             """, 
             unsafe_allow_html=True)
         
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["Functions", "Specialists", "Note Analysis", "Update Variables", "Sessions"])
+        tab1, tab2, tab4, tab5 = st.tabs(["Functions", "Specialists", "Variables", "Sessions"])
         
         with tab1:
-            display_ddx()
-            display_critical_tasks()
-            display_follow_up_tasks()
-            st.divider()
+            #display_pt_headline()
+            #display_ddx()
+            #display_critical_tasks()
+            #display_follow_up_tasks()
+            #st.divider()
             display_functions_tab()
 
         with tab2:
-            #display_critical_tasks(2)
-
-            
-            if st.session_state.differential_diagnosis:
-                st.subheader("Differential Diagnosis")
-                for diagnosis in st.session_state.differential_diagnosis:
-                    disease = diagnosis['disease']
-                    probability = diagnosis['probability']
-                    st.markdown(f"- {disease} - {probability}%")
-                st.divider()
-            
-            choose_specialist_radio()
-            
-            st.subheader(':orange[Consult Recommnedations]')
-            button1 = st.button("General Reccommendations")
-            button2 = st.button("Diagnosis")
-            button3 = st.button("Treatment Plan")
-            button4 = st.button("Disposition Plan")
-            
-            if button1: 
-                consult_specialist_and_update_ddx("General Reccommendations", consult_specialist)
-            if button2: 
-                consult_specialist_and_update_ddx("Diagnosis consult", consult_diagnosis)
-            if button3: 
-                consult_specialist_and_update_ddx("Treatment consult", consult_treatment)
-            if button4: 
-                consult_specialist_and_update_ddx("Disposition consult", consult_disposition)
-
-            # Ensure choose_specialist_radio is called here with a unique key
-            
-            
-        with tab3:
-            display_note_analysis_tab()
-            
-        with tab4:
-            update_patient_language()
-            buttoni = st.button("Update Indexes")
-
-            if buttoni:
-                update_indexes(st.session_state.session_id)
-
-        container = st.container()
-        container.float(float_css_helper(bottom="10px"))
-        #with container:
-            #authenticate_user()
+            display_specialist_tab()
         
+        with tab4:
+            display_variables_tab()
+
         with tab5:
-            user_id = st.session_state.username
-            user_sessions = list_user_sessions(user_id)
-            # print(f'DEBUG USER SESSIONS: name: {user_id} user session:{user_sessions}')
-            #if 'should_rerun' in st.session_state and st.session_state.should_rerun:
-                #st.session_state.should_rerun = False
-                #st.rerun()
-            if user_sessions:
-                # Sort sessions by timestamp, newest first
-                sorted_sessions = sort_user_sessions_by_time(user_sessions)
-                session_options = {session['session_name']: session['collection_name'] for session in sorted_sessions}
-                
-                
-                
-                session_name = st.selectbox("Select a recent session to load:", 
-                            options=["Select a session..."] + list(session_options.keys()),
-                            index=0,
-                            key="session_selectbox") # Set index to 0 to select the placeholder by default
-                
-                # Check if a session was selected from search results
-                if 'selected_session' in st.session_state:
-                    selected_session = st.session_state.selected_session
-                    del st.session_state.selected_session  # Clear the selection after using it
+            display_sessions_tab()
+        container = st.container()
+        container.float(float_css_helper(bottom="10px", border="1px solid #a3a8b4", border_radius= "10px", padding= "10px"))
+        with container:
+            logout_user()   
+        
 
-                # Search function
-
-                ######## basic search ########
-                #search_query = st.text_input("Search sessions:")
-
-                #if search_query:
-                    ##results = search_sessions(st.session_state.username, search_query)
-                   # session_name = display_search_results(results)
-                   # print(f'DEBUG BASIC SEARCH SESSION_NAME: {session_name}')
-
-                ####### streamlit-searchbox versions #########
-                
-                selected_session = st_searchbox(
-                    search_sessions_for_searchbox,
-                    key="session_searchbox",
-                    label="Search sessions",
-                    placeholder="Type to search for sessions...",
-                    default_use_searchterm=False,
-                    rerun_on_update=False,
-                    style_overrides = {
-                                    "dropdown": {
-                                        "width": "100%",
-                                        "max-height": "400px",
-                                        "overflow-y": "auto"
-                                    },
-                                    "searchbox": {
-                                        "menuList": {
-                                            "maxHeight": "1000px"
-                                        }
-                                    }
-                                }
-                )
-                print(f'DEBUG STREMLIT SEARCHBOX SEARCH_RESULTS: {selected_session}')
-                
-
-                if selected_session:
-                    session_name = load_session_from_search(selected_session)
-                    if session_name:
-                        st.success(f"Session Loaded")
-                        # Add any additional logic you need when a session is selected
-                    else:
-                        st.error("Failed to load the selected session.")
-                    print(f'DEBUG STREMLIT SEARCHBOX SESSION_NAME: {session_name}')             
-
-
-                # Check if a real session is selected (not the placeholder)
-                if session_name != "Select a session..." and session_name:
-                    #st.success(f"Loaded session: {session_name}")
-                    collection_name = session_options[session_name]
-                    st.session_state.session_id = collection_name
-                    print(f'DEBUG SESSSION ID FROM SESSTION STATE: {collection_name}')
-                    categorized_data = load_session_data(collection_name)
-                    
-                    # Initialize text indexes for the loaded collection
-                    initialize_text_indexes()
-                    
-                    # load chat history from Mongo DB
-                    load_chat_history(collection_name)
-                    print(f'DEBUG CLEAN_CHAT_HISTORY: {st.session_state.clean_chat_history}')
-                    # Load mongo DB collection after selection
-                    st.session_state.collection_name = collection_name
-
-                    st.write(f"**Data of session: {session_name}**")
-                    
-                    # Display Differential Diagnosis (ddx)
-                    with st.expander("Differential Diagnosis (ddx)"):
-                        for doc in categorized_data["ddx"]:
-                            ddx_list = doc.get('ddx', [])
-                            if ddx_list:
-                                for diagnosis in ddx_list:
-                                    disease = diagnosis.get('disease', 'Unknown')
-                                    probability = diagnosis.get('probability', 'N/A')
-                                    st.write(f"- {disease}: {probability}%")
-                            
-                    
-                    # Display Test Results
-                    with st.expander("Test Results"):
-                        for doc in categorized_data["test_result"]:
-                            st.write(f"**{doc.get('test_name', 'N/A')}:** {doc.get('result', 'N/A')}")
-                            st.write(f"{doc.get('timestamp', 'N/A')}")
-                            #st.write("---")
-                    
-                    # Display Clinical Notes
-                    with st.expander("Clinical Notes"):
-                        for doc in categorized_data["clinical_note"]:
-                            st.write(f"Specialist: {doc.get('specialist', 'N/A')}")
-                            st.markdown(f"Message: {doc.get('message', 'N/A')}")
-                            st.write(f"Timestamp: {doc.get('timestamp', 'N/A')}")
-                            st.write("---")
-                    
-                    # Display Chat History
-                    with st.expander("Chat History"):
-                        for doc in categorized_data["chat_history"]:
-                            st.write(f"**Sender: {doc.get('sender', 'N/A')}**")
-                            st.write(f"Message: {doc.get('message', 'N/A')}")
-                            st.write(f"Timestamp: {doc.get('timestamp', 'N/A')}")
-                            st.write("---")
-            else:
-                st.write("No sessions found for this user.")
-                    
-                   
-def consult_specialist_and_update_ddx(button_name, prompt):
-    # Consult the specific specialist
-    specialist = st.session_state.specialist
-    button_input(specialist, prompt)
-
-    """# If necessary, temporarily switch to an EM agent
-    if needs_em_update_for(button_name):
-        temp_specialist = "Emergency Medicine"
-        st.session_state.specialist = temp_specialist
-        st.session_state.assistant_id = specialist_id_caption[temp_specialist]["assistant_id"]
-
-        # Update ddx and plan with new information
-        button_input(temp_specialist, integrate_consultation)
-
-    # Resetting the specialist back if it was changed
-    if st.session_state.specialist == temp_specialist:
-        st.session_state.specialist = specialist"""
-
-# Sidebar tabs and functions
 def display_functions_tab():
-    
     st.subheader('Process Management')
     col1, col2 = st.columns(2)
     with col1:
-        button1 = st.button("🛌Disposition Analysis")
+        if st.button("🛌Disposition Analysis", use_container_width=True):
+            st.session_state.session_state.specialist = "Emergency Medicine"
+            consult_specialist_and_update_ddx("Disposition Analysis", disposition_analysis)
     with col2:
-        button2 = st.button("💉Which Procedure")
+        if st.button("💉Which Procedure", use_container_width=True):
+            consult_specialist_and_update_ddx("Which Procedure", procedure_checklist)
 
     st.subheader('📝Note Writer')
     col1, col2 = st.columns(2)
     with col1:
-        button3 = st.button('Full Medical Note')
-        button14 = st.button('Full Note except EMR results')
-        button4 = st.button("🙍Pt Education Note")
+        if st.button('Full Medical Note', use_container_width=True):
+            st.session_state.session_state.specialist = "Note Writer"
+            consult_specialist_and_update_ddx("Full Medical Note", "Write a full medical note on this patient")
+            st.session_state.session_state.specialist = "Emergency Medicine"
+        if st.button('Full Note except EMR results', use_container_width=True):
+            st.session_state.session_state.specialist = "Note Writer"
+            consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
+            st.session_state.session_state.specialist = "Emergency Medicine"
+        if st.button("🙍Pt Education Note", use_container_width=True):
+            st.session_state.session_state.specialist = "Patient Educator"
+            consult_specialist_and_update_ddx("Patient Education Note", f"Write a patient education note for this patient in {st.session_state.session_state.patient_language}")
+            st.session_state.session_state.specialist = "Emergency Medicine"
     with col2:
-        button11 = st.button('HPI only')
-        button12 = st.button('A&P only')
-        button13 = st.button('💪Physical Therapy Plan')
-        
+        if st.button('HPI only', use_container_width=True):
+            st.session_state.session_state.specialist = "Note Writer"
+            consult_specialist_and_update_ddx("HPI only", create_hpi)
+            st.session_state.session_state.specialist = "Emergency Medicine"
+        if st.button('A&P only', use_container_width=True):
+            st.session_state.session_state.specialist = "Note Writer"
+            consult_specialist_and_update_ddx("A&P only", create_ap)
+            st.session_state.session_state.specialist = "Emergency Medicine"
+        if st.button('💪Physical Therapy Plan', use_container_width=True):
+            st.session_state.session_state.specialist = "Musculoskeletal Systems"
+            consult_specialist_and_update_ddx("Physical Therapy Plan", pt_plan)
+            st.session_state.session_state.specialist = "Emergency Medicine"
 
     st.subheader('🏃‍♂️Flow')
     col1, col2 = st.columns(2)
     with col1:
-        button5 = st.button("➡️Next Step Recommendation")
-        
-        button10 = st.button("🤔Challenge the DDX")
+        if st.button("➡️Next Step Recommendation", use_container_width=True):
+            st.session_state.session_state.specialist = "Emergency Medicine"
+            consult_specialist_and_update_ddx("Next Step Recommendation", next_step)
+        if st.button("🤔Challenge the DDX", use_container_width=True):
+            st.session_state.session_state.specialist = "General"
+            consult_specialist_and_update_ddx("Challenge the DDX", challenge_ddx)
+            st.session_state.session_state.specialist = "Emergency Medicine"
     with col2:
-        #button6 = st.button('➡️➡️I did that, now what?')
-        button8 = st.button('🛠️Apply Clinical Decision Tools')
-        button7 = st.button("🧠Critical Thinking w Bayesian Reasoning")
+        if st.button('🛠️Apply Clinical Decision Tools', use_container_width=True):
+            st.session_state.session_state.specialist = "Clinical Decision Tools"
+            consult_specialist_and_update_ddx("Apply Clinical Decision Tools", apply_decision_tool)
+            st.session_state.session_state.specialist = "Emergency Medicine"
+        if st.button("🧠Critical Thinking w Bayesian Reasoning", use_container_width=True):
+            st.session_state.session_state.specialist = "Bayesian Reasoner"
+            consult_specialist_and_update_ddx("Critical Thinking w Bayesian Reasoning", apply_bayesian_reasoning)
+            st.session_state.session_state.specialist = "Emergency Medicine"
     st.divider()
-    col1, col2, col3 = st.columns([1,3,1])
-    with col2:
-        button9 = st.button('NEW THREAD', type="primary")
-        #button10 = st.button('TEST')
-
-    # Process button actions
-    process_buttons(button1, button2, button3, button4, button5, button7, button8, button9, button10, button11, button12, button13, button14)
-
-# Process the buttons
-def process_buttons(button1, button2, button3, button4, button5, button7, button8, button9, button10, button11, button12, button13, button14):
-    if button1:
-        specialist = 'Emergency Medicine'
-        prompt = disposition_analysis
-        st.session_state["specialist"] = specialist
-        button_input(specialist, prompt)
-    if button2:
-        specialist = 'Emergency Medicine'
-        prompt = procedure_checklist
-        st.session_state["specialist"] = specialist
-        button_input(specialist, prompt)
-    if button3:
-        specialist = 'Note Writer'
-        prompt = "Write a full medical note on this patient"
-        st.session_state["specialist"] = specialist
-        button_input(specialist, prompt)
-    if button4:
-        specialist = 'Patient Educator'
-        prompt = f"Write a patient education note for this patient in {st.session_state.patient_language}"
-        st.session_state["specialist"] = specialist
-        button_input(specialist, prompt)
-        
-    if button5:
-        specialist = 'Emergency Medicine'
-        prompt = next_step
-        st.session_state["specialist"] = specialist
-        button_input(specialist, prompt)
-    #if button6:
-        #specialist = 'Emergency Medicine'
-        #prompt = "Ok i did that. Now what?"
-        #st.session_state["specialist"] = specialist
-        #button_input(specialist, prompt)
-    if button7:
-        specialist = 'Bayesian Reasoner'
-        prompt = apply_bayesian_reasoning
-        st.session_state["specialist"] = specialist
-        button_input(specialist, prompt)
-    if button8:
-        specialist = 'Clinical Decision Tools'
-        prompt = apply_decision_tool
-        st.session_state["specialist"] = specialist
-        button_input(specialist, prompt)
-    if button9:
-        new_thread()
-    if button11:
-        specialist = 'Note Writer'
-        prompt = create_hpi
-        st.session_state["specialist"] = specialist
-        button_input(specialist, prompt)
-    if button12:
-        specialist = 'Note Writer'
-        prompt = create_ap
-        st.session_state["specialist"] = specialist
-        button_input(specialist, prompt)
-    if button13:
-        specialist = 'Musculoskeletal Systems'
-        prompt = pt_plan
-        st.session_state["specialist"] = specialist
-        button_input(specialist, prompt)
-    if button14:
-        specialist = 'Note Writer'
-        prompt = create_full_note_except_results
-        st.session_state["specialist"] = specialist
-        button_input(specialist, prompt)
-    if button10:
-        specialist = 'General'
-        prompt = challenge_ddx
-        st.session_state["specialist"] = specialist
-        button_input(specialist, prompt)
     
-# Note Analysis for summary and legal analysis
-def display_note_analysis_tab():
-    st.header("Note Analysis")
-    note_check = st.text_area("Paste your note here and hit 'Ctrl+Enter'", height=200)
-    if note_check:
-        st.write('Note uploaded 👍')
+    start_new_session()
+
+def display_specialist_tab():
+    if st.session_state.session_state.differential_diagnosis:
+        display_ddx()
+        st.divider()
+    
+    choose_specialist_radio()
+    
+    st.subheader(':orange[Consult Recommendations]')
+    if st.button("General Recommendations"):
+        consult_specialist_and_update_ddx("General Recommendations", consult_specialist)
+    if st.button("Diagnosis"):
+        consult_specialist_and_update_ddx("Diagnosis consult", consult_diagnosis)
+    if st.button("Treatment Plan"):
+        consult_specialist_and_update_ddx("Treatment consult", consult_treatment)
+    if st.button("Disposition Plan"):
+        consult_specialist_and_update_ddx("Disposition consult", consult_disposition)
+
+def display_variables_tab():
+    update_patient_language()
+    if st.button("Update Indexes"):
+        initialize_text_indexes(st.session_state.session_state.collection_name)
+
+def display_sessions_tab():
+    user_id = st.session_state.session_state.user_id  # Use Google ID instead of username
+    user_sessions = list_user_sessions(user_id)
+    if user_sessions:
+        sorted_sessions = sort_user_sessions_by_time(user_sessions)
+        session_options = {session['session_name']: session['collection_name'] for session in sorted_sessions}
+        
+        session_name = st.selectbox("Select a recent session to load:", 
+                    options=["Select a session..."] + list(session_options.keys()),
+                    index=0,
+                    key="session_selectbox")
+        
+        selected_session = st_searchbox(
+            search_sessions_for_searchbox,
+            key="session_searchbox",
+            label="Search sessions",
+            placeholder="Type to search for sessions...",
+            default_use_searchterm=False,
+            rerun_on_update=False
+        )
+
+        if selected_session:
+            session_name = load_session_from_search(selected_session)
+
+        if session_name != "Select a session...":
+            if session_name in session_options:
+                st.success(f"Session Loaded")
+                st.write(f'**{session_name}**')
+                display_session_data(session_options[session_name])
+                
+            else:
+                st.error(f"Session '{session_name}' not found in options.")
     else:
-        st.write('No note uploaded')
+        st.write("No sessions found for this user.")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        button7 = st.button("Summarize Note(s)")
-    with col2:
-        button8 = st.button("Optimize Your Note For Legal Protection")
+def display_session_data(collection_name):
+    st.session_state.session_state.session_id = collection_name
+    categorized_data = load_session_data(collection_name)
+    
+    initialize_text_indexes(collection_name)
+    
+    load_chat_history(collection_name)
+    st.session_state.session_state.collection_name = collection_name
+    #st.write(f"**Data of session: {collection_name}**")
+    
+    with st.expander("Differential Diagnosis (ddx)"):
+        for doc in categorized_data["ddx"]:
+            ddx_list = doc.get('ddx', [])
+            if ddx_list:
+                for diagnosis in ddx_list:
+                    disease = diagnosis.get('disease', 'Unknown')
+                    probability = diagnosis.get('probability', 'N/A')
+                    st.write(f"- {disease}: {probability}%")
+    
+    with st.expander("Test Results"):
+        for doc in categorized_data["test_result"]:
+            st.write(f"**{doc.get('test_name', 'N/A')}:** {doc.get('result', 'N/A')}")
+            st.write(f"{doc.get('timestamp', 'N/A')}")
+    
+    with st.expander("Clinical Notes"):
+        for doc in categorized_data["clinical_note"]:
+            st.write(f"Specialist: {doc.get('specialist', 'N/A')}")
+            st.markdown(f"Message: {doc.get('message', 'N/A')}")
+            st.write(f"Timestamp: {doc.get('timestamp', 'N/A')}")
+            st.write("---")
+    
+    with st.expander("Chat History"):
+        for doc in categorized_data["chat_history"]:
+            st.write(f"**Sender: {doc.get('sender', 'N/A')}**")
+            st.write(f"Message: {doc.get('message', 'N/A')}")
+            st.write(f"Timestamp: {doc.get('timestamp', 'N/A')}")
+            st.write("---")
+    
+    display_delete_session_button(collection_name)
+    
+def display_delete_session_button(collection_name):
+    if 'delete_confirmation' not in st.session_state:
+        st.session_state.delete_confirmation = False
 
-    # Process buttons
-    if button7:
-        specialist = 'Note Summarizer'
-        prompt = f'Summarize this: ```{note_check}```'
-        st.session_state["specialist"] = specialist
-        button_input(specialist, prompt)
-    if button8:
-        specialist = 'Medical Legal'
-        prompt = optimize_legal_note + f' here is the note separated by triple backticks```{note_check}```'
-        st.session_state["specialist"] = specialist
-        button_input(specialist, prompt)
+    if st.button("Delete Session Data?"):
+        st.session_state.delete_confirmation = True
 
+    if st.session_state.delete_confirmation:
+        st.error("Are you sure you want to delete session data? This action cannot be undone.")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button(f"Yes, delete {collection_name} data", type='primary', use_container_width=True):
+                delete_session_data(collection_name)
+                st.success(f"Session data {collection_name} deleted successfully.")
+                st.session_state.delete_confirmation = False
+                st.rerun()
+        with col2:
+            if st.button("No, cancel", use_container_width=True):
+                st.session_state.delete_confirmation = False
+                st.rerun()
 
-# Choosing the specialty group
+def consult_specialist_and_update_ddx(button_name, prompt):
+    specialist = st.session_state.session_state.specialist
+    button_input(specialist, prompt)
+
 def choose_specialist_radio():
-    specialities = list(specialist_id_caption.keys())
-    captions = [specialist_id_caption[speciality]["caption"] for speciality in specialities]
+    specialities = list(specialist_data.keys())
+    captions = [specialist_data[speciality]["caption"] for speciality in specialities]
 
-    if 'specialist' in st.session_state:
-        selected_specialist = st.session_state.specialist
-    else:
-        selected_specialist = specialities[0]
-
-    # Assign a unique key to the st.radio widget
     specialist = st.radio("**:black[Choose Your Specialty Group]**", specialities, 
                           captions=captions, 
-                          index=specialities.index(selected_specialist),
+                          index=specialities.index(st.session_state.session_state.specialist),
                           key="choose_specialist_radio")
 
-    if 'button_clicked' not in st.session_state:
-        st.session_state.button_clicked = False
-
-    # Only update if the selected specialist is different
-    if specialist and specialist != st.session_state.specialist:
-    #if specialist and specialist != st.session_state.specialist and not st.session_state.button_clicked:
-
-        st.session_state.specialist = specialist
-        st.session_state.assistant_id = specialist_id_caption[specialist]["assistant_id"]
-        st.session_state.specialist_avatar = specialist_id_caption[specialist]["avatar"]
-        st.session_state.system_instructions = specialist_id_caption[specialist]["system_instructions"]
-        # No need to call st.rerun() here
+    if specialist and specialist != st.session_state.session_state.specialist:
+        st.session_state.session_state.specialist = specialist
+        st.session_state.session_state.assistant_id = specialist_data[specialist]["assistant_id"]
+        st.session_state.session_state.specialist_avatar = specialist_data[specialist]["avatar"]
+        st.session_state.session_state.system_instructions = specialist_data[specialist]["system_instructions"]
         st.rerun()
 
-# process button inputs for quick bot responses
 def button_input(specialist, prompt):
-    st.session_state.button_clicked = True
-    #call the specialist
-    st.session_state.assistant_id = specialist_id_caption[specialist]["assistant_id"]
-    st.session_state.system_instructions = specialist_id_caption[specialist]["system_instructions"]
+    st.session_state.session_state.assistant_id = specialist_data[specialist]["assistant_id"]
+    st.session_state.session_state.system_instructions = specialist_data[specialist]["system_instructions"]
  
-    # set st.sesssion_state.user_question_sidebar for process_other_queries() 
     user_question = prompt
-    if user_question is not None and user_question != "":
-        st.session_state.specialist = specialist
-
-        specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
-        st.session_state.specialist_avatar = specialist_avatar
+    if user_question:
+        st.session_state.session_state.specialist = specialist
+        print(f'DEBUG BUTTON INPUT SPECIALIST CHOSEN: {specialist}')
+        specialist_avatar = specialist_data[st.session_state.session_state.specialist]["avatar"]
+        st.session_state.session_state.specialist_avatar = specialist_avatar
         timezone = pytz.timezone("America/Los_Angeles")
         current_datetime = datetime.now(timezone).strftime("%H:%M:%S")
-        user_question = current_datetime + f"""    \n{user_question}. 
-        \n{st.session_state.completed_tasks_str}
-        """
-        st.session_state.user_question_sidebar = user_question
+        user_question = f"{current_datetime}\n{user_question}\n{st.session_state.session_state.completed_tasks_str}"
+        st.session_state.session_state.user_question_sidebar = user_question
 
-        st.session_state.completed_tasks_str = ''
-        st.session_state.critical_actions  = []
-        #refresh page
+        st.session_state.session_state.completed_tasks_str = ''
+        st.session_state.session_state.critical_actions = []
+        print(f'DEBUG SESSION_STATE CRITCAL ACTIONS SHOULD BE NOTHING AFTER THIS:')
         st.rerun()
-    st.session_state.button_clicked = False
 
-# Updating the patient language
 def update_patient_language():
-    patient_language = st.text_input("Insert patient language if not English", value=st.session_state.patient_language)
-    if patient_language != st.session_state.patient_language:
-        st.session_state.patient_language = patient_language
+    patient_language = st.text_input("Insert patient language if not English", value=st.session_state.session_state.patient_language)
+    if patient_language != st.session_state.session_state.patient_language:
+        st.session_state.session_state.patient_language = patient_language
 
-# Processing queries
 def process_other_queries():
-    if st.session_state.user_question_sidebar != "" and st.session_state.user_question_sidebar != st.session_state.old_user_question_sidebar:
-
-        # set specialist and avatar for chat history
-        specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
-        specialist = st.session_state.specialist
+    if st.session_state.session_state.user_question_sidebar != "" and st.session_state.session_state.user_question_sidebar != st.session_state.session_state.old_user_question_sidebar:
+        specialist_avatar = specialist_data[st.session_state.session_state.specialist]["avatar"]
+        specialist = st.session_state.session_state.specialist
         
-        
-        # set user_question to sidebar user_question
-        user_question = st.session_state.user_question_sidebar
+        user_question = st.session_state.session_state.user_question_sidebar
         with st.chat_message("user", avatar=user_avatar_url):
             st.markdown(user_question)
 
-        # add querry to the chat history as human user
-        st.session_state.chat_history.append(HumanMessage(user_question, avatar=user_avatar_url))
-        # add to MongoDB
-        save_user_message(st.session_state.username, "user", user_question)
+        st.session_state.session_state.chat_history.append(HumanMessage(user_question, avatar=user_avatar_url))
+        save_user_message(st.session_state.session_state.username, "user", user_question)
 
-        #get ai response
         with st.chat_message("AI", avatar=specialist_avatar):
-            assistant_response = get_response(user_question, st.session_state.messages)
-            #st.session_state.assistant_response = assistant_response
+            assistant_response = get_response(user_question)
             if specialist != "Note Writer":
-                save_ai_message(st.session_state.username, specialist, assistant_response, specialist)
+                save_ai_message(st.session_state.session_state.username, specialist, assistant_response, specialist)
             if specialist == "Note Writer":
-                save_note_details(st.session_state.username, assistant_response)
-                save_ai_message(st.session_state.username, specialist, assistant_response, specialist)
-            print(f'DEBUG SPECIALIST: {specialist}')
+                save_note_details(st.session_state.session_state.username, assistant_response)
+                save_ai_message(st.session_state.session_state.username, specialist, assistant_response, specialist)
 
-        #append ai response to chat_history
-        st.session_state.chat_history.append(AIMessage(assistant_response, avatar=specialist_avatar))
-
-        # session_state variable to make sure user_question is not repeated.
-        st.session_state.old_user_question_sidebar = user_question
-
-        # store to mongoDB conditions
-        #if specialist != "Emergency Medicine":
-
-
+        st.session_state.session_state.chat_history.append(AIMessage(assistant_response, avatar=specialist_avatar))
+        st.session_state.session_state.old_user_question_sidebar = user_question
 
         chat_history = chat_history_string()
         parse_json(chat_history) 
 
-    elif st.session_state["legal_question"]:
-        handle_user_legal_input(st.session_state["legal_question"])
-    elif st.session_state["note_input"]:
-        write_note(st.session_state["note_input"])
-
-# Create new thread
+        # Clear completed tasks
+        st.session_state.session_state.completed_tasks_str = ""
+        st.session_state.session_state.specialist = "Emergency Medicine"
+        st.rerun()
+        
 def new_thread():
-    thread = client.beta.threads.create()
-    st.session_state.thread_id = thread.id
-    st.session_state.chat_history = []
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
+    
+    html("""
+        <script>
+            window.parent.location.reload();
+        </script>
+    """)
     st.rerun()
 
+def start_new_session():
+    if 'new_session_clicked' not in st.session_state:
+        st.session_state.new_session_clicked = False
+
+    if st.button('New Session Encounter', type="secondary", use_container_width=True):
+        st.session_state.new_session_clicked = True
+
+    if st.session_state.new_session_clicked:
+        st.write("Are you sure you want to start a new encounter? This will reset all current data.")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Yes, start new encounter", type="primary", use_container_width=True):
+                new_thread()
+        with col2:
+            if st.button("No, cancel", type="secondary", use_container_width=True):
+                st.session_state.new_session_clicked = False
 
 def chat_history_string():
     output = io.StringIO()
 
-    for message in st.session_state.chat_history:
+    for message in st.session_state.session_state.chat_history:
         if isinstance(message, HumanMessage):
             print(message.content, file=output)
         else:
             print(message.content, file=output)
 
     output_string = output.getvalue()
-    print(f'DEBUG CHAT_HISTORY_STRING - OUTPUT STRING: {output_string}')
-
-    #store chat history to MongoDB
-    save_case_details(st.session_state.username, "chat_history", output_string)
-    st.session_state.clean_chat_history = output_string
+    save_case_details(st.session_state.session_state.username, "chat_history", output_string)
+    st.session_state.session_state.clean_chat_history = output_string
     return output_string
 
 def parse_json(chat_history):
+    
     pt_json = create_json(text=chat_history)
-    #print(f'DEBUG PT JSON: {pt_json}')
+    print(f'DEBUG PARSE_JSON: {pt_json}')
+    if not pt_json or pt_json.strip() == '{}':
+        #print("No data was extracted from the chat history.")
+        return
     try:
         data = json.loads(pt_json)
-        st.session_state.pt_data = data
-        st.session_state.differential_diagnosis = data['patient']['differential_diagnosis']
-        st.session_state.critical_actions = data['patient']['critical_actions']
-        st.session_state.follow_up_steps = data['patient']['follow_up_steps']
+        patient_data = data.get('patient', {})
+        print(f'DEBUG PARSE_JSON patient_data: {patient_data}')
+        # Update session state
+        st.session_state.session_state.pt_data = patient_data
+        st.session_state.session_state.differential_diagnosis = patient_data.get('differential_diagnosis', [])
+        st.session_state.session_state.critical_actions = patient_data.get('critical_actions', [])
+        st.session_state.session_state.follow_up_steps = patient_data.get('follow_up_steps', [])
         
-        # Store DDX
-        save_case_details(st.session_state.username, "ddx")
+        # Only save case details if there's meaningful data
+        if any([st.session_state.session_state.differential_diagnosis, 
+                st.session_state.session_state.critical_actions, 
+                st.session_state.session_state.follow_up_steps]):
+            save_case_details(st.session_state.session_state.username, "ddx")
         
-        # Extract  test names and results and store in MongoDB
-        lab_results = data['patient']['lab_results']
-        #print(f'DEBUG LAB RESULTS: {lab_results}')
+        lab_results = patient_data.get('lab_results', {})
+        imaging_results = patient_data.get('imaging_results', {})
+        
         sequence_number = 1
-        for test_name, test_result in lab_results.items():
-            
-            #print(f'DEBUG TEST NAME AND RESULT: test name: {test_name}, test result: {test_result}')
-            #insert_test_result(st.session_state.username, test_name, test_result)
-            conditional_upsert_test_result(st.session_state.username, test_name, test_result, sequence_number)
-        imaging_results = data['patient']['imaging_results']
-        for test_name, test_result in imaging_results.items():
-            
-            #insert_test_result(st.session_state.username, test_name, test_result)
-            conditional_upsert_test_result(st.session_state.username, test_name, test_result, sequence_number)
-        #print(f'DEBUG JSON DATA: {data}')
-    except:
-        return
+        for results in [lab_results, imaging_results]:
+            for test_name, test_result in results.items():
+                if test_result:  # Only upsert if there's a result
+                    conditional_upsert_test_result(st.session_state.session_state.username, test_name, test_result, sequence_number)
+                    sequence_number += 1
 
-
-
-# Function to generate the response stream
-def generate_response_stream(response):
-    for content in response.content:
-        if content.type == 'text':
-            yield content.text
-            
-def chat_message_history():
-    chat = ''
-    for index, message in enumerate(st.session_state.chat_history, start=1):
-        if isinstance(message, dict) and 'content' in message:
-            content = message['content']
-        elif hasattr(message, 'content'):
-            content = message.content
-        else:
-            content = str(message)
-        
-        prefix = 'User: ' if index % 2 != 0 else 'Assistant: '
-        chat += f"{prefix}{content}\n"
-
-def get_response(user_question, message_history):
-    response_placeholder = st.empty()
-    response_text = ""
-    chat_history = st.session_state.clean_chat_history
-    print(f'DEBUG GET_RESPONSE CHAT_HISTORY: {chat_history}')
-    
-    #chat_mess_history = chat_message_history()
-    #print(f'\nDEBUG CHAT MESS HISTORY: {chat_mess_history}')
-    #message = HumanMessage(system=st.session_state.system_instructions,
-             #content=user_question)
-    
-    # Create system message
-    system_message = SystemMessage(content=st.session_state.system_instructions)
-    
-
-    # Create user message
-    user_message = HumanMessage(content=user_question + "```" + chat_history + "```")
-
-    # Combine messages
-    messages = [system_message, user_message]
-
-    # Get the response
-    response = model.invoke(messages)
-    response_text = response.content
-
-    # Print the response
-    response_placeholder.markdown(response_text)
-
-    
-    return response_text
+    except json.JSONDecodeError:
+        print("Failed to parse JSON data")
+    except Exception as e:
+        print(f"An unexpected error occurred: {str(e)}")
+        print(f"Full error details: {repr(e)}")  # This will print more detailed error information
 
 def display_chat_history():    
-    #st.empty()  # Clear existing chat messages
-    print(f'DEBUG DISPLAY_CHAT_HISTORY ST.SS.CHAT_HISOTR: {st.session_state.chat_history}')
-    for message in st.session_state.chat_history:
+    messages_per_page = 20
+    page = st.session_state.get('chat_page', 0)
+    
+    total_messages = len(st.session_state.session_state.chat_history)
+    start_idx = max(0, total_messages - (page + 1) * messages_per_page)
+    end_idx = total_messages - page * messages_per_page
+    
+    for message in st.session_state.session_state.chat_history[start_idx:end_idx][::1]:
         if isinstance(message, HumanMessage):
-            avatar_url = message.avatar
             with st.chat_message("user", avatar=user_avatar_url):                
                 st.markdown(message.content, unsafe_allow_html=True)
         else:
-            avatar_url = message.avatar
-            with st.chat_message("AI", avatar=avatar_url):
+            with st.chat_message("AI", avatar=message.avatar):
                 st.markdown(message.content, unsafe_allow_html=True)
-    #print(f'\nDEBUG st.session_state.chat_history: {st.session_state.chat_history}')
+    if start_idx > 0:
+        if st.button("Load More"):
+            st.session_state.chat_page = page + 1
+            st.rerun()
 
-# User input container
+
 def handle_user_input_container():
     input_container = st.container()
-    input_container.float(float_css_helper(bottom="50px"))
+    input_container.float(float_css_helper(
+                    bottom="50px",
+                    shadow=1,
+                    border="1px #262730",
+                    border_radius="10px",  # Rounded edges
+                    height=None,  # Adjust the height as needed
+                    overflow_y=None,  # Enable vertical scrolling
+                    padding="20px",  # Add some padding for better appearance))
+                    background="white"  
+        ))
     with input_container:
         
-        specialist = st.session_state.specialist
-        #obtain specialist avatar
-        specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
-            # Replace with your avatar URL
-        st.markdown(
-            f"""
-            <div style="text-align: center;">
-                <h6>
-                    Specialty Group: 
-                    <img src="{specialist_avatar}" alt="Avatar" style="width:30px;height:30px;border-radius:50%;">
-                    <span style="color:deepskyblue;">{specialist}</span>
-                </h6>
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
-        user_question = st.chat_input("How may I help you?") 
-        if user_question:
-            if 'session_id' not in st.session_state:
-                create_session_collection()
+        col_specialist, col1, col2= st.columns([1, 3, 1])
+        with col_specialist:
+            specialist = st.session_state.session_state.specialist
+            specialist_avatar = specialist_data[specialist]["avatar"]
+            st.markdown(
+                f"""
+                <div style="text-align: right; display: flex; justify-content: flex-end; align-items: center;">
+    <div style="display: flex; align-items: center; border: ; padding: 5px; border-radius: 5px;">
+        <span style="color:#048DEA; max-width: 100px; line-height: 1.2; display: inline-block; text-align: right; margin-right: 5px;">{specialist}</span>
+        <img src="{specialist_avatar}" alt="Avatar" style="width:30px;height:30px;border-radius:50%;">
+    </div>
+</div>
+                """, 
+                unsafe_allow_html=True
+            )
+
+        with col1:
+            user_question = st.chat_input("How may I help you?") 
+        with col2:
+            user_chat = record_audio()
         
-    process_user_question(user_question, specialist)
+    if user_question:
+        process_user_question(user_question, specialist)
+        st.rerun()
+    elif user_chat:
+        process_user_question(user_chat, specialist)
+        st.rerun()
+
 def process_user_question(user_question, specialist):
-    if user_question is not None and user_question != "":
-        #add to mongoDB
-        print(F'DEBUG USERNAME IS: {st.session_state.username}')
-        save_user_message(st.session_state.username, "user", user_question)
+    if user_question:
+        if not st.session_state.session_state.collection_name:
+            create_new_session()
+        
+        # Save the completed tasks before clearing
+        completed_tasks = st.session_state.session_state.completed_tasks_str
         
         timezone = pytz.timezone("America/Los_Angeles")
         current_datetime = datetime.now(timezone).strftime("%H:%M:%S")
-        user_question = current_datetime + f"""\n{user_question} 
-        \n{st.session_state.completed_tasks_str}
-        """
         
-        st.session_state.completed_tasks_str = ''
-        st.session_state.critical_actions  = []
-        st.session_state.specialist = specialist
-        specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
-        st.session_state.specialist_avatar = specialist_avatar
+        # Include the completed tasks in the user l
+        full_user_question = f"""{current_datetime}
+            \n{user_question}
+            \n{completed_tasks}
+            """
         
-        # Add user message to the session state
-        st.session_state.messages.append({"role": "user", "content": user_question})
-        st.session_state.chat_history.append(HumanMessage(user_question, avatar=user_avatar_url))
-
+        save_user_message(st.session_state.session_state.username, "user", full_user_question)
         
+        st.session_state.session_state.specialist = specialist
+        specialist_avatar = specialist_data[specialist]["avatar"]
+        st.session_state.session_state.specialist_avatar = specialist_avatar
+        
+        st.session_state.session_state.messages.append({"role": "user", "content": full_user_question})
+        st.session_state.session_state.chat_history.append(HumanMessage(full_user_question, avatar=user_avatar_url))
         
         with st.chat_message("user", avatar=user_avatar_url):
-            st.markdown(user_question)
+            st.markdown(full_user_question)
         
         with st.chat_message("AI", avatar=specialist_avatar):
-            assistant_response = get_response(user_question, st.session_state.messages)
-            st.session_state.assistant_response = assistant_response
-            
-
-        # Add assistant response to the session state
-        st.session_state.messages.append({"role": "assistant", "content": assistant_response})
-        st.session_state.chat_history.append(AIMessage(st.session_state.assistant_response, avatar=specialist_avatar))
-
-        #add to mongoDB
+            assistant_response = get_response(full_user_question)
+            st.session_state.session_state.assistant_response = assistant_response
         
-        save_ai_message(st.session_state.username, "ai", assistant_response, specialist)
+        st.session_state.session_state.messages.append({"role": "assistant", "content": assistant_response})
+        st.session_state.session_state.chat_history.append(AIMessage(st.session_state.session_state.assistant_response, avatar=specialist_avatar))
+        
+        save_ai_message(st.session_state.session_state.username, "ai", assistant_response, specialist)
 
         chat_history = chat_history_string()
-        parse_json(chat_history)    
-
-
+        parse_json(chat_history)
+        
+        # Clear completed tasks
+        st.session_state.session_state.completed_tasks_str = ""
+        
+        # Debug output
+        print("DEBUG: Session State after processing user question")
+ 
 
 def main():
     initialize_session_state()
     
-    display_header()
+    session_token = st.query_params.get("session")
+    session_expiry = st.query_params.get("session_expiry")
     
-    # Authentication with streamlit authenticator 
-    # name, authentication_status, username = authenticator.login('main')
-    # if authentication_status == True:
-        # User is authenticated, show the app content# Create a thread where the conversation will happen and keep Streamlit from initiating a new session state
-        #if "thread_id" not in st.session_state:
-            #thread = client.beta.threads.create()
-            #st.session_state.thread_id = thread.id
-    
-    display_chat_history() 
-    handle_user_input_container()   
-    process_other_queries() 
+    user = None
+    user = get_current_user()
+    print(f'DEBUG SESSION_TOKEN AND SESSION_EXPIRY AND USER: {session_token} and {session_expiry} and {get_user_from_session(session_token)}')
+    if session_token and session_expiry:
+        expiry = datetime.fromisoformat(session_expiry)
+        if expiry > datetime.utcnow():
+            user = get_user_from_session(session_token)
+        else:
+            st.warning("Your session has expired. Please log in again.")
+            clear_session(session_token)
+            st.query_params.clear()
 
-    display_sidebar()
-    #else:
-        #authenticate_user()
-  
+    if 'chat_page' not in st.session_state:
+        st.session_state.chat_page = 0
+
+    if user:
+        try:
+            
+            #print(f'MONGODB CLIENT: {client[DB_NAME]}')
+            #st.write(client.server_info())
+            # Create two columns with 2:1 ratio
+            if st.session_state.session_state.differential_diagnosis != []:
+                
+                col1, col2 = st.columns([2, 1])
+            
+                with col1:
+                    with st.container():
+                        display_header()
+                        display_chat_history()
+                        handle_user_input_container() 
+                        
+                    
+                with col2:
+                    input_container = st.container()
+                    input_container.float(float_css_helper(
+                        shadow=1,
+                        bottom="50px",
+                        border="1px #262730",
+                        border_radius="10px",  # Rounded edges
+                        height="calc(95vh - 80px)",  # Adjust the height as needed
+                        overflow_y="auto",  # Enable vertical scrolling
+                        padding="10px"  # Add some padding for better appearance
+                    ))
+                    with input_container:
+                            display_pt_headline()
+                            st.divider()
+                            display_ddx()
+                            st.divider()
+                            display_critical_tasks()
+                            st.divider()
+                            display_follow_up_tasks()
+            else:
+                display_header()
+                display_chat_history()
+                handle_user_input_container() 
+
+            process_other_queries() 
+            display_sidebar()
+            
+            # Periodically archive old sessions
+            archive_old_sessions(st.session_state.session_state.username)
+ 
+        except Exception as e:
+            st.error(f"An error occurred: {str(e)}")
+            # Log the error for debugging
+            logging.error(f"Unhandled exception in main: {str(e)}", exc_info=True)
+
+    elif 'code' in st.query_params:
+        user = google_callback()
+        if user:
+            st.success(f"Welcome Dr. {user.family_name}!")
+            st.rerun()
+        else:
+            st.error("Failed to log in. Please try again.")
+            st.query_params.clear()
+    else:
+        #display_header()
+        google_login()
 
 if __name__ == '__main__':
     main()
