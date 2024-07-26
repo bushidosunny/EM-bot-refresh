@@ -38,9 +38,13 @@ MONGODB_URI = os.getenv("MONGODB_ATLAS_URI")
 #print(f'MONGODB_URI: {MONGODB_URI}')
 DB_NAME = 'emma-dev'
 SCOPES = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile', 'openid']
-#REDIRECT_URI = 'http://localhost:8501/'
+ 
 SECRET_KEY = secrets.token_hex(32)
 CLIENT_SECRET_JSON = json.loads(os.getenv('CLIENT_SECRET_JSON'))
+if os.getenv('ENVIRONMENT') == 'production':
+    REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
+else:
+    REDIRECT_URI = 'http://localhost:8501/'
 
 # Initialize Anthropic client
 anthropic = Anthropic(api_key=ANTHROPIC_API_KEY)
@@ -176,18 +180,13 @@ class User:
 
 
 ###################### GOOGLE OAUTH ##############################################################
-def get_redirect_uri():
-    if os.getenv('ENVIRONMENT') == 'production':
-        return 'https://em-bot-ef123b005ca5.herokuapp.com/'
-    else:
-        return 'http://localhost:8501/'
-    
+
 def google_login() -> None:
     # Create a Flow instance from the client secrets file
     flow = Flow.from_client_config(
         client_config=CLIENT_SECRET_JSON,
         scopes=SCOPES,
-        redirect_uri=get_redirect_uri()
+        redirect_uri=REDIRECT_URI
     )
 
     # Get the authorization URL
