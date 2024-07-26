@@ -49,7 +49,7 @@ if os.path.exists('config.toml'):
     DEEPGRAM_API_KEY = config['DEEPGRAM_API_KEY']
     OPENAI_API_KEY = config['OPENAI_API_KEY']
     ANTHROPIC_API_KEY = config['ANTHROPIC_API_KEY']
-    MONGODB_ATLAS_URI = config['MONGODB_ATLAS_URI']
+    MONGODB_URI = config['MONGODB_ATLAS_URI']
     CLIENT_SECRET_JSON = config['CLIENT_SECRET_JSON']['web']
     ENVIRONMENT = config['ENVIRONMENT']
 else:
@@ -57,7 +57,7 @@ else:
     DEEPGRAM_API_KEY = os.getenv('DEEPGRAM_API_KEY')
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
-    MONGODB_ATLAS_URI = os.getenv('MONGODB_ATLAS_URI')
+    MONGODB_URI = os.getenv('MONGODB_ATLAS_URI')
     CLIENT_SECRET_JSON = json.loads(os.getenv('CLIENT_SECRET_JSON'))
     ENVIRONMENT = os.getenv('ENVIRONMENT')
 
