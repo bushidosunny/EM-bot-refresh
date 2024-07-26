@@ -255,8 +255,8 @@ def google_callback() -> Optional[User]:
         return None
 
     try:
-        flow = Flow.from_client_secrets_file(
-            'client_secret.json',
+        flow = Flow.from_client_config(
+            CLIENT_SECRET_JSON,
             scopes=SCOPES,
             redirect_uri=REDIRECT_URI
         )
