@@ -24,6 +24,7 @@ import secrets
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from urllib.parse import urljoin
+import toml
 
 st.set_page_config(page_title="EMMA", page_icon="🤖", initial_sidebar_state="collapsed", layout="wide")
 
@@ -32,16 +33,33 @@ st.set_page_config(page_title="EMMA", page_icon="🤖", initial_sidebar_state="c
 load_dotenv()
 
 # Constants
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
-MONGODB_URI = os.getenv("MONGODB_ATLAS_URI")
+#ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+#DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
+#MONGODB_URI = os.getenv("MONGODB_ATLAS_URI")
 #print(f'MONGODB_URI: {MONGODB_URI}')
 DB_NAME = 'emma-dev'
 SCOPES = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile', 'openid']
  
 SECRET_KEY = secrets.token_hex(32)
-CLIENT_SECRET_JSON = json.loads(os.getenv('CLIENT_SECRET_JSON'))
 
+if os.path.exists('config.toml'):
+    with open('config.toml', 'r') as f:
+        config = toml.load(f)
+    # Use the config dictionary to set up your application
+    DEEPGRAM_API_KEY = config['DEEPGRAM_API_KEY']
+    OPENAI_API_KEY = config['OPENAI_API_KEY']
+    ANTHROPIC_API_KEY = config['ANTHROPIC_API_KEY']
+    MONGODB_ATLAS_URI = config['MONGODB_ATLAS_URI']
+    CLIENT_SECRET_JSON = config['CLIENT_SECRET_JSON']['web']
+    ENVIRONMENT = config['ENVIRONMENT']
+else:
+    # Run as usual, using environment variables or other configuration methods
+    DEEPGRAM_API_KEY = os.getenv('DEEPGRAM_API_KEY')
+    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+    ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
+    MONGODB_ATLAS_URI = os.getenv('MONGODB_ATLAS_URI')
+    CLIENT_SECRET_JSON = json.loads(os.getenv('CLIENT_SECRET_JSON'))
+    ENVIRONMENT = os.getenv('ENVIRONMENT')
 
 # Initialize Anthropic client
 anthropic = Anthropic(api_key=ANTHROPIC_API_KEY)
@@ -193,9 +211,10 @@ def google_login() -> None:
     )
     logging.info(f"Current ENVIRONMENT: {os.getenv('ENVIRONMENT')}")
     logging.info(f"Using REDIRECT_URI: {REDIRECT_URI}")
+    
     # Get the authorization URL
     authorization_url, _ = flow.authorization_url(prompt='consent')
-
+    logging.info(f"Final authorization URL: {authorization_url}")
     # HTML for the Google Sign-In button using the official image
     html = f"""
     <style>
