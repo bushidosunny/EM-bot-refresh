@@ -1059,11 +1059,7 @@ def record_audio():
 # Initialize the model
 model = ChatAnthropic(model="claude-3-5-sonnet-20240620", temperature=0.5, max_tokens=4096)
 
-# Define the avatar URLs
-if st.session_state.session_state.user_photo_url == "":
-    user_avatar_url = "https://cdn.pixabay.com/photo/2016/12/21/07/36/profession-1922360_1280.png"
-else:
-    user_avatar_url = st.session_state.session_state.user_photo_url
+
 
 def get_response(user_question: str) -> str:
     with st.spinner("Waiting for EMMA's response..."):
@@ -1485,10 +1481,10 @@ def process_other_queries():
         specialist = st.session_state.session_state.specialist
         
         user_question = st.session_state.session_state.user_question_sidebar
-        with st.chat_message("user", avatar=user_avatar_url):
+        with st.chat_message("user", avatar=st.session_state.session_state.user_photo_url):
             st.markdown(user_question)
 
-        st.session_state.session_state.chat_history.append(HumanMessage(user_question, avatar=user_avatar_url))
+        st.session_state.session_state.chat_history.append(HumanMessage(user_question, avatar=st.session_state.session_state.user_photo_url))
         save_user_message(st.session_state.session_state.username, "user", user_question)
 
         with st.chat_message("AI", avatar=specialist_avatar):
@@ -1601,7 +1597,7 @@ def display_chat_history():
     
     for message in st.session_state.session_state.chat_history[start_idx:end_idx][::1]:
         if isinstance(message, HumanMessage):
-            with st.chat_message("user", avatar=user_avatar_url):                
+            with st.chat_message("user", avatar=st.session_state.session_state.user_photo_url):                
                 st.markdown(message.content, unsafe_allow_html=True)
         else:
             with st.chat_message("AI", avatar=message.avatar):
@@ -1678,9 +1674,9 @@ def process_user_question(user_question, specialist):
         st.session_state.session_state.specialist_avatar = specialist_avatar
         
         st.session_state.session_state.messages.append({"role": "user", "content": full_user_question})
-        st.session_state.session_state.chat_history.append(HumanMessage(full_user_question, avatar=user_avatar_url))
+        st.session_state.session_state.chat_history.append(HumanMessage(full_user_question, avatar=st.session_state.session_state.user_photo_url))
         
-        with st.chat_message("user", avatar=user_avatar_url):
+        with st.chat_message("user", avatar=st.session_state.session_state.user_photo_url):
             st.markdown(full_user_question)
         
         with st.chat_message("AI", avatar=specialist_avatar):
