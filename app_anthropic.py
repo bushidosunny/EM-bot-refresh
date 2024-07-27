@@ -42,8 +42,8 @@ SCOPES = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googlea
  
 SECRET_KEY = secrets.token_hex(32)
 
-if os.path.exists('config.toml'):
-    with open('config.toml', 'r') as f:
+if os.path.exists('/.streamlit/secrets.toml'):
+    with open('/.streamlit/secrets.toml', 'r') as f:
         config = toml.load(f)
     # Use the config dictionary to set up your application
     DEEPGRAM_API_KEY = config['DEEPGRAM_API_KEY']
