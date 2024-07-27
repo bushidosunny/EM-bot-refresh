@@ -1234,6 +1234,10 @@ def display_sidebar():
             #display_follow_up_tasks()
             #st.divider()
             display_functions_tab()
+            container = st.container()
+            container.float(float_css_helper(bottom="10px", border="1px solid #a3a8b4", border_radius= "10px", padding= "10px"))
+            with container:
+                logout_user() 
 
         with tab2:
             display_specialist_tab()
@@ -1243,10 +1247,7 @@ def display_sidebar():
 
         with tab5:
             display_sessions_tab()
-        container = st.container()
-        container.float(float_css_helper(bottom="10px", border="1px solid #a3a8b4", border_radius= "10px", padding= "10px"))
-        with container:
-            logout_user()   
+          
         
 
 def display_functions_tab():
