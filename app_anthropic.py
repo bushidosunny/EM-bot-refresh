@@ -1060,7 +1060,10 @@ def record_audio():
 model = ChatAnthropic(model="claude-3-5-sonnet-20240620", temperature=0.5, max_tokens=4096)
 
 # Define the avatar URLs
-user_avatar_url = "https://cdn.pixabay.com/photo/2016/12/21/07/36/profession-1922360_1280.png"
+if st.session_state.session_state.user_photo_url == "":
+    user_avatar_url = "https://cdn.pixabay.com/photo/2016/12/21/07/36/profession-1922360_1280.png"
+else:
+    user_avatar_url = st.session_state.session_state.user_photo_url
 
 def get_response(user_question: str) -> str:
     with st.spinner("Waiting for EMMA's response..."):
