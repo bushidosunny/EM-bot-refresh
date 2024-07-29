@@ -71,7 +71,7 @@ def init_mongodb_connection():
 
 try:
     # MongoDB setup
-    client = MongoClient(MONGODB_URI)
+    client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000, maxPoolSize=50)
     db = client[DB_NAME]
     users_collection = db['users']
     sessions_collection = db['sessions']
