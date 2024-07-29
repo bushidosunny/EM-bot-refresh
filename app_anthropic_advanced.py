@@ -42,8 +42,8 @@ SCOPES = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googlea
  
 SECRET_KEY = secrets.token_hex(32)
 
-if os.path.exists('/.streamlit/secrets.toml'):
-    with open('/.streamlit/secrets.toml', 'r') as f:
+if os.path.exists('config.toml'):
+    with open('config.toml', 'r') as f:
         config = toml.load(f)
     # Use the config dictionary to set up your application
     DEEPGRAM_API_KEY = config['DEEPGRAM_API_KEY']
@@ -71,7 +71,7 @@ def init_mongodb_connection():
 
 try:
     # MongoDB setup
-    client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000, maxPoolSize=50)
+    client = MongoClient(MONGODB_URI)
     db = client[DB_NAME]
     users_collection = db['users']
     sessions_collection = db['sessions']
@@ -198,7 +198,7 @@ class User:
 
 def google_login() -> None:
     if os.getenv('ENVIRONMENT') == 'production':
-        REDIRECT_URI = 'https://emmahealth.ai/'
+        REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
     else:
         REDIRECT_URI = 'http://localhost:8501/'
     
@@ -274,7 +274,7 @@ def google_login() -> None:
         
 def google_callback() -> Optional[User]:
     if os.getenv('ENVIRONMENT') == 'production':
-        REDIRECT_URI = 'https://emmahealth.ai/'
+        REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
     else:
         REDIRECT_URI = 'http://localhost:8501/'
     if 'code' not in st.query_params:
@@ -418,7 +418,7 @@ def create_session(user_id: str) -> tuple[str, datetime]:
     })
     return session_token, expiration
 
-def get_user_from_session(session_token: str) -> Optional[Dict[str, Any]]:
+def get_user_from_session(session_token: str) -> Optional[User]:
     session = sessions_collection.find_one({
         "token": session_token,
         "expires": {"$gt": datetime.utcnow()}
@@ -426,12 +426,7 @@ def get_user_from_session(session_token: str) -> Optional[Dict[str, Any]]:
     if session:
         user_data = users_collection.find_one({"_id": ObjectId(session["user_id"])})
         if user_data:
-            return {
-                "user": User.from_dict(user_data),
-                "user_photo_url": user_data.get("picture"),
-                "username": user_data.get("name"),
-                "family_name": user_data.get("family_name")
-            }
+            return User.from_dict(user_data)
     return None
 
 def get_current_user() -> Optional[User]:
@@ -1064,7 +1059,8 @@ def record_audio():
 # Initialize the model
 model = ChatAnthropic(model="claude-3-5-sonnet-20240620", temperature=0.5, max_tokens=4096)
 
-
+# Define the avatar URLs
+user_avatar_url = "https://cdn.pixabay.com/photo/2016/12/21/07/36/profession-1922360_1280.png"
 
 def get_response(user_question: str) -> str:
     with st.spinner("Waiting for EMMA's response..."):
@@ -1241,12 +1237,7 @@ def display_sidebar():
             container = st.container()
             container.float(float_css_helper(bottom="10px", border="1px solid #a3a8b4", border_radius= "10px", padding= "10px"))
             with container:
-<<<<<<< Updated upstream
-                logout_user() 
-
-=======
                 logout_user()  
->>>>>>> Stashed changes
         with tab2:
             display_specialist_tab()
         
@@ -1255,11 +1246,7 @@ def display_sidebar():
 
         with tab5:
             display_sessions_tab()
-<<<<<<< Updated upstream
-          
-=======
          
->>>>>>> Stashed changes
         
 
 def display_functions_tab():
@@ -1494,10 +1481,10 @@ def process_other_queries():
         specialist = st.session_state.session_state.specialist
         
         user_question = st.session_state.session_state.user_question_sidebar
-        with st.chat_message("user", avatar=st.session_state.session_state.user_photo_url):
+        with st.chat_message("user", avatar=user_avatar_url):
             st.markdown(user_question)
 
-        st.session_state.session_state.chat_history.append(HumanMessage(user_question, avatar=st.session_state.session_state.user_photo_url))
+        st.session_state.session_state.chat_history.append(HumanMessage(user_question, avatar=user_avatar_url))
         save_user_message(st.session_state.session_state.username, "user", user_question)
 
         with st.chat_message("AI", avatar=specialist_avatar):
@@ -1610,7 +1597,7 @@ def display_chat_history():
     
     for message in st.session_state.session_state.chat_history[start_idx:end_idx][::1]:
         if isinstance(message, HumanMessage):
-            with st.chat_message("user", avatar=st.session_state.session_state.user_photo_url):                
+            with st.chat_message("user", avatar=user_avatar_url):                
                 st.markdown(message.content, unsafe_allow_html=True)
         else:
             with st.chat_message("AI", avatar=message.avatar):
@@ -1687,9 +1674,9 @@ def process_user_question(user_question, specialist):
         st.session_state.session_state.specialist_avatar = specialist_avatar
         
         st.session_state.session_state.messages.append({"role": "user", "content": full_user_question})
-        st.session_state.session_state.chat_history.append(HumanMessage(full_user_question, avatar=st.session_state.session_state.user_photo_url))
+        st.session_state.session_state.chat_history.append(HumanMessage(full_user_question, avatar=user_avatar_url))
         
-        with st.chat_message("user", avatar=st.session_state.session_state.user_photo_url):
+        with st.chat_message("user", avatar=user_avatar_url):
             st.markdown(full_user_question)
         
         with st.chat_message("AI", avatar=specialist_avatar):
@@ -1725,12 +1712,9 @@ def main():
         if expiry > datetime.utcnow():
             user = get_user_from_session(session_token)
         else:
-            
             st.warning("Your session has expired. Please log in again.")
             clear_session(session_token)
             st.query_params.clear()
-    else:
-        user = get_current_user()
 
     if 'chat_page' not in st.session_state:
         st.session_state.chat_page = 0
