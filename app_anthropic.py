@@ -71,7 +71,7 @@ def init_mongodb_connection():
 
 try:
     # MongoDB setup
-    client = MongoClient(MONGODB_URI)
+    client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000, maxPoolSize=50)
     db = client[DB_NAME]
     users_collection = db['users']
     sessions_collection = db['sessions']
@@ -296,16 +296,17 @@ def google_callback() -> Optional[User]:
         print(f'DEBUG GOOGLE CALLBACK: {user_info_service}')
         google_user_info = user_info_service.userinfo().get().execute()
         print(f'DEBUG GOOGLE CALLBACK GOOGLE USER INFO: {google_user_info}')
+        #st.session_state.session_state.user_photo_url = google_user_info['picture']
+        #st.session_state.session_state.username = google_user_info['name']
         
+        #print(f'DEBUG GOOGLE CALLBACK GOOGLE USER PHOTO URL: {st.session_state.session_state.user_photo_url}')
         user = get_or_create_user(google_user_info)
         print(f'DEBUG GOOGLE CALLBACK   USER: {user}')
-
-        # Add these lines to create a session and store the token
         session_token, expiration = create_session(str(user._id))
+        print(f'DEBUG GOOGLE CALLBACK SESSIONT TOKEN AND USER: {session_token}')
         st.session_state['session_token'] = session_token
         st.session_state['user'] = user
         print(f'DEBUG GOOGLE CALLBACK SESSIONT TOKEN AND USER: {session_token} and {user}')
-
         # Update query parameters
         st.query_params['session'] = session_token
         st.query_params['session_expiry'] = expiration.isoformat()
@@ -321,16 +322,6 @@ def google_callback() -> Optional[User]:
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         return None
-
-def create_session(user_id: str) -> tuple[str, datetime]:
-    session_token = secrets.token_urlsafe(32)
-    expiration = datetime.utcnow() + timedelta(days=1)
-    sessions_collection.insert_one({
-        "token": session_token,
-        "user_id": user_id,
-        "expires": expiration
-    })
-    return session_token, expiration
 
 def init_db() -> None:
     users_collection.create_index([("google_id", ASCENDING)], unique=True)
@@ -1719,8 +1710,8 @@ def main():
     session_expiry = st.query_params.get("session_expiry")
     
     user = None
-    #user = get_current_user()
-    #print(f'DEBUG SESSION_TOKEN AND SESSION_EXPIRY AND USER: {session_token} and {session_expiry} and {get_user_from_session(session_token)}')
+    user = get_current_user()
+    print(f'DEBUG SESSION_TOKEN AND SESSION_EXPIRY AND USER: {session_token} and {session_expiry} and {get_user_from_session(session_token)}')
     if session_token and session_expiry:
         expiry = datetime.fromisoformat(session_expiry)
         if expiry > datetime.utcnow():
