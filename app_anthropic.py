@@ -427,7 +427,7 @@ def create_session(user_id: str) -> tuple[str, datetime]:
     })
     return session_token, expiration
 
-def get_user_from_session(session_token: str) -> Optional[User]:
+def get_user_from_session(session_token: str) -> Optional[Dict[str, Any]]:
     session = sessions_collection.find_one({
         "token": session_token,
         "expires": {"$gt": datetime.utcnow()}
@@ -435,7 +435,12 @@ def get_user_from_session(session_token: str) -> Optional[User]:
     if session:
         user_data = users_collection.find_one({"_id": ObjectId(session["user_id"])})
         if user_data:
-            return User.from_dict(user_data)
+            return {
+                "user": User.from_dict(user_data),
+                "user_photo_url": user_data.get("picture"),
+                "username": user_data.get("name"),
+                "family_name": user_data.get("family_name")
+            }
     return None
 
 def get_current_user() -> Optional[User]:
@@ -1721,9 +1726,12 @@ def main():
         if expiry > datetime.utcnow():
             user = get_user_from_session(session_token)
         else:
+            
             st.warning("Your session has expired. Please log in again.")
             clear_session(session_token)
             st.query_params.clear()
+    else:
+        user = get_current_user()
 
     if 'chat_page' not in st.session_state:
         st.session_state.chat_page = 0
