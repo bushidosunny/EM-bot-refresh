@@ -97,7 +97,7 @@ class User:
         self.google_id = google_id
         self.email = email
         self.name = name
-        self.family_name = family_name
+        self.family_name = family_name if family_name is not None else ""
         self.picture = picture
         self.created_at = datetime.now()
         self.last_login = datetime.now()
@@ -342,7 +342,8 @@ def get_or_create_user(google_user_info: Dict[str, Any]) -> User:
                 "last_login": user.last_login,
                 "login_count": user.login_count,
                 "preferences": user.preferences,
-                "picture": user.picture
+                "picture": user.picture,
+                "family_name": google_user_info.get('family_name') or ''
             }}
         )
     else:
@@ -350,7 +351,7 @@ def get_or_create_user(google_user_info: Dict[str, Any]) -> User:
             google_id=google_user_info['id'],
             email=google_user_info['email'],
             name=google_user_info['name'],
-            family_name=google_user_info['family_name'],
+            family_name=google_user_info.get('family_name') or '',
             picture=google_user_info.get('picture')
         )
         user.update_login()
@@ -418,21 +419,7 @@ def create_session(user_id: str) -> tuple[str, datetime]:
     })
     return session_token, expiration
 
-def get_user_from_session(session_token: str) -> Optional[Dict[str, Any]]:
-    session = sessions_collection.find_one({
-        "token": session_token,
-        "expires": {"$gt": datetime.utcnow()}
-    })
-    if session:
-        user_data = users_collection.find_one({"_id": ObjectId(session["user_id"])})
-        if user_data:
-            return {
-                "user": User.from_dict(user_data),
-                "user_photo_url": user_data.get("picture"),
-                "username": user_data.get("name"),
-                "family_name": user_data.get("family_name")
-            }
-    return None
+
 
 def get_current_user() -> Optional[User]:
     session_token = st.session_state.get('session_token')
@@ -889,6 +876,7 @@ def load_chat_history(collection_name):
         formatted_chat_history.append(formatted_entry)
     chat_history_string = "\n\n".join(formatted_chat_history)
     st.session_state.session_state.clean_chat_history = chat_history_string
+
     return chat_history_string
 
 def search_sessions(user_id, keywords):
@@ -1196,16 +1184,28 @@ def logout_user():
     #st.write(st.session_state.session_state.user_photo_url)
     colL,colR = st.columns([2,1])
     with colL:
-        st.markdown(
-            f"""
-            <div style="text-align: center;">
-                <h4>                  
-                    <img src="{st.session_state.session_state.user_photo_url}" style="width:30px;height:30px;border-radius:50%;">
-                    Dr. {st.session_state.session_state.family_name}
-                </h4>
-            </div>
-            """, 
-            unsafe_allow_html=True)
+        if st.session_state.session_state.family_name:
+            st.markdown(
+                f"""
+                <div style="text-align: center;">
+                    <h4>                  
+                        <img src="{st.session_state.session_state.user_photo_url}" style="width:30px;height:30px;border-radius:50%;">
+                        Dr. {st.session_state.session_state.family_name}
+                    </h4>
+                </div>
+                """, 
+                unsafe_allow_html=True)
+        else:
+            st.markdown(
+                f"""
+                <div style="text-align: center;">
+                    <h4>                  
+                        <img src="{st.session_state.session_state.user_photo_url}" style="width:30px;height:30px;border-radius:50%;">
+                        Dr. {st.session_state.session_state.name}
+                    </h4>
+                </div>
+                """, 
+                unsafe_allow_html=True)
     with colR:
         # Add a unique key to the logout button
         if st.button("Logout", key="logout_button"):
@@ -1264,21 +1264,18 @@ def display_functions_tab():
     #     if st.button("💉Which Procedure", use_container_width=True):
     #         consult_specialist_and_update_ddx("Which Procedure", procedure_checklist)
 
-    st.subheader('📝Note Writer')
+    st.subheader('📝Clinical Notes')
     col1, col2 = st.columns(2)
     with col1:
-        # if st.button('Full Medical Note', use_container_width=True):
-        #     st.session_state.session_state.specialist = "Note Writer"
-        #     consult_specialist_and_update_ddx("Full Medical Note", "Write a full medical note on this patient")
-        #     st.session_state.session_state.specialist = "Emergency Medicine"
+        if st.button('Full Medical Note', use_container_width=True):
+            st.session_state.session_state.specialist = "Note Writer"
+            consult_specialist_and_update_ddx("Full Medical Note", "Write a full medical note on this patient")
+            st.session_state.session_state.specialist = "Emergency Medicine"
         if st.button('Full Note except EMR results', use_container_width=True):
             st.session_state.session_state.specialist = "Note Writer"
             consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
             st.session_state.session_state.specialist = "Emergency Medicine"
-        if st.button("🙍Pt Education Note", use_container_width=True):
-            st.session_state.session_state.specialist = "Patient Educator"
-            consult_specialist_and_update_ddx("Patient Education Note", f"Write a patient education note for this patient in {st.session_state.session_state.patient_language}")
-            st.session_state.session_state.specialist = "Emergency Medicine"
+
     with col2:
         if st.button('HPI only', use_container_width=True):
             st.session_state.session_state.specialist = "Note Writer"
@@ -1288,11 +1285,19 @@ def display_functions_tab():
             st.session_state.session_state.specialist = "Note Writer"
             consult_specialist_and_update_ddx("A&P only", create_ap)
             st.session_state.session_state.specialist = "Emergency Medicine"
+    st.subheader('📝Notes for Patients')
+    col1, col2 = st.columns(2)
+    with col1:
+
+        if st.button("🙍Pt Education Note", use_container_width=True):
+            st.session_state.session_state.specialist = "Patient Educator"
+            consult_specialist_and_update_ddx("Patient Education Note", f"Write a patient education note for this patient in {st.session_state.session_state.patient_language}")
+            st.session_state.session_state.specialist = "Emergency Medicine"
+    with col2:
         if st.button('💪Physical Therapy Plan', use_container_width=True):
             st.session_state.session_state.specialist = "Musculoskeletal Systems"
             consult_specialist_and_update_ddx("Physical Therapy Plan", pt_plan)
             st.session_state.session_state.specialist = "Emergency Medicine"
-
     st.subheader('🧠Critical Thinking')
     col1, col2 = st.columns(2)
     with col1:
@@ -1549,6 +1554,7 @@ def chat_history_string():
 
     output_string = output.getvalue()
     save_case_details(st.session_state.session_state.username, "chat_history", output_string)
+    save_case_details(st.session_state.session_state.username, "session_state_chat_history", st.session_state.session_state.chat_history)
     st.session_state.session_state.clean_chat_history = output_string
     return output_string
 
@@ -1709,12 +1715,13 @@ def main():
     session_expiry = st.query_params.get("session_expiry")
     
     user = None
-    user = get_current_user()
+    #user = get_current_user()
     print(f'DEBUG SESSION_TOKEN AND SESSION_EXPIRY AND USER: {session_token} and {session_expiry} and {get_user_from_session(session_token)}')
     if session_token and session_expiry:
         expiry = datetime.fromisoformat(session_expiry)
         if expiry > datetime.utcnow():
             user = get_user_from_session(session_token)
+            print(f'DEBUG PAGE REFRESH: USER.NAME: {user.name}')
         else:
             
             st.warning("Your session has expired. Please log in again.")
@@ -1781,8 +1788,12 @@ def main():
     elif 'code' in st.query_params:
         user = google_callback()
         if user:
-            st.success(f"Welcome Dr. {user.family_name}!")
-            st.rerun()
+            if user.family_name:
+                st.success(f"Welcome Dr. {user.family_name}!")
+                st.rerun()
+            else:
+                st.success(f"Welcome Dr. {user.name}!")
+                st.rerun()
         else:
             st.error("Failed to log in. Please try again.")
             st.query_params.clear()
