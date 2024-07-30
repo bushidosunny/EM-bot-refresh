@@ -1,1 +1,1 @@
-web: sh setup.sh && streamlit run app_anthropic.py
+web: python -X int_max_str_digits=0 -m streamlit run app_anthropic.py

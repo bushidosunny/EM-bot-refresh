@@ -67,11 +67,11 @@ anthropic = Anthropic(api_key=ANTHROPIC_API_KEY)
 # Initialize MongoDB connection
 @st.cache_resource
 def init_mongodb_connection():
-    return MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000, maxPoolSize=50)
+    return MongoClient(MONGODB_URI, maxPoolSize=1, connect=False)
 
 try:
     # MongoDB setup
-    client = MongoClient(MONGODB_URI)
+    client = MongoClient(MONGODB_URI, maxPoolSize=1, connect=False)
     db = client[DB_NAME]
     users_collection = db['users']
     sessions_collection = db['sessions']
@@ -1241,12 +1241,7 @@ def display_sidebar():
             container = st.container()
             container.float(float_css_helper(bottom="10px", border="1px solid #a3a8b4", border_radius= "10px", padding= "10px"))
             with container:
-<<<<<<< Updated upstream
                 logout_user() 
-
-=======
-                logout_user()  
->>>>>>> Stashed changes
         with tab2:
             display_specialist_tab()
         
@@ -1255,31 +1250,27 @@ def display_sidebar():
 
         with tab5:
             display_sessions_tab()
-<<<<<<< Updated upstream
           
-=======
-         
->>>>>>> Stashed changes
         
 
 def display_functions_tab():
-    st.subheader('Process Management')
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🛌Disposition Analysis", use_container_width=True):
-            st.session_state.session_state.specialist = "Emergency Medicine"
-            consult_specialist_and_update_ddx("Disposition Analysis", disposition_analysis)
-    with col2:
-        if st.button("💉Which Procedure", use_container_width=True):
-            consult_specialist_and_update_ddx("Which Procedure", procedure_checklist)
+    # st.subheader('Process Management')
+    # col1, col2 = st.columns(2)
+    # with col1:
+    #     if st.button("🛌Disposition Analysis", use_container_width=True):
+    #         st.session_state.session_state.specialist = "Emergency Medicine"
+    #         consult_specialist_and_update_ddx("Disposition Analysis", disposition_analysis)
+    # with col2:
+    #     if st.button("💉Which Procedure", use_container_width=True):
+    #         consult_specialist_and_update_ddx("Which Procedure", procedure_checklist)
 
     st.subheader('📝Note Writer')
     col1, col2 = st.columns(2)
     with col1:
-        if st.button('Full Medical Note', use_container_width=True):
-            st.session_state.session_state.specialist = "Note Writer"
-            consult_specialist_and_update_ddx("Full Medical Note", "Write a full medical note on this patient")
-            st.session_state.session_state.specialist = "Emergency Medicine"
+        # if st.button('Full Medical Note', use_container_width=True):
+        #     st.session_state.session_state.specialist = "Note Writer"
+        #     consult_specialist_and_update_ddx("Full Medical Note", "Write a full medical note on this patient")
+        #     st.session_state.session_state.specialist = "Emergency Medicine"
         if st.button('Full Note except EMR results', use_container_width=True):
             st.session_state.session_state.specialist = "Note Writer"
             consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
@@ -1302,21 +1293,21 @@ def display_functions_tab():
             consult_specialist_and_update_ddx("Physical Therapy Plan", pt_plan)
             st.session_state.session_state.specialist = "Emergency Medicine"
 
-    st.subheader('🏃‍♂️Flow')
+    st.subheader('🧠Critical Thinking')
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("➡️Next Step Recommendation", use_container_width=True):
-            st.session_state.session_state.specialist = "Emergency Medicine"
-            consult_specialist_and_update_ddx("Next Step Recommendation", next_step)
+        # if st.button("➡️Next Step Recommendation", use_container_width=True):
+        #     st.session_state.session_state.specialist = "Emergency Medicine"
+        #     consult_specialist_and_update_ddx("Next Step Recommendation", next_step)
         if st.button("🤔Challenge the DDX", use_container_width=True):
             st.session_state.session_state.specialist = "General"
             consult_specialist_and_update_ddx("Challenge the DDX", challenge_ddx)
             st.session_state.session_state.specialist = "Emergency Medicine"
     with col2:
-        if st.button('🛠️Apply Clinical Decision Tools', use_container_width=True):
-            st.session_state.session_state.specialist = "Clinical Decision Tools"
-            consult_specialist_and_update_ddx("Apply Clinical Decision Tools", apply_decision_tool)
-            st.session_state.session_state.specialist = "Emergency Medicine"
+        # if st.button('🛠️Apply Clinical Decision Tools', use_container_width=True):
+        #     st.session_state.session_state.specialist = "Clinical Decision Tools"
+        #     consult_specialist_and_update_ddx("Apply Clinical Decision Tools", apply_decision_tool)
+        #     st.session_state.session_state.specialist = "Emergency Medicine"
         if st.button("🧠Critical Thinking w Bayesian Reasoning", use_container_width=True):
             st.session_state.session_state.specialist = "Bayesian Reasoner"
             consult_specialist_and_update_ddx("Critical Thinking w Bayesian Reasoning", apply_bayesian_reasoning)
@@ -1359,17 +1350,17 @@ def display_sessions_tab():
                     index=0,
                     key="session_selectbox")
         
-        selected_session = st_searchbox(
-            search_sessions_for_searchbox,
-            key="session_searchbox",
-            label="Search sessions",
-            placeholder="Type to search for sessions...",
-            default_use_searchterm=False,
-            rerun_on_update=False
-        )
+        # selected_session = st_searchbox(
+        #     search_sessions_for_searchbox,
+        #     key="session_searchbox",
+        #     label="Search sessions",
+        #     placeholder="Type to search for sessions...",
+        #     default_use_searchterm=False,
+        #     rerun_on_update=False
+        # )
 
-        if selected_session:
-            session_name = load_session_from_search(selected_session)
+        # if selected_session:
+        #     session_name = load_session_from_search(selected_session)
 
         if session_name != "Select a session...":
             if session_name in session_options:
