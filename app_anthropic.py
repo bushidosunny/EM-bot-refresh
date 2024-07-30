@@ -14,7 +14,7 @@ import pytz
 from pymongo import MongoClient, ASCENDING, TEXT, DESCENDING, UpdateOne
 from pymongo.errors import BulkWriteError, ServerSelectionTimeoutError, OperationFailure, ConfigurationError#,DuplicateKeyError, BulkWriteError, InvalidName, 
 from bson import ObjectId #, Regex
-from streamlit_searchbox import st_searchbox
+#from streamlit_searchbox import st_searchbox
 from streamlit_mic_recorder import mic_recorder
 from deepgram import DeepgramClient, PrerecordedOptions
 from streamlit.components.v1 import html
@@ -703,11 +703,25 @@ def save_ai_message(user_id, sender, message, specialist="ai"):
     }])
 
 def save_case_details(user_id, doc_type, content=None):
+    print(f'DEBUG SAVE CASE DETAILS -------SESSION STATE CHAT HISTORY: {st.session_state.session_state.chat_history}')
+    
+    # Convert chat history to serializable format
+    serializable_history = []
+    for message in st.session_state.session_state.chat_history:
+        if isinstance(message, (HumanMessage, AIMessage)):
+            serializable_history.append({
+                'type': message.__class__.__name__,
+                'content': message.content,
+                'avatar': message.avatar
+            })
+    
+    print(f'DEBUG SAVE CASE DETAILS: ---------- serializable history: {serializable_history}')
     document = {
         "type": doc_type,
         "user_id": user_id,
         "ddx": st.session_state.session_state.differential_diagnosis,
         "content": content,
+        "session_state_chat_history": serializable_history,
         "patient_cc": st.session_state.session_state.patient_cc,
         "timestamp": datetime.now(),
     }
@@ -716,6 +730,7 @@ def save_case_details(user_id, doc_type, content=None):
         "user_id": user_id,
     }
     update = {"$set": document}
+    print(f'DEBUG SAVE CASE DETAILS -------SESSION STATE CHAT HISTORY: {datetime.now()}')
     try:
         result = db[st.session_state.session_state.collection_name].update_one(query, update, upsert=True)
         if result.matched_count > 0:
@@ -864,20 +879,49 @@ def delete_session_data(collection_name):
     db.drop_collection(collection_name)
 
 def load_chat_history(collection_name):
+    # Check if we've already loaded the chat history
+    
     st.session_state.session_state.chat_history = []
     st.session_state.session_state.differential_diagnosis = []
-    query = {"type": {"$in": ["user_input", "ai_input"]}}
-    projection = {"message": 1, "sender": 1, "timestamp": 1, "_id": 0}
-    chat_history = list(db[collection_name].find(query, projection).sort("timestamp", 1))
-    formatted_chat_history = []
-    for entry in chat_history:
-        role = "Human" if entry['sender'] == "Human" else "AI"
-        formatted_entry = f"{role}: {entry['message']}"
-        formatted_chat_history.append(formatted_entry)
-    chat_history_string = "\n\n".join(formatted_chat_history)
-    st.session_state.session_state.clean_chat_history = chat_history_string
 
-    return chat_history_string
+    result = db[collection_name].find_one({"type": "chat_history"})
+    if result and 'session_state_chat_history' in result:
+        serialized_history = result['session_state_chat_history']
+        
+        # Check if serialized_history is already a list
+        if isinstance(serialized_history, list):
+            print("Chat history is already a list, no need to parse JSON")
+        else:
+            try:
+                # If it's a string, try to parse it as JSON
+                serialized_history = json.loads(serialized_history)
+            except json.JSONDecodeError:
+                print("Error decoding JSON from database. Chat history might be in old format.")
+                # Optionally, add fallback code here to handle old format
+                return
+
+        for message_data in serialized_history:
+            if isinstance(message_data, dict):
+                # If it's a dict, assume it's in the new format
+                if message_data['type'] == 'HumanMessage':
+                    message = HumanMessage(content=message_data['content'], avatar=message_data['avatar'])
+                elif message_data['type'] == 'AIMessage':
+                    message = AIMessage(content=message_data['content'], avatar=message_data['avatar'])
+                else:
+                    continue  # Skip unknown message types
+            elif isinstance(message_data, (HumanMessage, AIMessage)):
+                # If it's already a message object, use it directly
+                message = message_data
+            else:
+                print(f"Unknown message format: {type(message_data)}")
+                continue
+
+            st.session_state.session_state.chat_history.append(message)
+    
+    print(f'DEBUG LOAD CHAT HISTORY ----type: {type(st.session_state.session_state.chat_history)}-- SESSION STATE CHAT HISTORY: {st.session_state.session_state.chat_history}')
+
+    
+    st.rerun()
 
 def search_sessions(user_id, keywords):
     collections = db.list_collection_names()
@@ -1367,14 +1411,15 @@ def display_sessions_tab():
         # if selected_session:
         #     session_name = load_session_from_search(selected_session)
 
-        if session_name != "Select a session...":
-            if session_name in session_options:
-                st.success(f"Session Loaded")
-                st.write(f'**{session_name}**')
-                display_session_data(session_options[session_name])
-                
-            else:
-                st.error(f"Session '{session_name}' not found in options.")
+        with st.spinner("Loading session..."):
+            if session_name != "Select a session...":
+                if session_name in session_options:
+                    st.success(f"Session Loaded")
+                    st.write(f'**{session_name}**')
+                    display_session_data(session_options[session_name])
+                    
+                else:
+                    st.error(f"Session '{session_name}' not found in options.")
     else:
         st.write("No sessions found for this user.")
 
@@ -1384,7 +1429,6 @@ def display_session_data(collection_name):
     
     initialize_text_indexes(collection_name)
     
-    load_chat_history(collection_name)
     st.session_state.session_state.collection_name = collection_name
     #st.write(f"**Data of session: {collection_name}**")
     
@@ -1415,7 +1459,11 @@ def display_session_data(collection_name):
             st.write(f"Message: {doc.get('message', 'N/A')}")
             st.write(f"Timestamp: {doc.get('timestamp', 'N/A')}")
             st.write("---")
+
     
+    if st.button("load the chat history?"):
+        load_chat_history(collection_name)
+        
     display_delete_session_button(collection_name)
     
 def display_delete_session_button(collection_name):
@@ -1429,11 +1477,12 @@ def display_delete_session_button(collection_name):
         st.error("Are you sure you want to delete session data? This action cannot be undone.")
         col1, col2 = st.columns(2)
         with col1:
-            if st.button(f"Yes, delete {collection_name} data", type='primary', use_container_width=True):
-                delete_session_data(collection_name)
-                st.success(f"Session data {collection_name} deleted successfully.")
-                st.session_state.delete_confirmation = False
-                st.rerun()
+            with st.spinner("Loading session..."):
+                if st.button(f"Yes, delete {collection_name} data", type='primary', use_container_width=True):
+                    delete_session_data(collection_name)
+                    st.success(f"Session data {collection_name} deleted successfully.")
+                    st.session_state.delete_confirmation = False
+                    st.rerun()
         with col2:
             if st.button("No, cancel", use_container_width=True):
                 st.session_state.delete_confirmation = False
@@ -1489,6 +1538,9 @@ def process_other_queries():
         specialist_avatar = specialist_data[st.session_state.session_state.specialist]["avatar"]
         specialist = st.session_state.session_state.specialist
         
+        # load previous chat history    
+        chat_history = chat_history_string()
+
         user_question = st.session_state.session_state.user_question_sidebar
         with st.chat_message("user", avatar=st.session_state.session_state.user_photo_url):
             st.markdown(user_question)
@@ -1507,7 +1559,7 @@ def process_other_queries():
         st.session_state.session_state.chat_history.append(AIMessage(assistant_response, avatar=specialist_avatar))
         st.session_state.session_state.old_user_question_sidebar = user_question
 
-        chat_history = chat_history_string()
+
         parse_json(chat_history) 
 
         # Clear completed tasks
@@ -1545,7 +1597,7 @@ def start_new_session():
 
 def chat_history_string():
     output = io.StringIO()
-
+    # print(f'\nDEBUG chat_history_string ------st.session_state.session_state.chat_history:{st.session_state.session_state.chat_history}')
     for message in st.session_state.session_state.chat_history:
         if isinstance(message, HumanMessage):
             print(message.content, file=output)
@@ -1554,8 +1606,8 @@ def chat_history_string():
 
     output_string = output.getvalue()
     save_case_details(st.session_state.session_state.username, "chat_history", output_string)
-    save_case_details(st.session_state.session_state.username, "session_state_chat_history", st.session_state.session_state.chat_history)
     st.session_state.session_state.clean_chat_history = output_string
+    print(f'\nDEBUG chat_history_string ------output_string:{output_string}')
     return output_string
 
 def parse_json(chat_history):
@@ -1568,7 +1620,7 @@ def parse_json(chat_history):
     try:
         data = json.loads(pt_json)
         patient_data = data.get('patient', {})
-        print(f'DEBUG PARSE_JSON patient_data: {patient_data}')
+        # print(f'DEBUG PARSE_JSON patient_data: {patient_data}')
         # Update session state
         st.session_state.session_state.pt_data = patient_data
         st.session_state.session_state.differential_diagnosis = patient_data.get('differential_diagnosis', [])
@@ -1600,7 +1652,7 @@ def parse_json(chat_history):
 def display_chat_history():    
     messages_per_page = 20
     page = st.session_state.get('chat_page', 0)
-    
+    # print(f'DEBUG display_chat_history ------ type: {type(st.session_state.session_state.chat_history)} --- SESSION STATE CHAT HISTORY:{st.session_state.session_state.chat_history}')
     total_messages = len(st.session_state.session_state.chat_history)
     start_idx = max(0, total_messages - (page + 1) * messages_per_page)
     end_idx = total_messages - page * messages_per_page
@@ -1664,7 +1716,10 @@ def process_user_question(user_question, specialist):
     if user_question:
         if not st.session_state.session_state.collection_name:
             create_new_session()
-        
+
+        # load previous chat history    
+        chat_history = chat_history_string()
+
         # Save the completed tasks before clearing
         completed_tasks = st.session_state.session_state.completed_tasks_str
         
@@ -1698,7 +1753,7 @@ def process_user_question(user_question, specialist):
         
         save_ai_message(st.session_state.session_state.username, "ai", assistant_response, specialist)
 
-        chat_history = chat_history_string()
+        
         parse_json(chat_history)
         
         # Clear completed tasks
