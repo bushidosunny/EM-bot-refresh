@@ -703,7 +703,7 @@ def save_ai_message(user_id, sender, message, specialist="ai"):
     }])
 
 def save_case_details(user_id, doc_type, content=None):
-    print(f'DEBUG SAVE CASE DETAILS -------SESSION STATE CHAT HISTORY: {st.session_state.session_state.chat_history}')
+    # print(f'DEBUG SAVE CASE DETAILS -------SESSION STATE CHAT HISTORY: {st.session_state.session_state.chat_history}')
     
     # Convert chat history to serializable format
     serializable_history = []
@@ -715,7 +715,7 @@ def save_case_details(user_id, doc_type, content=None):
                 'avatar': message.avatar
             })
     
-    print(f'DEBUG SAVE CASE DETAILS: ---------- serializable history: {serializable_history}')
+    # print(f'DEBUG SAVE CASE DETAILS: ---------- serializable history: {serializable_history}')
     document = {
         "type": doc_type,
         "user_id": user_id,
@@ -730,7 +730,7 @@ def save_case_details(user_id, doc_type, content=None):
         "user_id": user_id,
     }
     update = {"$set": document}
-    print(f'DEBUG SAVE CASE DETAILS -------SESSION STATE CHAT HISTORY: {datetime.now()}')
+    # print(f'DEBUG SAVE CASE DETAILS -------SESSION STATE CHAT HISTORY: {datetime.now()}')
     try:
         result = db[st.session_state.session_state.collection_name].update_one(query, update, upsert=True)
         if result.matched_count > 0:
@@ -1083,14 +1083,19 @@ def record_audio():
     if audio_data:
         audio_bytes = io.BytesIO(audio_data['bytes'])
         audio_bytes.seek(0)
-        raw_transcript = transcribe_audio(audio_bytes)
+        with st.spinner("transcribing audio...."):
+            raw_transcript = transcribe_audio(audio_bytes)
         if raw_transcript:
             transcript = raw_transcript['results']['channels'][0]['alternatives'][0]['paragraphs']['transcript']
             specialist = 'Emergency Medicine'
             st.session_state.session_state.specialist = specialist
-            prompt = f"{transcript_prompt} '''{transcript}'''" 
-            user_question = prompt
-            return user_question
+
+            if "Speaker 1" in transcript:
+                prompt = f"{transcript_prompt} '''{transcript}'''"
+                return prompt
+            else:
+                prompt = transcript.replace("Speaker 0:", "").strip()
+                return prompt
     return None
 
 # Initialize the model
