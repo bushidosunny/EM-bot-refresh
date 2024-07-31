@@ -114,13 +114,18 @@ integrate_consultation = "Please integrate the specialist's recommendations into
 apply_decision_tool = "apply any appropriate clinical decision tools for this case"
 apply_bayesian_reasoning = "Critically evaluate the DDX and apply bayesian inference"
 
-create_json_prompt = """You are an AI assistant tasked with analyzing a medical case transcript. The transcript contains a conversation about a patient case, and your goal is to extract and summarize the most relevant and up-to-date information. Here is the transcript:
+create_json_prompt = """You are an AI assistant tasked with extracting and summarizing relevant medical information from a case transcript. Your goal is to provide an accurate representation of the information contained in the transcript without making assumptions or inferences beyond what is explicitly stated.
 
-As you analyze this transcript, keep in mind that the information becomes more accurate as the conversation progresses. Always prioritize the most recent information provided, as it is likely to be the most accurate and up-to-date. If there are any conflicting details between earlier and later parts of the conversation, rely on the most recent information and disregard any contradictory information from earlier in the transcript.
+Instructions:
+1. Analyze the provided transcript carefully.
+2. Extract only the information that is explicitly stated in the transcript.
+3. Do not make assumptions or infer information that is not directly stated.
+4. If information for a category is missing or unclear, indicate this in your response.
+5. For each piece of information, provide a confidence level (High, Medium, Low) based on the clarity and consistency of the information in the transcript.
+6. If there are contradictions in the transcript, report both pieces of information and highlight the contradiction.
+7. Provide references to the specific parts of the transcript where you found each piece of information.
 
-After analyzing the transcript, provide a summary of the patient case in JSON format. Use the categories listed above as keys in your JSON output. For each category, include the most recent and accurate information available in the transcript.
-
-Format your JSON output as follows:
+After analyzing the transcript, provide a summary of the patient case in JSON format using the following structure:
 {
    "patient":{
       "name":"Patient's full name (string)",
@@ -142,23 +147,13 @@ Format your JSON output as follows:
    }
    
    
-If there is conflicting information for a particular category, use only the most recent information provided in the transcript. For example, if the patient's age is mentioned as 45 early in the transcript but later corrected to 47, use 47 in your JSON output.
-If there is a "Completed:[critical_action or follow_up_steps]" do not include that particular item in the json.
-If a particular category or subcategory is not discussed in the transcript, leave it blank (for strings) or as an empty array/object (for arrays/objects) in the JSON output. Do not invent or assume any information that is not explicitly stated in the transcript.
-Here's an example of how to handle conflicting information:
-Transcript excerpt: "The patient is a 45-year-old male... [later in the conversation] Actually, I apologize, the patient is 47 years old, not 45."
-JSON output:
-{
-  "Patient Demographics": {
-    "Age": "47",
-    "Gender": "male",
-    "Other relevant demographics": ""
-  },
-  ...
-}
+Important notes:
+- If a particular category or subcategory is not discussed in the transcript, leave it as null in the JSON output.
+- Do not include any information that is not explicitly stated in the transcript.
+- If there are contradictions or corrections in the transcript, include both pieces of information and highlight the contradiction in the "source" field.
+- Do not include completed critical actions or follow-up steps in the JSON output.
 
-Analyze the transcript carefully and provide your final analysis in the JSON format described above. Ensure that your output reflects the most accurate and up-to-date information from the transcript. Do not surround it by triple backticks
-
+Analyze the transcript carefully and provide your final analysis in the JSON format described above. Ensure that your output reflects only the information present in the transcript, without any additional assumptions or inferences.
 Transcript:
 """
 
