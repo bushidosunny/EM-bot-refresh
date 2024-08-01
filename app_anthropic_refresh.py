@@ -366,6 +366,11 @@ specialist_data = {
 
 
 ###################### GOOGLE OAUTH ##############################################################
+def generate_oauth_state():
+    oauth_state = secrets.token_urlsafe(16)
+    st.session_state.session_state.oauth_state = oauth_state
+    controller.set('oauth_state', oauth_state)
+    return oauth_state
 
 def google_login() -> None:
     if os.getenv('ENVIRONMENT') == 'production':
@@ -381,7 +386,8 @@ def google_login() -> None:
     )
 
     # Generate and store the state
-    oauth_state = st.session_state.session_state.oauth_state
+    # oauth_state = st.session_state.session_state.oauth_state
+    oauth_state = generate_oauth_state()
     controller.set('oauth_state', oauth_state)
 
     authorization_url, _ = flow.authorization_url(
