@@ -462,10 +462,10 @@ def google_callback() -> Optional[User]:
     received_state = st.query_params['state']
 
     # Check against both session state and cookie
-    # if received_state != stored_state_session and received_state != stored_state_cookie:
-    #     logging.error(f"State mismatch. Received: {received_state}, Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
-    #     st.error("Authentication failed due to state mismatch. Please try again.")
-    #     return None
+    if received_state != stored_state_session and received_state != stored_state_cookie:
+        logging.error(f"State mismatch. Received: {received_state}, Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
+        st.error("Authentication failed due to state mismatch. Please try again.")
+        return None
 
     # Clear the stored state
     st.session_state.session_state.oauth_state = None
