@@ -1241,12 +1241,7 @@ def display_sidebar():
             container = st.container()
             container.float(float_css_helper(bottom="10px", border="1px solid #a3a8b4", border_radius= "10px", padding= "10px"))
             with container:
-<<<<<<< Updated upstream
-                logout_user() 
-
-=======
                 logout_user()  
->>>>>>> Stashed changes
         with tab2:
             display_specialist_tab()
         
@@ -1255,11 +1250,7 @@ def display_sidebar():
 
         with tab5:
             display_sessions_tab()
-<<<<<<< Updated upstream
-          
-=======
          
->>>>>>> Stashed changes
         
 
 def display_functions_tab():
