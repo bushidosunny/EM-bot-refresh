@@ -847,7 +847,6 @@ def sort_user_sessions_by_time(sessions):
             return datetime.min
     return sorted(sessions, key=parse_session_date, reverse=True)
 
-@st.cache_data
 def load_session_data(collection_name):
     documents = list(db[collection_name].find({}).sort("timestamp", ASCENDING))
     categorized_data = {

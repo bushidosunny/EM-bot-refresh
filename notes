@@ -1,0 +1,12 @@
+please clarify Update the main() function specifically
+
+currently i have a sessionstate class that i add to st.session_state with 
+```
+def initialize_session_state():
+    
+    if "session_state" not in st.session_state:
+        st.session_state.session_state = SessionState()
+```
+
+
+can we please try this again?

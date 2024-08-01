@@ -154,6 +154,9 @@ Important notes:
 - Do not include completed critical actions or follow-up steps in the JSON output.
 
 Analyze the transcript carefully and provide your final analysis in the JSON format described above. Ensure that your output reflects only the information present in the transcript, without any additional assumptions or inferences.
+format your answer in pure JSON, do not add any triple backticks.
+
+
 Transcript:
 """
 

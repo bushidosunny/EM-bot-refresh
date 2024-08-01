@@ -5,6 +5,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 import os
 import io
+import time
 from dotenv import load_dotenv
 from prompts import *
 from extract_json import *
@@ -25,21 +26,16 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from urllib.parse import urljoin
 import toml
+from streamlit_cookies_controller import CookieController
 
 st.set_page_config(page_title="EMMA", page_icon="🤖", initial_sidebar_state="collapsed", layout="wide")
 
-#login_username = "Sunny"
-# Load environment variables
-load_dotenv()
 
+load_dotenv()
+controller = CookieController()
 # Constants
-#ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-#DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
-#MONGODB_URI = os.getenv("MONGODB_ATLAS_URI")
-#print(f'MONGODB_URI: {MONGODB_URI}')
 DB_NAME = 'emma-dev'
 SCOPES = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile', 'openid']
- 
 SECRET_KEY = secrets.token_hex(32)
 
 if os.path.exists('/.streamlit/secrets.toml'):
@@ -70,8 +66,7 @@ def init_mongodb_connection():
     return MongoClient(MONGODB_URI, maxPoolSize=1, connect=False)
 
 try:
-    # MongoDB setup
-    client = MongoClient(MONGODB_URI, maxPoolSize=1, connect=False)
+    client = init_mongodb_connection()
     db = client[DB_NAME]
     users_collection = db['users']
     sessions_collection = db['sessions']
@@ -82,7 +77,7 @@ try:
     shared_buttons_collection = db['shared_buttons']
     shared_layouts_collection = db['shared_layouts']
     client.admin.command('ping')
-    print("Successfully connected to MongoDB")
+    #print("Successfully connected to MongoDB")
     
 except (ServerSelectionTimeoutError, OperationFailure, ConfigurationError) as err:
     st.error(f"Error connecting to MongoDB Atlas: {err}")
@@ -190,257 +185,62 @@ class User:
 
     def delete_note_template(self, template_id: str) -> None:
         self.preferences["note_templates"] = [t for t in self.preferences["note_templates"] if t["id"] != template_id]
-         
 
-
-
-###################### GOOGLE OAUTH ##############################################################
-
-def google_login() -> None:
-    if os.getenv('ENVIRONMENT') == 'production':
-        REDIRECT_URI = 'https://emmahealth.ai/'
-    else:
-        REDIRECT_URI = 'http://localhost:8501/'
-    
-
-    # Create a Flow instance from the client secrets file
-    flow = Flow.from_client_config(
-        client_config=CLIENT_SECRET_JSON,
-        scopes=SCOPES,
-        redirect_uri=REDIRECT_URI
-    )
-    logging.info(f"Current ENVIRONMENT: {os.getenv('ENVIRONMENT')}")
-    logging.info(f"Using REDIRECT_URI: {REDIRECT_URI}")
-    
-    # Get the authorization URL
-    authorization_url, _ = flow.authorization_url(prompt='consent')
-    logging.info(f"Final authorization URL: {authorization_url}")
-    # HTML for the Google Sign-In button using the official image
-    html = f"""
-    <style>
-        body {{
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f2f5;
-            margin: 0;
-        }}
-        .container {{
-            text-align: center;
-            font-family: Arial, sans-serif;
-        }}
-        .title {{
-            font-size: 2.5em;
-            margin-bottom: 20px;
-        }}
-        .subtitle {{
-            font-size: 1.2em;
-            margin-bottom: 40px;
-        }}
-        .google-btn {{
-            display: inline-block;
-            width: 191px;
-            height: 46px;
-            background-image: url('https://developers.google.com/static/identity/images/branding_guideline_sample_lt_rd_lg.svg');
-            background-repeat: no-repeat;
-            background-size: 191px 46px;
-            border: none;
-            cursor: pointer;
-        }}
-        .google-btn:hover {{
-            box-shadow: 0 0 8px 4px rgba(4, 182, 234, 0.3);
-            border-radius: 20px;
-            background-image: url('https://developers.google.com/static/identity/images/branding_guideline_sample_lt_rd_lg.svg');
-            
-        }}
-        .google-btn:active {{
-            background-image: url('https://developers.google.com/static/identity/images/branding_guideline_sample_lt_rd_lg.svg');
-        }}
-    </style>
-    <div class="container">
-        <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:200px;height:200px;border-radius:20%;">
-        <div class="title">Welcome to EMMA</div>
-        <div class="subtitle">Your Emergency Medicine main assistant</div>
-        <a href="{authorization_url}" target="_self">
-            <div class="google-btn"></div>
-        </a>
-    </div>
-    """
-
-    # Display the button
-    st.markdown(html, unsafe_allow_html=True)
-    
+class SessionState:
+    def __init__(self):
+        self.id = secrets.token_hex(8)
+        self._oauth_state = None
+        self.user_id = None
+        self.authentication_status = None
+        self.logout = None
+        self.collection_name = ""
+        self.name = ""
+        self.username = ""
+        self.family_name = ""
+        self.chat_history = []
+        self.user_question = ""
+        self.legal_question = ""
+        self.note_input = ""
+        self.json_data = {}
+        self.pt_data = {}
+        self.user_photo_url = ""
+        self.differential_diagnosis = []
+        self.danger_diag_list = {}
+        self.critical_actions = {}
+        self.follow_up_steps = {}
+        self.completed_tasks_str = ""
+        self.sidebar_state = 1
+        self.assistant_response = ""
+        self.patient_language = "English"
+        self.specialist_input = ""
+        self.should_rerun = False
+        self.user_question_sidebar = ""
+        self.old_user_question_sidebar = ""
+        self.messages = []
+        self.system_instructions = emma_system
+        self.pt_title = ""
+        self.patient_cc = ""
+        self.clean_chat_history = ""
+        self.specialist = list(specialist_data.keys())[0]
+        self.assistant_id = specialist_data[self.specialist]["assistant_id"]
+        self.specialist_avatar = specialist_data[self.specialist]["avatar"]
+        self.session_id = None
+        self.auth_state = 'initial'
+        self.auth_completed = False
         
-def google_callback() -> Optional[User]:
-    if os.getenv('ENVIRONMENT') == 'production':
-        REDIRECT_URI = 'https://emmahealth.ai/'
-    else:
-        REDIRECT_URI = 'http://localhost:8501/'
-    if 'code' not in st.query_params:
-        st.error("Authorization code not found. Please try logging in again.")
-        return None
+    @property
+    def oauth_state(self):
+        if self._oauth_state is None:
+            self._oauth_state = secrets.token_urlsafe(16)
+        return self._oauth_state
 
-    try:
-        flow = Flow.from_client_config(
-            CLIENT_SECRET_JSON,
-            scopes=SCOPES,
-            redirect_uri=REDIRECT_URI
-        )
-        print(f'DEBUG GOOGLE CALLBACK FLOW: {flow}')
-        flow.fetch_token(code=st.query_params['code'])
-        credentials = flow.credentials
-        print(f'DEBUG GOOGLE CALLBACK CREDENTIALS: {credentials}')
-
-        user_info_service = build('oauth2', 'v2', credentials=credentials, cache_discovery=False)
-        print(f'DEBUG GOOGLE CALLBACK: {user_info_service}')
-        google_user_info = user_info_service.userinfo().get().execute()
-        print(f'DEBUG GOOGLE CALLBACK GOOGLE USER INFO: {google_user_info}')
-        #st.session_state.session_state.user_photo_url = google_user_info['picture']
-        #st.session_state.session_state.username = google_user_info['name']
+    @oauth_state.setter
+    def oauth_state(self, value):
+        self._oauth_state = value
         
-        #print(f'DEBUG GOOGLE CALLBACK GOOGLE USER PHOTO URL: {st.session_state.session_state.user_photo_url}')
-        user = get_or_create_user(google_user_info)
-        print(f'DEBUG GOOGLE CALLBACK   USER: {user}')
-        session_token, expiration = create_session(str(user._id))
-        print(f'DEBUG GOOGLE CALLBACK SESSIONT TOKEN AND USER: {session_token}')
-        st.session_state['session_token'] = session_token
-        st.session_state['user'] = user
-        print(f'DEBUG GOOGLE CALLBACK SESSIONT TOKEN AND USER: {session_token} and {user}')
-        # Update query parameters
-        st.query_params['session'] = session_token
-        st.query_params['session_expiry'] = expiration.isoformat()
-        
-        # Remove the 'code' parameter
-        del st.query_params['code']
-        
-        return user
-    except Exception as e:
-        logger.error(f"Error during token fetch: {str(e)}")
-        st.error("An error occurred during authentication. Please try logging in again.")
-        # Clear any existing session data
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        return None
-
-def init_db() -> None:
-    users_collection.create_index([("google_id", ASCENDING)], unique=True)
-    users_collection.create_index([("email", ASCENDING)], unique=True)
-
-def get_or_create_user(google_user_info: Dict[str, Any]) -> User:
-    existing_user = users_collection.find_one({"google_id": google_user_info['id']})
-    print(f'DEBUG get_or_create_user -------existing_user: {existing_user}')
-    if existing_user:
-        user = User.from_dict(existing_user)
-        user.update_login()
-        user.picture = google_user_info.get('picture')
-        if "note_templates" not in user.preferences:
-            user.preferences["note_templates"] = []
-        users_collection.update_one(
-            {"_id": user._id},
-            {"$set": {
-                "last_login": user.last_login,
-                "login_count": user.login_count,
-                "preferences": user.preferences,
-                "picture": user.picture,
-                "family_name": google_user_info.get('family_name') or ''
-            }}
-        )
-    else:
-        user = User(
-            google_id=google_user_info['id'],
-            email=google_user_info['email'],
-            name=google_user_info['name'],
-            family_name=google_user_info.get('family_name') or '',
-            picture=google_user_info.get('picture')
-        )
-        user.update_login()
-        result = users_collection.insert_one(user.to_dict())
-        user._id = result.inserted_id
+    def __repr__(self):
+        return f"<SessionState id={self.id}>"
     
-    # Update session state with user information
-    st.session_state.session_state.user = user
-    st.session_state.session_state.user_id = user.google_id
-    st.session_state.session_state.username = user.name
-    st.session_state.session_state.family_name = user.family_name
-    st.session_state.session_state.user_photo_url = user.picture
-    
-    return user
-
-
-def save_user(user: User) -> None:
-    user_dict = user.to_dict()
-    print(f'DEBUT SAVE')
-    if '_id' in user_dict:
-        del user_dict['_id']
-    users_collection.update_one(
-        {"google_id": user.google_id},
-        {"$set": user_dict},
-        upsert=True
-    )
-
-
-def update_user_activity(user: User) -> None:
-    user.update_activity()
-    users_collection.update_one(
-        {"_id": user._id},
-        {"$set": {"last_active": user.last_active}}
-    )
-
-
-def save_user_preferences(user: User) -> None:
-    users_collection.update_one(
-        {"_id": user._id},
-        {"$set": {"preferences": user.preferences}}
-    )
-
-def add_note_template(user: User, title: str, template_type: str, content: str) -> None:
-    user.add_note_template(title, template_type, content)
-    save_user_preferences(user)
-
-def get_user_note_templates(user: User) -> List[Dict[str, Any]]:
-    return user.get_note_templates()
-
-def update_note_template(user: User, template_id: str, title: Optional[str] = None, template_type: Optional[str] = None, content: Optional[str] = None) -> None:
-    user.update_note_template(template_id, title, template_type, content)
-    save_user_preferences(user)
-
-def delete_note_template(user: User, template_id: str) -> None:
-    user.delete_note_template(template_id)
-    save_user_preferences(user)
-
-def create_session(user_id: str) -> tuple[str, datetime]:
-    session_token = secrets.token_urlsafe(32)
-    expiration = datetime.utcnow() + timedelta(days=1)
-    sessions_collection.insert_one({
-        "token": session_token,
-        "user_id": user_id,
-        "expires": expiration
-    })
-    return session_token, expiration
-
-
-
-def get_current_user() -> Optional[User]:
-    session_token = st.session_state.get('session_token')
-    if session_token:
-        return get_user_from_session(session_token)
-    return None
-
-def clear_session(session_token: str) -> None:
-    sessions_collection.delete_one({"token": session_token})
-
-def update_user_session_time(user: User, duration: timedelta) -> None:
-    user.add_session_time(duration)
-    users_collection.update_one(
-        {"_id": user._id},
-        {"$set": {"total_session_time": user.total_session_time}}
-    )
-
-
-
-########################################################################################################
-
 specialist_data = {
   "Emergency Medicine": {
     "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
@@ -565,43 +365,294 @@ specialist_data = {
 }
 
 
-class SessionState:
-    def __init__(self):
-        self.user_id = None
-        self.authentication_status = None
-        self.logout = None
-        self.collection_name = ""
-        self.name = ""
-        self.username = ""
-        self.family_name = ""
-        self.chat_history = []
-        self.user_question = ""
-        self.legal_question = ""
-        self.note_input = ""
-        self.json_data = {}
-        self.pt_data = {}
-        self.user_photo_url = ""
-        self.differential_diagnosis = []
-        self.danger_diag_list = {}
-        self.critical_actions = {}
-        self.follow_up_steps = {}
-        self.completed_tasks_str = ""
-        self.sidebar_state = 1
-        self.assistant_response = ""
-        self.patient_language = "English"
-        self.specialist_input = ""
-        self.should_rerun = False
-        self.user_question_sidebar = ""
-        self.old_user_question_sidebar = ""
-        self.messages = []
-        self.system_instructions = emma_system
-        self.pt_title = ""
-        self.patient_cc = ""
-        self.clean_chat_history = ""
-        self.specialist = list(specialist_data.keys())[0]
-        self.assistant_id = specialist_data[self.specialist]["assistant_id"]
-        self.specialist_avatar = specialist_data[self.specialist]["avatar"]
-        self.session_id = None
+###################### GOOGLE OAUTH ##############################################################
+
+def google_login() -> None:
+    if os.getenv('ENVIRONMENT') == 'production':
+        REDIRECT_URI = 'https://emmahealth.ai/'
+    else:
+        REDIRECT_URI = 'http://localhost:8501/'
+    
+
+    flow = Flow.from_client_config(
+        client_config=CLIENT_SECRET_JSON,
+        scopes=SCOPES,
+        redirect_uri=REDIRECT_URI
+    )
+
+    # Generate and store the state
+    oauth_state = st.session_state.session_state.oauth_state
+    controller.set('oauth_state', oauth_state)
+
+    authorization_url, _ = flow.authorization_url(
+        prompt='consent',
+        access_type='offline',
+        include_granted_scopes='true',
+        state=oauth_state
+    )
+    # Log the state for debugging
+    logging.info(f"Generated OAuth state: {st.session_state.session_state.oauth_state}")
+
+    html = f"""
+    <style>
+        body {{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+        }}
+        .container {{
+            text-align: center;
+            font-family: Arial, sans-serif;
+        }}
+        .title {{
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }}
+        .subtitle {{
+            font-size: 1.2em;
+            margin-bottom: 40px;
+        }}
+        .google-btn {{
+            display: inline-block;
+            width: 191px;
+            height: 46px;
+            background-image: url('https://developers.google.com/static/identity/images/branding_guideline_sample_lt_rd_lg.svg');
+            background-repeat: no-repeat;
+            background-size: 191px 46px;
+            border: none;
+            cursor: pointer;
+        }}
+        .google-btn:hover {{
+            box-shadow: 0 0 8px 4px rgba(4, 182, 234, 0.3);
+            border-radius: 20px;
+            background-image: url('https://developers.google.com/static/identity/images/branding_guideline_sample_lt_rd_lg.svg');
+            
+        }}
+        .google-btn:active {{
+            background-image: url('https://developers.google.com/static/identity/images/branding_guideline_sample_lt_rd_lg.svg');
+        }}
+    </style>
+    <div class="container">
+        <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:200px;height:200px;border-radius:20%;">
+        <div class="title">Welcome to EMMA</div>
+        <div class="subtitle">Your Emergency Medicine main assistant</div>
+        <a href="{authorization_url}" target="_self">
+            <div class="google-btn"></div>
+        </a>
+    </div>
+    """
+    # Display the button
+    st.markdown(html, unsafe_allow_html=True)
+    
+        
+def google_callback() -> Optional[User]:
+    logging.info("Google callback initiated")
+    logging.info(f"Query params: {st.query_params}")
+
+    stored_state_session = st.session_state.session_state.oauth_state
+    stored_state_cookie = controller.get('oauth_state')
+
+    if 'code' not in st.query_params or 'state' not in st.query_params:
+        logging.error("Authorization code or state not found in query parameters")
+        st.error("Authorization failed. Please try logging in again.")
+        return None
+
+    received_state = st.query_params['state']
+
+    # Check against both session state and cookie
+    if received_state != stored_state_session and received_state != stored_state_cookie:
+        logging.error(f"State mismatch. Received: {received_state}, Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
+        st.error("Authentication failed due to state mismatch. Please try again.")
+        return None
+
+    # Clear the stored state
+    st.session_state.session_state.oauth_state = None
+    controller.remove('oauth_state')
+
+    if os.getenv('ENVIRONMENT') == 'production':
+        REDIRECT_URI = 'https://emmahealth.ai/'
+    else:
+        REDIRECT_URI = 'http://localhost:8501/'
+    
+    logging.info(f"Callback initiated. REDIRECT_URI: {REDIRECT_URI}")
+    
+    if 'code' not in st.query_params:
+        logging.error("Authorization code not found in query parameters")
+        st.error("Authorization code not found. Please try logging in again.")
+        return None
+
+    try:
+        logging.info("Initializing OAuth flow")
+        flow = Flow.from_client_config(
+            CLIENT_SECRET_JSON,
+            scopes=SCOPES,
+            redirect_uri=REDIRECT_URI
+        )
+        
+        auth_code = st.query_params['code']
+        logging.info(f"Fetching token with auth code: {auth_code[:10]}...")  # Log first 10 chars for security
+        
+        flow.fetch_token(code=auth_code)
+        logging.info("Token fetched successfully")
+        
+        credentials = flow.credentials
+        logging.info("Credentials obtained")
+
+        user_info_service = build('oauth2', 'v2', credentials=credentials, cache_discovery=False)
+        logging.info("User info service built")
+        
+        google_user_info = user_info_service.userinfo().get().execute()
+        logging.info("User info retrieved from Google")
+        
+        user = get_or_create_user(google_user_info)
+        logging.info(f"User retrieved/created: {user.email}")
+        logging.info(f"User retrieved/created: {user.picture}")
+        
+        session_token, expiration = create_session(str(user._id))
+        logging.info("Session created")
+        
+        # controller = CookieController()
+        controller.set('session_token', session_token)
+        controller.set('session_expiry', expiration.isoformat())
+        logging.info("Cookies set")
+        
+        st.session_state['user'] = user
+        
+        del st.query_params['code']
+        logging.info("Query params cleaned")
+
+        if user:
+            # Clear query parameters after successful authentication
+            st.query_params.clear()
+        
+        return user
+    except Exception as e:
+        logging.error(f"Error during token fetch: {str(e)}", exc_info=True)
+        st.error("An error occurred during authentication. Please try again.")
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        return None
+
+def init_db() -> None:
+    users_collection.create_index([("google_id", ASCENDING)], unique=True)
+    users_collection.create_index([("email", ASCENDING)], unique=True)
+
+def get_or_create_user(google_user_info: Dict[str, Any]) -> User:
+    existing_user = users_collection.find_one({"google_id": google_user_info['id']})
+    print(f'DEBUG get_or_create_user -------existing_user: {existing_user}')
+    if existing_user:
+        user = User.from_dict(existing_user)
+        user.update_login()
+        user.picture = google_user_info.get('picture')
+        if "note_templates" not in user.preferences:
+            user.preferences["note_templates"] = []
+        users_collection.update_one(
+            {"_id": user._id},
+            {"$set": {
+                "last_login": user.last_login,
+                "login_count": user.login_count,
+                "preferences": user.preferences,
+                "picture": user.picture,
+                "family_name": google_user_info.get('family_name') or ''
+            }}
+        )
+    else:
+        user = User(
+            google_id=google_user_info['id'],
+            email=google_user_info['email'],
+            name=google_user_info['name'],
+            family_name=google_user_info.get('family_name') or '',
+            picture=google_user_info.get('picture')
+        )
+        user.update_login()
+        result = users_collection.insert_one(user.to_dict())
+        user._id = result.inserted_id
+    
+    # Update session state with user information
+    st.session_state.session_state.user = user
+    st.session_state.session_state.user_id = user.google_id
+    st.session_state.session_state.username = user.name
+    st.session_state.session_state.family_name = user.family_name
+    st.session_state.session_state.user_photo_url = user.picture
+    
+    return user
+
+
+def save_user(user: User) -> None:
+    user_dict = user.to_dict()
+    print(f'DEBUT SAVE')
+    if '_id' in user_dict:
+        del user_dict['_id']
+    users_collection.update_one(
+        {"google_id": user.google_id},
+        {"$set": user_dict},
+        upsert=True
+    )
+
+
+def update_user_activity(user: User) -> None:
+    user.update_activity()
+    users_collection.update_one(
+        {"_id": user._id},
+        {"$set": {"last_active": user.last_active}}
+    )
+
+
+def save_user_preferences(user: User) -> None:
+    users_collection.update_one(
+        {"_id": user._id},
+        {"$set": {"preferences": user.preferences}}
+    )
+
+def add_note_template(user: User, title: str, template_type: str, content: str) -> None:
+    user.add_note_template(title, template_type, content)
+    save_user_preferences(user)
+
+def get_user_note_templates(user: User) -> List[Dict[str, Any]]:
+    return user.get_note_templates()
+
+def update_note_template(user: User, template_id: str, title: Optional[str] = None, template_type: Optional[str] = None, content: Optional[str] = None) -> None:
+    user.update_note_template(template_id, title, template_type, content)
+    save_user_preferences(user)
+
+def delete_note_template(user: User, template_id: str) -> None:
+    user.delete_note_template(template_id)
+    save_user_preferences(user)
+
+def create_session(user_id: str) -> tuple[str, datetime]:
+    session_token = secrets.token_urlsafe(32)
+    expiration = datetime.utcnow() + timedelta(days=1)
+    sessions_collection.insert_one({
+        "token": session_token,
+        "user_id": user_id,
+        "expires": expiration
+    })
+    return session_token, expiration
+
+
+
+def get_current_user() -> Optional[User]:
+    session_token = st.session_state.get('session_token')
+    if session_token:
+        return get_user_from_session(session_token)
+    return None
+
+def clear_session(session_token: str) -> None:
+    sessions_collection.delete_one({"token": session_token})
+
+def update_user_session_time(user: User, duration: timedelta) -> None:
+    user.add_session_time(duration)
+    users_collection.update_one(
+        {"_id": user._id},
+        {"$set": {"total_session_time": user.total_session_time}}
+    )
+
+
+
+########################################################################################################
 
 
 def initialize_session_state():
@@ -740,7 +791,7 @@ def save_case_details(user_id, doc_type, content=None):
     try:
         result = db[st.session_state.session_state.collection_name].update_one(query, update, upsert=True)
         if result.matched_count > 0:
-            print("Existing ddx document updated successfully.")
+            print(f"Existing case doc: {doc_type} updated successfully.")
         elif result.upserted_id:
             print("New ddx document inserted successfully.")
         else:
@@ -804,9 +855,17 @@ def get_user_from_session(session_token: str) -> Optional[User]:
             return User.from_dict(user_data)
     return None
 
+def update_session_state_with_user(user: User):
+    st.session_state.session_state.user = user
+    st.session_state.session_state.user_id = user.google_id
+    st.session_state.session_state.username = user.name
+    st.session_state.session_state.family_name = user.family_name
+    st.session_state.session_state.user_photo_url = user.picture
+
 def clear_session(session_token: str) -> None:
     sessions_collection.delete_one({"token": session_token})
 
+@st.cache_data(ttl=60)
 def list_user_sessions(user_id: str):
     collections = db.list_collection_names()
     user_sessions = [col for col in collections if col.startswith(f'user_{user_id}')]
@@ -851,6 +910,7 @@ def list_user_sessions(user_id: str):
     
     return session_details
 
+
 def sort_user_sessions_by_time(sessions):
     def parse_session_date(session):
         try:
@@ -860,8 +920,8 @@ def sort_user_sessions_by_time(sessions):
             return datetime.min
     return sorted(sessions, key=parse_session_date, reverse=True)
 
-@st.cache_data
-def load_session_data(collection_name):
+@st.cache_data(ttl=60)
+def load_session_data_from_db(collection_name):
     documents = list(db[collection_name].find({}).sort("timestamp", ASCENDING))
     categorized_data = {
         "ddx": [],
@@ -885,49 +945,52 @@ def delete_session_data(collection_name):
     db.drop_collection(collection_name)
 
 def load_chat_history(collection_name):
-    # Check if we've already loaded the chat history
-    
-    st.session_state.session_state.chat_history = []
-    st.session_state.session_state.differential_diagnosis = []
+    try:
+        # Check if we've already loaded the chat history
+        st.session_state.session_state.chat_history = []
+        st.session_state.session_state.differential_diagnosis = []
 
-    result = db[collection_name].find_one({"type": "chat_history"})
-    if result and 'session_state_chat_history' in result:
-        serialized_history = result['session_state_chat_history']
-        
-        # Check if serialized_history is already a list
-        if isinstance(serialized_history, list):
-            print("Chat history is already a list, no need to parse JSON")
-        else:
-            try:
-                # If it's a string, try to parse it as JSON
-                serialized_history = json.loads(serialized_history)
-            except json.JSONDecodeError:
-                print("Error decoding JSON from database. Chat history might be in old format.")
-                # Optionally, add fallback code here to handle old format
-                return
-
-        for message_data in serialized_history:
-            if isinstance(message_data, dict):
-                # If it's a dict, assume it's in the new format
-                if message_data['type'] == 'HumanMessage':
-                    message = HumanMessage(content=message_data['content'], avatar=message_data['avatar'])
-                elif message_data['type'] == 'AIMessage':
-                    message = AIMessage(content=message_data['content'], avatar=message_data['avatar'])
-                else:
-                    continue  # Skip unknown message types
-            elif isinstance(message_data, (HumanMessage, AIMessage)):
-                # If it's already a message object, use it directly
-                message = message_data
+        result = db[collection_name].find_one({"type": "chat_history"})
+        if result and 'session_state_chat_history' in result:
+            serialized_history = result['session_state_chat_history']
+            
+            # Check if serialized_history is already a list
+            if isinstance(serialized_history, list):
+                print("Chat history is already a list, no need to parse JSON")
             else:
-                print(f"Unknown message format: {type(message_data)}")
-                continue
+                try:
+                    # If it's a string, try to parse it as JSON
+                    serialized_history = json.loads(serialized_history)
+                except json.JSONDecodeError:
+                    print("Error decoding JSON from database. Chat history might be in old format.")
+                    # Optionally, add fallback code here to handle old format
+                    return
 
-            st.session_state.session_state.chat_history.append(message)
-    
-    print(f'DEBUG LOAD CHAT HISTORY ----type: {type(st.session_state.session_state.chat_history)}-- SESSION STATE CHAT HISTORY: {st.session_state.session_state.chat_history}')
+            for message_data in serialized_history:
+                if isinstance(message_data, dict):
+                    # If it's a dict, assume it's in the new format
+                    if message_data['type'] == 'HumanMessage':
+                        message = HumanMessage(content=message_data['content'], avatar=message_data['avatar'])
+                    elif message_data['type'] == 'AIMessage':
+                        message = AIMessage(content=message_data['content'], avatar=message_data['avatar'])
+                    else:
+                        continue  # Skip unknown message types
+                elif isinstance(message_data, (HumanMessage, AIMessage)):
+                    # If it's already a message object, use it directly
+                    message = message_data
+                else:
+                    print(f"Unknown message format: {type(message_data)}")
+                    continue
 
+                st.session_state.session_state.chat_history.append(message)
+        
+        # print(f'DEBUG LOAD CHAT HISTORY ----collection name: {collection_name}-- SESSION STATE CHAT HISTORY: {st.session_state.session_state.chat_history}')
+    except Exception as e:
+        print(f"Error loading chat history: {e}")
     
-    st.rerun()
+    # st.rerun()
+
+
 
 def search_sessions(user_id, keywords):
     collections = db.list_collection_names()
@@ -1172,13 +1235,16 @@ def display_follow_up_tasks():
         
         for task in tasks:
             key = f"follow_up_{task}"
-            if st.checkbox(f"- :yellow[{task}]", key=key):
+            if st.checkbox(f"- {task}", key=key):
                 if task not in st.session_state.session_state.completed_tasks_str:
                     st.session_state.session_state.completed_tasks_str += f"Followed up: {task}. "
         
 def update_completed_tasks():
-    completed_tasks = [task for task, status in st.session_state.session_state.items() if task.startswith("critical_") and status]
-    st.session_state.session_state.completed_tasks_str = "Tasks Completed: " + '. '.join(completed_tasks) if completed_tasks else ""
+    try:
+        completed_tasks = [task for task, status in st.session_state.session_state.items() if task.startswith("critical_") and status]
+        st.session_state.session_state.completed_tasks_str = "Tasks Completed: " + '. '.join(completed_tasks) if completed_tasks else ""
+    except Exception as e:
+        print(f"An unexpected error occurred: {str(e)}")
 
 
 
@@ -1264,11 +1330,11 @@ def logout_user():
     with colR:
         # Add a unique key to the logout button
         if st.button("Logout", key="logout_button"):
-            clear_session(st.session_state.get('session_token'))
+            # controller = CookieController()
+            controller.remove('session_token')
+            controller.remove('session_expiry')
             st.session_state.clear()
-            st.query_params.clear()
             st.rerun()
-
 
 def display_sidebar():
     with st.sidebar:
@@ -1305,8 +1371,6 @@ def display_sidebar():
 
         with tab5:
             display_sessions_tab()
-          
-        
 
 def display_functions_tab():
     # st.subheader('Process Management')
@@ -1377,9 +1441,9 @@ def display_functions_tab():
     start_new_session()
 
 def display_specialist_tab():
-    if st.session_state.session_state.differential_diagnosis:
-        display_ddx()
-        st.divider()
+    # if st.session_state.session_state.differential_diagnosis:
+    #     display_ddx()
+    #     st.divider()
     
     choose_specialist_radio()
     
@@ -1422,23 +1486,23 @@ def display_sessions_tab():
         # if selected_session:
         #     session_name = load_session_from_search(selected_session)
 
-        with st.spinner("Loading session..."):
-            if session_name != "Select a session...":
-                if session_name in session_options:
-                    st.success(f"Session Loaded")
-                    st.write(f'**{session_name}**')
-                    display_session_data(session_options[session_name])
-                    
-                else:
-                    st.error(f"Session '{session_name}' not found in options.")
+        
+        if session_name != "Select a session...":
+            if session_name in session_options:
+                st.success(f"Session Loaded")
+                st.write(f'**{session_name}**')
+                display_session_data(session_options[session_name])                    
+            else:
+                st.error(f"Session '{session_name}' not found in options.")
     else:
         st.write("No sessions found for this user.")
 
 def display_session_data(collection_name):
     st.session_state.session_state.session_id = collection_name
-    categorized_data = load_session_data(collection_name)
+    with st.spinner("Loading session..."):
+        categorized_data = load_session_data_from_db(collection_name)
     
-    initialize_text_indexes(collection_name)
+    # initialize_text_indexes(collection_name)
     
     st.session_state.session_state.collection_name = collection_name
     #st.write(f"**Data of session: {collection_name}**")
@@ -1472,32 +1536,33 @@ def display_session_data(collection_name):
             st.write("---")
 
     
-    if st.button("load the chat history?"):
+    if st.button("load the chat history?", on_click=load_chat_history(collection_name)):
         load_chat_history(collection_name)
+        st.success(f"Session Loaded")
+        # st.rerun()
+
         
     display_delete_session_button(collection_name)
     
 def display_delete_session_button(collection_name):
-    if 'delete_confirmation' not in st.session_state:
-        st.session_state.delete_confirmation = False
+    # if 'delete_confirmation' not in st.session_state:
+    #     st.session_state.delete_confirmation = False
 
     if st.button("Delete Session Data?"):
-        st.session_state.delete_confirmation = True
-
-    if st.session_state.delete_confirmation:
         st.error("Are you sure you want to delete session data? This action cannot be undone.")
         col1, col2 = st.columns(2)
         with col1:
-            with st.spinner("Loading session..."):
-                if st.button(f"Yes, delete {collection_name} data", type='primary', use_container_width=True):
-                    delete_session_data(collection_name)
-                    st.success(f"Session data {collection_name} deleted successfully.")
-                    st.session_state.delete_confirmation = False
-                    st.rerun()
-        with col2:
-            if st.button("No, cancel", use_container_width=True):
-                st.session_state.delete_confirmation = False
+            if st.button(f"Yes, delete {collection_name} data", use_container_width=True):
+                db.drop_collection(collection_name)  
+                st.success(f"Session data {collection_name} deleted successfully.")
+                # st.session_state.delete_confirmation = False
                 st.rerun()
+        with col2:
+            if st.button("No, cancel", type='primary', use_container_width=True):
+                # st.session_state.delete_confirmation = False
+                st.rerun()
+
+
 
 def consult_specialist_and_update_ddx(button_name, prompt):
     specialist = st.session_state.session_state.specialist
@@ -1507,7 +1572,7 @@ def choose_specialist_radio():
     specialities = list(specialist_data.keys())
     captions = [specialist_data[speciality]["caption"] for speciality in specialities]
 
-    specialist = st.radio("**:black[Choose Your Specialty Group]**", specialities, 
+    specialist = st.radio("Choose Your Specialty Group", specialities, 
                           captions=captions, 
                           index=specialities.index(st.session_state.session_state.specialist),
                           key="choose_specialist_radio")
@@ -1537,7 +1602,7 @@ def button_input(specialist, prompt):
         st.session_state.session_state.completed_tasks_str = ''
         st.session_state.session_state.critical_actions = []
         print(f'DEBUG SESSION_STATE CRITCAL ACTIONS SHOULD BE NOTHING AFTER THIS:')
-        st.rerun()
+        # st.rerun()
 
 def update_patient_language():
     patient_language = st.text_input("Insert patient language if not English", value=st.session_state.session_state.patient_language)
@@ -1549,8 +1614,7 @@ def process_other_queries():
         specialist_avatar = specialist_data[st.session_state.session_state.specialist]["avatar"]
         specialist = st.session_state.session_state.specialist
         
-        # load previous chat history    
-        chat_history = chat_history_string()
+
 
         user_question = st.session_state.session_state.user_question_sidebar
         with st.chat_message("user", avatar=st.session_state.session_state.user_photo_url):
@@ -1570,13 +1634,14 @@ def process_other_queries():
         st.session_state.session_state.chat_history.append(AIMessage(assistant_response, avatar=specialist_avatar))
         st.session_state.session_state.old_user_question_sidebar = user_question
 
-
+        # load previous chat history    
+        chat_history = chat_history_string()
         parse_json(chat_history) 
 
         # Clear completed tasks
         st.session_state.session_state.completed_tasks_str = ""
         st.session_state.session_state.specialist = "Emergency Medicine"
-        st.rerun()
+        # st.rerun()
         
 def new_thread():
     for key in list(st.session_state.keys()):
@@ -1608,7 +1673,6 @@ def start_new_session():
 
 def chat_history_string():
     output = io.StringIO()
-    # print(f'\nDEBUG chat_history_string ------st.session_state.session_state.chat_history:{st.session_state.session_state.chat_history}')
     for message in st.session_state.session_state.chat_history:
         if isinstance(message, HumanMessage):
             print(message.content, file=output)
@@ -1623,10 +1687,12 @@ def chat_history_string():
 
 def parse_json(chat_history):
     
-    pt_json = create_json(text=chat_history)
-    print(f'DEBUG PARSE_JSON: {pt_json}')
+    pt_json_dirty = create_json(text=chat_history)
+    pt_json = pt_json_dirty.replace('```', '')
+    print(f'DEBUG PARSE_JSON PT_JSON_DIRTY: {pt_json_dirty}')
+    print(f'DEBUG PARSE_JSON PT_JSON: {pt_json}')
     if not pt_json or pt_json.strip() == '{}':
-        #print("No data was extracted from the chat history.")
+        print("No data was extracted from the chat history.")
         return
     try:
         data = json.loads(pt_json)
@@ -1638,6 +1704,10 @@ def parse_json(chat_history):
         st.session_state.session_state.critical_actions = patient_data.get('critical_actions', [])
         st.session_state.session_state.follow_up_steps = patient_data.get('follow_up_steps', [])
         
+        print(f'DEBUG PARSE_JSON session_state.differential_diagnosis: {st.session_state.session_state.differential_diagnosis}')
+        print(f'DEBUG PARSE_JSON st.session_state.session_state.critical_actionss: {st.session_state.session_state.critical_actions}')
+        print(f'DEBUG PARSE_JSON st.session_state.session_state.follow_up_steps: {st.session_state.session_state.follow_up_steps}')
+
         # Only save case details if there's meaningful data
         if any([st.session_state.session_state.differential_diagnosis, 
                 st.session_state.session_state.critical_actions, 
@@ -1695,7 +1765,7 @@ def handle_user_input_container():
         ))
     with input_container:
         
-        col_specialist, col1, col2= st.columns([1, 3, 1])
+        col_specialist, col1, col2, col3= st.columns([.5, 3, .5,.5])
         with col_specialist:
             specialist = st.session_state.session_state.specialist
             specialist_avatar = specialist_data[specialist]["avatar"]
@@ -1715,21 +1785,27 @@ def handle_user_input_container():
             user_question = st.chat_input("How may I help you?") 
         with col2:
             user_chat = record_audio()
+        with col3:
+            if st.button("refresh"):
+                return
         
     if user_question:
         process_user_question(user_question, specialist)
-        st.rerun()
+        # st.session_state.session_state.should_rerun = True
     elif user_chat:
         process_user_question(user_chat, specialist)
-        st.rerun()
+        # st.session_state.session_state.should_rerun = True
+
+    # if st.session_state.session_state.should_rerun:
+    #     # st.session_state.session_state.should_rerun = False
+    #     st.rerun()
 
 def process_user_question(user_question, specialist):
     if user_question:
         if not st.session_state.session_state.collection_name:
             create_new_session()
 
-        # load previous chat history    
-        chat_history = chat_history_string()
+
 
         # Save the completed tasks before clearing
         completed_tasks = st.session_state.session_state.completed_tasks_str
@@ -1764,108 +1840,123 @@ def process_user_question(user_question, specialist):
         
         save_ai_message(st.session_state.session_state.username, "ai", assistant_response, specialist)
 
-        
+        # load previous chat history    
+        chat_history = chat_history_string()
+        print(f'DEBUG PROCESS USER QUESTION ------ st.session_state.session_state.chat_history: {st.session_state.session_state.chat_history}')
         parse_json(chat_history)
         
         # Clear completed tasks
         st.session_state.session_state.completed_tasks_str = ""
         
         # Debug output
-        print("DEBUG: Session State after processing user question")
- 
+        # print("DEBUG: Session State after processing user question")
+
 
 def main():
-    initialize_session_state()
     
-    session_token = st.query_params.get("session")
-    session_expiry = st.query_params.get("session_expiry")
-    
-    user = None
-    #user = get_current_user()
-    print(f'DEBUG SESSION_TOKEN AND SESSION_EXPIRY AND USER: {session_token} and {session_expiry} and {get_user_from_session(session_token)}')
-    if session_token and session_expiry:
-        expiry = datetime.fromisoformat(session_expiry)
-        if expiry > datetime.utcnow():
-            user = get_user_from_session(session_token)
-            print(f'DEBUG PAGE REFRESH: USER.NAME: {user.name}')
-        else:
-            
-            st.warning("Your session has expired. Please log in again.")
-            clear_session(session_token)
-            st.query_params.clear()
-    else:
-        user = get_current_user()
+    if 'session_state' not in st.session_state:
+        st.session_state.session_state = SessionState()
 
-    if 'chat_page' not in st.session_state:
-        st.session_state.chat_page = 0
+    logging.info(f"DEBUG INITIALIZE SESSION STATE SESSIONSTATE: {st.session_state.session_state}")
 
-    if user:
-        try:
-            
-            #print(f'MONGODB CLIENT: {client[DB_NAME]}')
-            #st.write(client.server_info())
-            # Create two columns with 2:1 ratio
-            if st.session_state.session_state.differential_diagnosis != []:
-                
-                col1, col2 = st.columns([2, 1])
-            
-                with col1:
-                    with st.container():
-                        display_header()
-                        display_chat_history()
-                        handle_user_input_container() 
-                        
+    # Get the current OAuth state from the session state
+    oauth_state = st.session_state.session_state.oauth_state
+    logging.info(f"Current OAuth state from session state: {oauth_state}")
+
+    try:
+        session_token = controller.get('session_token')
+        session_expiry = controller.get('session_expiry')
+        
+        user = None
+        if session_token and session_expiry:
+            expiry = datetime.fromisoformat(session_expiry)
+            if expiry > datetime.utcnow():
+                user = get_user_from_session(session_token)
+                if user:
+                    update_session_state_with_user(user)
+                    st.session_state.session_state.auth_state = 'authenticated'
+                else:
+                    logging.error("Failed to load user from session token")
+                    controller.remove('session_token')
+                    controller.remove('session_expiry')
+                    st.session_state.session_state.auth_state = 'initial'
+            else:
+                st.warning("Your session has expired. Please log in again.")
+                clear_session(session_token)
+                controller.remove('session_token')
+                controller.remove('session_expiry')
+                st.session_state.session_state.auth_state = 'initial'
+        
+        # Check for OAuth callback first
+        if 'code' in st.query_params:
+            user = google_callback()
+            if user:
+                update_session_state_with_user(user)
+                st.session_state.session_state.auth_state = 'authenticated'
+                st.session_state.session_state.auth_completed = True
+                st.success(f"Welcome, {user.name}!")
+                # Clear query params
+                st.query_params.clear()
+                # Force a rerun to clear the URL
+                st.rerun()
+            else:
+                st.error("Failed to log in. Please try again.")
+                st.session_state.session_state.auth_state = 'initial'
+                st.query_params.clear()
+        
+        if st.session_state.session_state.auth_state == 'initial':
+            google_login()
+        elif st.session_state.session_state.auth_state == 'authenticated':
+            try:
+                if st.session_state.session_state.differential_diagnosis != []:
                     
-                with col2:
-                    input_container = st.container()
-                    input_container.float(float_css_helper(
-                        shadow=1,
-                        bottom="50px",
-                        border="1px #262730",
-                        border_radius="10px",  # Rounded edges
-                        height="calc(95vh - 80px)",  # Adjust the height as needed
-                        overflow_y="auto",  # Enable vertical scrolling
-                        padding="10px"  # Add some padding for better appearance
-                    ))
-                    with input_container:
-                            display_pt_headline()
-                            st.divider()
-                            display_ddx()
-                            st.divider()
-                            display_critical_tasks()
-                            st.divider()
-                            display_follow_up_tasks()
-            else:
-                display_header()
-                display_chat_history()
-                handle_user_input_container() 
+                    col1, col2 = st.columns([2, 1])
+                
+                    with col1:
+                        with st.container():
+                            display_header()
+                            display_chat_history()
+                            handle_user_input_container() 
+                            
+                        
+                    with col2:
+                        input_container = st.container()
+                        input_container.float(float_css_helper(
+                            shadow=1,
+                            bottom="50px",
+                            border="1px #262730",
+                            border_radius="10px",  # Rounded edges
+                            height="calc(95vh - 80px)",  # Adjust the height as needed
+                            overflow_y="auto",  # Enable vertical scrolling
+                            padding="10px"  # Add some padding for better appearance
+                        ))
+                        with input_container:
+                                display_pt_headline()
+                                st.divider()
+                                display_ddx()
+                                st.divider()
+                                display_critical_tasks()
+                                st.divider()
+                                display_follow_up_tasks()
+                else:
+                    display_header()
+                    display_chat_history()
+                    handle_user_input_container()
+                    
+                process_other_queries()     
+                display_sidebar()
 
-            process_other_queries() 
-            display_sidebar()
-            
-            # Periodically archive old sessions
-            archive_old_sessions(st.session_state.session_state.username)
- 
-        except Exception as e:
-            st.error(f"An error occurred: {str(e)}")
-            # Log the error for debugging
-            logging.error(f"Unhandled exception in main: {str(e)}", exc_info=True)
+                # Periodically archive old sessions
+                archive_old_sessions(st.session_state.session_state.username)                    
+                    
+            except Exception as e:
+                st.error(f"An error occurred: {str(e)}")
+                logging.error(f"Unhandled exception in main: {str(e)}", exc_info=True)
 
-    elif 'code' in st.query_params:
-        user = google_callback()
-        if user:
-            if user.family_name:
-                st.success(f"Welcome Dr. {user.family_name}!")
-                st.rerun()
-            else:
-                st.success(f"Welcome Dr. {user.name}!")
-                st.rerun()
-        else:
-            st.error("Failed to log in. Please try again.")
-            st.query_params.clear()
-    else:
-        #display_header()
-        google_login()
+    except Exception as e:
+        st.error(f"An unexpected error occurred: {str(e)}")
+        logging.error(f"Unhandled exception in main: {str(e)}", exc_info=True)
+
 
 if __name__ == '__main__':
     main()
