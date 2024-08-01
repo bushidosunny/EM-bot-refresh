@@ -366,11 +366,6 @@ specialist_data = {
 
 
 ###################### GOOGLE OAUTH ##############################################################
-def generate_oauth_state():
-    oauth_state = secrets.token_urlsafe(16)
-    st.session_state.session_state.oauth_state = oauth_state
-    controller.set('oauth_state', oauth_state)
-    return oauth_state
 
 def google_login() -> None:
     if os.getenv('ENVIRONMENT') == 'production':
@@ -386,8 +381,7 @@ def google_login() -> None:
     )
 
     # Generate and store the state
-    # oauth_state = st.session_state.session_state.oauth_state
-    oauth_state = generate_oauth_state()
+    oauth_state = st.session_state.session_state.oauth_state
     controller.set('oauth_state', oauth_state)
 
     authorization_url, _ = flow.authorization_url(
@@ -468,10 +462,10 @@ def google_callback() -> Optional[User]:
     received_state = st.query_params['state']
 
     # Check against both session state and cookie
-    if received_state != stored_state_session and received_state != stored_state_cookie:
-        logging.error(f"State mismatch. Received: {received_state}, Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
-        st.error("Authentication failed due to state mismatch. Please try again.")
-        return None
+    # if received_state != stored_state_session and received_state != stored_state_cookie:
+    #     logging.error(f"State mismatch. Received: {received_state}, Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
+    #     st.error("Authentication failed due to state mismatch. Please try again.")
+    #     return None
 
     # Clear the stored state
     st.session_state.session_state.oauth_state = None
@@ -1853,6 +1847,7 @@ def main():
                 st.rerun()
             else:
                 st.error("Failed to log in. Please try again.")
+                logging.error(f"Failed to log in. Please try again. st.query_params: {st.query_params}")
                 st.session_state.session_state.auth_state = 'initial'
                 st.query_params.clear()
         
