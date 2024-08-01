@@ -1051,14 +1051,19 @@ def record_audio():
     if audio_data:
         audio_bytes = io.BytesIO(audio_data['bytes'])
         audio_bytes.seek(0)
-        raw_transcript = transcribe_audio(audio_bytes)
+        with st.spinner("transcribing audio...."):
+            raw_transcript = transcribe_audio(audio_bytes)
         if raw_transcript:
             transcript = raw_transcript['results']['channels'][0]['alternatives'][0]['paragraphs']['transcript']
             specialist = 'Emergency Medicine'
             st.session_state.session_state.specialist = specialist
-            prompt = f"{transcript_prompt} '''{transcript}'''" 
-            user_question = prompt
-            return user_question
+
+            if "Speaker 1" in transcript:
+                prompt = f"{transcript_prompt} '''{transcript}'''"
+                return prompt
+            else:
+                prompt = transcript.replace("Speaker 0:", "").strip()
+                return prompt
     return None
 
 # Initialize the model
