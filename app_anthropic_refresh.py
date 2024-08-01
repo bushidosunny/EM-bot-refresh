@@ -446,8 +446,7 @@ def google_login() -> None:
     """
     # Display the button
     st.markdown(html, unsafe_allow_html=True)
-    
-        
+          
 def google_callback() -> Optional[User]:
     logging.info("Google callback initiated")
     logging.info(f"Query params: {st.query_params}")
@@ -580,7 +579,6 @@ def get_or_create_user(google_user_info: Dict[str, Any]) -> User:
     
     return user
 
-
 def save_user(user: User) -> None:
     user_dict = user.to_dict()
     print(f'DEBUT SAVE')
@@ -592,14 +590,12 @@ def save_user(user: User) -> None:
         upsert=True
     )
 
-
 def update_user_activity(user: User) -> None:
     user.update_activity()
     users_collection.update_one(
         {"_id": user._id},
         {"$set": {"last_active": user.last_active}}
     )
-
 
 def save_user_preferences(user: User) -> None:
     users_collection.update_one(
@@ -632,8 +628,6 @@ def create_session(user_id: str) -> tuple[str, datetime]:
     })
     return session_token, expiration
 
-
-
 def get_current_user() -> Optional[User]:
     session_token = st.session_state.get('session_token')
     if session_token:
@@ -660,7 +654,6 @@ def initialize_session_state():
     if "session_state" not in st.session_state:
         st.session_state.session_state = SessionState()
         print(f'DEEBUG INITALIZE SESSIONT STATE SESSIONSTATE: {st.session_state.session_state}')
-
 
 def create_new_session():
     user_id = st.session_state.session_state.user_id  # Use Google ID instead of username
@@ -698,7 +691,6 @@ def initialize_text_indexes(collection_name):
     else:
         print(f"Text index already exists for collection: {collection_name}")
 
-
 def validate_chat_document(document):
     required_fields = ['type', 'user_id', 'sender', 'message', 'timestamp']
     for field in required_fields:
@@ -710,8 +702,6 @@ def validate_chat_document(document):
     
     if document['type'] not in ['user_input', 'ai_input']:
         raise ValueError("Invalid document type")
-
-
 
 def save_messages(user_id, messages):
     if not st.session_state.session_state.collection_name:
@@ -865,7 +855,7 @@ def update_session_state_with_user(user: User):
 def clear_session(session_token: str) -> None:
     sessions_collection.delete_one({"token": session_token})
 
-@st.cache_data(ttl=60)
+# @st.cache_data(ttl=60)
 def list_user_sessions(user_id: str):
     collections = db.list_collection_names()
     user_sessions = [col for col in collections if col.startswith(f'user_{user_id}')]
@@ -910,7 +900,6 @@ def list_user_sessions(user_id: str):
     
     return session_details
 
-
 def sort_user_sessions_by_time(sessions):
     def parse_session_date(session):
         try:
@@ -920,7 +909,7 @@ def sort_user_sessions_by_time(sessions):
             return datetime.min
     return sorted(sessions, key=parse_session_date, reverse=True)
 
-@st.cache_data(ttl=60)
+# @st.cache_data(ttl=60)
 def load_session_data_from_db(collection_name):
     documents = list(db[collection_name].find({}).sort("timestamp", ASCENDING))
     categorized_data = {
@@ -945,52 +934,19 @@ def delete_session_data(collection_name):
     db.drop_collection(collection_name)
 
 def load_chat_history(collection_name):
-    try:
-        # Check if we've already loaded the chat history
-        st.session_state.session_state.chat_history = []
-        st.session_state.session_state.differential_diagnosis = []
-
-        result = db[collection_name].find_one({"type": "chat_history"})
-        if result and 'session_state_chat_history' in result:
-            serialized_history = result['session_state_chat_history']
-            
-            # Check if serialized_history is already a list
-            if isinstance(serialized_history, list):
-                print("Chat history is already a list, no need to parse JSON")
-            else:
-                try:
-                    # If it's a string, try to parse it as JSON
-                    serialized_history = json.loads(serialized_history)
-                except json.JSONDecodeError:
-                    print("Error decoding JSON from database. Chat history might be in old format.")
-                    # Optionally, add fallback code here to handle old format
-                    return
-
-            for message_data in serialized_history:
-                if isinstance(message_data, dict):
-                    # If it's a dict, assume it's in the new format
-                    if message_data['type'] == 'HumanMessage':
-                        message = HumanMessage(content=message_data['content'], avatar=message_data['avatar'])
-                    elif message_data['type'] == 'AIMessage':
-                        message = AIMessage(content=message_data['content'], avatar=message_data['avatar'])
-                    else:
-                        continue  # Skip unknown message types
-                elif isinstance(message_data, (HumanMessage, AIMessage)):
-                    # If it's already a message object, use it directly
-                    message = message_data
-                else:
-                    print(f"Unknown message format: {type(message_data)}")
-                    continue
-
-                st.session_state.session_state.chat_history.append(message)
-        
-        # print(f'DEBUG LOAD CHAT HISTORY ----collection name: {collection_name}-- SESSION STATE CHAT HISTORY: {st.session_state.session_state.chat_history}')
-    except Exception as e:
-        print(f"Error loading chat history: {e}")
-    
-    # st.rerun()
-
-
+    st.session_state.session_state.chat_history = []
+    st.session_state.session_state.differential_diagnosis = []
+    query = {"type": {"$in": ["user_input", "ai_input"]}}
+    projection = {"message": 1, "sender": 1, "timestamp": 1, "_id": 0}
+    chat_history = list(db[collection_name].find(query, projection).sort("timestamp", 1))
+    formatted_chat_history = []
+    for entry in chat_history:
+        role = "Human" if entry['sender'] == "Human" else "AI"
+        formatted_entry = f"{role}: {entry['message']}"
+        formatted_chat_history.append(formatted_entry)
+    chat_history_string = "\n\n".join(formatted_chat_history)
+    st.session_state.session_state.clean_chat_history = chat_history_string
+    return chat_history_string
 
 def search_sessions(user_id, keywords):
     collections = db.list_collection_names()
@@ -1119,8 +1075,6 @@ def archive_old_sessions(user_id, days_threshold=30):
             
             st.info(f"Archived old session: {collection_name}")
 
-
-
 def transcribe_audio(audio_file):
     try:
         deepgram = DeepgramClient(DEEPGRAM_API_KEY)
@@ -1169,8 +1123,6 @@ def record_audio():
 
 # Initialize the model
 model = ChatAnthropic(model="claude-3-5-sonnet-20240620", temperature=0.5, max_tokens=4096)
-
-
 
 def get_response(user_question: str) -> str:
     with st.spinner("Waiting for EMMA's response..."):
@@ -1246,8 +1198,6 @@ def update_completed_tasks():
     except Exception as e:
         print(f"An unexpected error occurred: {str(e)}")
 
-
-
 def display_ddx():
     ddx_container = st.empty()
     with ddx_container.container():
@@ -1299,7 +1249,6 @@ def display_pt_headline():
         except KeyError as e:
             st.error(f"Missing key in patient data: {e}")
             st.title("EMMA")
-
 
 def logout_user():
     #st.write(st.session_state.session_state.user_photo_url)
@@ -1537,7 +1486,7 @@ def display_session_data(collection_name):
 
     
     if st.button("load the chat history?", on_click=load_chat_history(collection_name)):
-        load_chat_history(collection_name)
+        # load_chat_history(collection_name)
         st.success(f"Session Loaded")
         # st.rerun()
 
@@ -1561,8 +1510,6 @@ def display_delete_session_button(collection_name):
             if st.button("No, cancel", type='primary', use_container_width=True):
                 # st.session_state.delete_confirmation = False
                 st.rerun()
-
-
 
 def consult_specialist_and_update_ddx(button_name, prompt):
     specialist = st.session_state.session_state.specialist
@@ -1750,7 +1697,6 @@ def display_chat_history():
             st.session_state.chat_page = page + 1
             st.rerun()
 
-
 def handle_user_input_container():
     input_container = st.container()
     input_container.float(float_css_helper(
@@ -1850,7 +1796,6 @@ def process_user_question(user_question, specialist):
         
         # Debug output
         # print("DEBUG: Session State after processing user question")
-
 
 def main():
     
@@ -1956,7 +1901,6 @@ def main():
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
         logging.error(f"Unhandled exception in main: {str(e)}", exc_info=True)
-
 
 if __name__ == '__main__':
     main()

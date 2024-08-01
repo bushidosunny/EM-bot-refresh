@@ -1417,6 +1417,10 @@ def display_session_data(collection_name):
             st.write(f"Timestamp: {doc.get('timestamp', 'N/A')}")
             st.write("---")
     
+    # if st.button("load the chat history?"):
+    #     load_chat_history(collection_name)
+    #     st.success(f"Session Loaded")
+    #     # st.rerun()
     display_delete_session_button(collection_name)
     
 def display_delete_session_button(collection_name):
