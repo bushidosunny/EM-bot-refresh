@@ -1413,38 +1413,39 @@ def display_variables_tab():
 
 def display_sessions_tab():
     user_id = st.session_state.session_state.user_id  # Use Google ID instead of username
-    user_sessions = list_user_sessions(user_id)
-    if user_sessions:
-        sorted_sessions = sort_user_sessions_by_time(user_sessions)
-        session_options = {session['session_name']: session['collection_name'] for session in sorted_sessions}
-        
-        session_name = st.selectbox("Select a recent session to load:", 
-                    options=["Select a session..."] + list(session_options.keys()),
-                    index=0,
-                    key="session_selectbox")
-        
-        # selected_session = st_searchbox(
-        #     search_sessions_for_searchbox,
-        #     key="session_searchbox",
-        #     label="Search sessions",
-        #     placeholder="Type to search for sessions...",
-        #     default_use_searchterm=False,
-        #     rerun_on_update=False
-        # )
+    if st.button("Load Sessions"):
+        user_sessions = list_user_sessions(user_id)
+        if user_sessions:
+            sorted_sessions = sort_user_sessions_by_time(user_sessions)
+            session_options = {session['session_name']: session['collection_name'] for session in sorted_sessions}
+            
+            session_name = st.selectbox("Select a recent session to load:", 
+                        options=["Select a session..."] + list(session_options.keys()),
+                        index=0,
+                        key="session_selectbox")
+            
+            # selected_session = st_searchbox(
+            #     search_sessions_for_searchbox,
+            #     key="session_searchbox",
+            #     label="Search sessions",
+            #     placeholder="Type to search for sessions...",
+            #     default_use_searchterm=False,
+            #     rerun_on_update=False
+            # )
 
-        # if selected_session:
-        #     session_name = load_session_from_search(selected_session)
+            # if selected_session:
+            #     session_name = load_session_from_search(selected_session)
 
-        
-        if session_name != "Select a session...":
-            if session_name in session_options:
-                st.success(f"Session Loaded")
-                st.write(f'**{session_name}**')
-                display_session_data(session_options[session_name])                    
-            else:
-                st.error(f"Session '{session_name}' not found in options.")
-    else:
-        st.write("No sessions found for this user.")
+            
+            if session_name != "Select a session...":
+                if session_name in session_options:
+                    st.success(f"Session Loaded")
+                    st.write(f'**{session_name}**')
+                    display_session_data(session_options[session_name])                    
+                else:
+                    st.error(f"Session '{session_name}' not found in options.")
+        else:
+            st.write("No sessions found for this user.")
 
 def display_session_data(collection_name):
     st.session_state.session_state.session_id = collection_name
@@ -1488,7 +1489,7 @@ def display_session_data(collection_name):
     if st.button("load the chat history?", on_click=load_chat_history(collection_name)):
         # load_chat_history(collection_name)
         st.success(f"Session Loaded")
-        # st.rerun()
+        st.rerun()
 
         
     display_delete_session_button(collection_name)
