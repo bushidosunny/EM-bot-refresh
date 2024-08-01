@@ -1389,9 +1389,7 @@ def display_session_data(collection_name):
     st.session_state.session_state.session_id = collection_name
     categorized_data = load_session_data(collection_name)
     
-    initialize_text_indexes(collection_name)
     
-    load_chat_history(collection_name)
     st.session_state.session_state.collection_name = collection_name
     #st.write(f"**Data of session: {collection_name}**")
     
@@ -1423,6 +1421,9 @@ def display_session_data(collection_name):
             st.write(f"Timestamp: {doc.get('timestamp', 'N/A')}")
             st.write("---")
     
+    initialize_text_indexes(collection_name)
+    
+    load_chat_history(collection_name)
     # if st.button("load the chat history?"):
     #     load_chat_history(collection_name)
     #     st.success(f"Session Loaded")
