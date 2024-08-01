@@ -1212,7 +1212,7 @@ def logout_user():
             clear_session(st.session_state.get('session_token'))
             st.session_state.clear()
             st.query_params.clear()
-            st.rerun()
+            st.rerun(scope="fragment")
 
 
 def display_sidebar():
@@ -1626,7 +1626,7 @@ def handle_user_input_container():
         ))
     with input_container:
         
-        col_specialist, col1, col2= st.columns([1, 3, 1])
+        col_specialist, col1, col2= st.columns([1, 6, 1])
         with col_specialist:
             specialist = st.session_state.session_state.specialist
             specialist_avatar = specialist_data[specialist]["avatar"]
