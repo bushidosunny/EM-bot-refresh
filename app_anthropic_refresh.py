@@ -472,7 +472,7 @@ def google_callback() -> Optional[User]:
     controller.remove('oauth_state')
 
     if os.getenv('ENVIRONMENT') == 'production':
-        REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/
+        REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
     else:
         REDIRECT_URI = 'http://localhost:8501/'
     
