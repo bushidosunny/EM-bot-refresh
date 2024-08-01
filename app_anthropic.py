@@ -799,6 +799,7 @@ def get_user_from_session(session_token: str) -> Optional[User]:
 def clear_session(session_token: str) -> None:
     sessions_collection.delete_one({"token": session_token})
 
+@st.cache_data(ttl=60)
 def list_user_sessions(user_id: str):
     collections = db.list_collection_names()
     user_sessions = [col for col in collections if col.startswith(f'user_{user_id}')]
@@ -852,7 +853,7 @@ def sort_user_sessions_by_time(sessions):
             return datetime.min
     return sorted(sessions, key=parse_session_date, reverse=True)
 
-@st.cache_data
+@st.cache_data(ttl=60)
 def load_session_data(collection_name):
     documents = list(db[collection_name].find({}).sort("timestamp", ASCENDING))
     categorized_data = {
@@ -1015,7 +1016,6 @@ def archive_old_sessions(user_id, days_threshold=30):
                 with session.start_transaction():
                     db[archive_collection_name].insert_many(db[collection_name].find())
                     db[collection_name].drop()
-            
             st.info(f"Archived old session: {collection_name}")
 
 
