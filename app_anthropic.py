@@ -1252,19 +1252,18 @@ def display_sidebar():
             display_sessions_tab()
          
         
-
 def display_functions_tab():
-    st.subheader('Process Management')
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🛌Disposition Analysis", use_container_width=True):
-            st.session_state.session_state.specialist = "Emergency Medicine"
-            consult_specialist_and_update_ddx("Disposition Analysis", disposition_analysis)
-    with col2:
-        if st.button("💉Which Procedure", use_container_width=True):
-            consult_specialist_and_update_ddx("Which Procedure", procedure_checklist)
+    # st.subheader('Process Management')
+    # col1, col2 = st.columns(2)
+    # with col1:
+    #     if st.button("🛌Disposition Analysis", use_container_width=True):
+    #         st.session_state.session_state.specialist = "Emergency Medicine"
+    #         consult_specialist_and_update_ddx("Disposition Analysis", disposition_analysis)
+    # with col2:
+    #     if st.button("💉Which Procedure", use_container_width=True):
+    #         consult_specialist_and_update_ddx("Which Procedure", procedure_checklist)
 
-    st.subheader('📝Note Writer')
+    st.subheader('📝Clinical Notes')
     col1, col2 = st.columns(2)
     with col1:
         if st.button('Full Medical Note', use_container_width=True):
@@ -1275,10 +1274,7 @@ def display_functions_tab():
             st.session_state.session_state.specialist = "Note Writer"
             consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
             st.session_state.session_state.specialist = "Emergency Medicine"
-        if st.button("🙍Pt Education Note", use_container_width=True):
-            st.session_state.session_state.specialist = "Patient Educator"
-            consult_specialist_and_update_ddx("Patient Education Note", f"Write a patient education note for this patient in {st.session_state.session_state.patient_language}")
-            st.session_state.session_state.specialist = "Emergency Medicine"
+
     with col2:
         if st.button('HPI only', use_container_width=True):
             st.session_state.session_state.specialist = "Note Writer"
@@ -1288,26 +1284,34 @@ def display_functions_tab():
             st.session_state.session_state.specialist = "Note Writer"
             consult_specialist_and_update_ddx("A&P only", create_ap)
             st.session_state.session_state.specialist = "Emergency Medicine"
+    st.subheader('📝Notes for Patients')
+    col1, col2 = st.columns(2)
+    with col1:
+
+        if st.button("🙍Pt Education Note", use_container_width=True):
+            st.session_state.session_state.specialist = "Patient Educator"
+            consult_specialist_and_update_ddx("Patient Education Note", f"Write a patient education note for this patient in {st.session_state.session_state.patient_language}")
+            st.session_state.session_state.specialist = "Emergency Medicine"
+    with col2:
         if st.button('💪Physical Therapy Plan', use_container_width=True):
             st.session_state.session_state.specialist = "Musculoskeletal Systems"
             consult_specialist_and_update_ddx("Physical Therapy Plan", pt_plan)
             st.session_state.session_state.specialist = "Emergency Medicine"
-
-    st.subheader('🏃‍♂️Flow')
+    st.subheader('🧠Critical Thinking')
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("➡️Next Step Recommendation", use_container_width=True):
-            st.session_state.session_state.specialist = "Emergency Medicine"
-            consult_specialist_and_update_ddx("Next Step Recommendation", next_step)
+        # if st.button("➡️Next Step Recommendation", use_container_width=True):
+        #     st.session_state.session_state.specialist = "Emergency Medicine"
+        #     consult_specialist_and_update_ddx("Next Step Recommendation", next_step)
         if st.button("🤔Challenge the DDX", use_container_width=True):
             st.session_state.session_state.specialist = "General"
             consult_specialist_and_update_ddx("Challenge the DDX", challenge_ddx)
             st.session_state.session_state.specialist = "Emergency Medicine"
     with col2:
-        if st.button('🛠️Apply Clinical Decision Tools', use_container_width=True):
-            st.session_state.session_state.specialist = "Clinical Decision Tools"
-            consult_specialist_and_update_ddx("Apply Clinical Decision Tools", apply_decision_tool)
-            st.session_state.session_state.specialist = "Emergency Medicine"
+        # if st.button('🛠️Apply Clinical Decision Tools', use_container_width=True):
+        #     st.session_state.session_state.specialist = "Clinical Decision Tools"
+        #     consult_specialist_and_update_ddx("Apply Clinical Decision Tools", apply_decision_tool)
+        #     st.session_state.session_state.specialist = "Emergency Medicine"
         if st.button("🧠Critical Thinking w Bayesian Reasoning", use_container_width=True):
             st.session_state.session_state.specialist = "Bayesian Reasoner"
             consult_specialist_and_update_ddx("Critical Thinking w Bayesian Reasoning", apply_bayesian_reasoning)
@@ -1315,6 +1319,7 @@ def display_functions_tab():
     st.divider()
     
     start_new_session()
+
 
 def display_specialist_tab():
     if st.session_state.session_state.differential_diagnosis:
@@ -1337,6 +1342,7 @@ def display_variables_tab():
     update_patient_language()
     if st.button("Update Indexes"):
         initialize_text_indexes(st.session_state.session_state.collection_name)
+
 
 def display_sessions_tab():
     user_id = st.session_state.session_state.user_id  # Use Google ID instead of username
