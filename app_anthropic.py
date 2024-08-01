@@ -1361,17 +1361,17 @@ def display_sessions_tab():
                     index=0,
                     key="session_selectbox")
         
-        selected_session = st_searchbox(
-            search_sessions_for_searchbox,
-            key="session_searchbox",
-            label="Search sessions",
-            placeholder="Type to search for sessions...",
-            default_use_searchterm=False,
-            rerun_on_update=False
-        )
+        # selected_session = st_searchbox(
+        #     search_sessions_for_searchbox,
+        #     key="session_searchbox",
+        #     label="Search sessions",
+        #     placeholder="Type to search for sessions...",
+        #     default_use_searchterm=False,
+        #     rerun_on_update=False
+        # )
 
-        if selected_session:
-            session_name = load_session_from_search(selected_session)
+        # if selected_session:
+        #     session_name = load_session_from_search(selected_session)
 
         if session_name != "Select a session...":
             if session_name in session_options:
