@@ -1376,12 +1376,12 @@ def display_sessions_tab():
 
         
         if session_name != "Select a session...":
-            # if session_name in session_options:
-            st.success(f"Session Loaded")
-            st.write(f'**{session_name}**')
-            display_session_data(session_options[session_name])                    
-            # else:
-            #     st.error(f"Session '{session_name}' not found in options.")
+            if session_name in session_options:
+                st.success(f"Session Loaded")
+                st.write(f'**{session_name}**')
+                display_session_data(session_options[session_name])                    
+            else:
+                st.error(f"Session '{session_name}' not found in options.")
     else:
         st.write("No sessions found for this user.")
 
