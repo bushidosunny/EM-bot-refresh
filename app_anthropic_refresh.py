@@ -1620,7 +1620,7 @@ def process_other_queries():
         # Clear completed tasks
         st.session_state.session_state.completed_tasks_str = ""
         st.session_state.session_state.specialist = "Emergency Medicine"
-        # st.rerun()
+        st.rerun()
         
 def new_thread():
     for key in list(st.session_state.keys()):
@@ -1743,7 +1743,7 @@ def handle_user_input_container():
         ))
     with input_container:
         
-        col_specialist, col1, col2, col3= st.columns([.5, 3, .5,.5])
+        col_specialist, col1, col2= st.columns([1, 3, .5])
         with col_specialist:
             specialist = st.session_state.session_state.specialist
             specialist_avatar = specialist_data[specialist]["avatar"]
@@ -1763,8 +1763,7 @@ def handle_user_input_container():
             user_question = st.chat_input("How may I help you?") 
         with col2:
             user_chat = record_audio()
-        with col3:
-            if st.button("refresh"):
+
                 return
         
     if user_question:
@@ -1828,7 +1827,7 @@ def process_user_question(user_question, specialist):
         
         # Debug output
         # print("DEBUG: Session State after processing user question")
-
+        st.rerun()
 def main():
     
     if 'session_state' not in st.session_state:
