@@ -198,7 +198,7 @@ class User:
 
 def google_login() -> None:
     if os.getenv('ENVIRONMENT') == 'production':
-        REDIRECT_URI = 'https://emmahealth.ai/'
+        REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com'
     else:
         REDIRECT_URI = 'http://localhost:8501/'
     
@@ -274,7 +274,7 @@ def google_login() -> None:
         
 def google_callback() -> Optional[User]:
     if os.getenv('ENVIRONMENT') == 'production':
-        REDIRECT_URI = 'https://emmahealth.ai/'
+        REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
     else:
         REDIRECT_URI = 'http://localhost:8501/'
     if 'code' not in st.query_params:
