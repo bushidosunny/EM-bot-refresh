@@ -1489,7 +1489,7 @@ def display_session_data(collection_name):
     if st.button("load the chat history?", on_click=load_chat_history(collection_name)):
         # load_chat_history(collection_name)
         st.success(f"Session Loaded")
-        st.rerun()
+        # st.rerun()
 
         
     display_delete_session_button(collection_name)
