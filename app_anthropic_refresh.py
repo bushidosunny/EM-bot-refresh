@@ -59,7 +59,8 @@ else:
 
 # Initialize Anthropic client
 anthropic = Anthropic(api_key=ANTHROPIC_API_KEY)
-
+# Initialize the model
+model = ChatAnthropic(model="claude-3-5-sonnet-20240620", temperature=0.5, max_tokens=4096)
 # Initialize MongoDB connection
 @st.cache_resource
 def init_mongodb_connection():
@@ -456,6 +457,16 @@ def google_login() -> None:
 
 def google_callback() -> Optional[User]:
     logging.info("Google callback initiated")
+    
+    if st.session_state.get('auth_code_used'):
+        st.error("This authorization code has already been used. Please log in again.")
+        return None
+
+    auth_code = st.query_params.get('code')
+    
+    if not auth_code:
+        st.error("No authorization code found. Please try logging in again.")
+        return None
 
     if st.session_state.oauth_flow_complete:
         return None
@@ -505,16 +516,20 @@ def google_callback() -> Optional[User]:
             redirect_uri=REDIRECT_URI
         )
 
-        auth_code = st.query_params['code']
         logging.info(f"Fetching token with auth code: {auth_code}")  # Log first 10 chars for security
 
         try:
             flow.fetch_token(code=auth_code)
+            st.session_state.auth_code_used = True
         except Exception as e:
             logging.error(f"Error during token fetch: {str(e)}")
             st.error("An error occurred during authentication. Please try again.")
             return None
-
+        finally:
+            # Clear query parameters
+            st.query_params.clear()
+            
+        
         credentials = flow.credentials
         logging.info("Credentials obtained")
 
@@ -1171,8 +1186,7 @@ def record_audio():
                 return prompt
     return None
 
-# Initialize the model
-model = ChatAnthropic(model="claude-3-5-sonnet-20240620", temperature=0.5, max_tokens=4096)
+
 
 def get_response(user_question: str) -> str:
     with st.spinner("Waiting for EMMA's response..."):
@@ -1925,8 +1939,11 @@ def handle_authenticated_state():
             st.error(f"An error occurred: {str(e)}")
             logging.error(f"Unhandled exception in main: {str(e)}", exc_info=True)
 
-
 def main():
+    st.markdown("""
+    # EMMA - Emergency Medicine Main Assistant
+    """)
+
     if 'initialized' not in st.session_state:
         initialize_session_state()
     
@@ -1942,9 +1959,6 @@ def main():
         st.session_state.oauth_state = st.query_params['state']
     elif st.session_state.oauth_state is None:
         st.session_state.oauth_state = secrets.token_urlsafe(16)
-
-    # oauth_state = st.session_state.oauth_state
-    # logging.info(f"Current OAuth state from session state: {oauth_state}")
 
     try:
         session_token = controller.get('session_token')
@@ -1964,14 +1978,88 @@ def main():
                 clear_session_data()
         
         if st.session_state.auth_state == 'initial':
-            handle_initial_state()
+            if 'code' in st.query_params and not st.session_state.get('auth_code_used'):
+                user = google_callback()
+                if user:
+                    update_session_state_with_user(user)
+                    st.session_state.auth_state = 'authenticated'
+                    st.success(f"Welcome, {user.name}!")
+                    st.session_state.clear_params = True
+                    st.rerun()
+                else:
+                    st.session_state.auth_state = 'initial'
+            else:
+                google_login()
         elif st.session_state.auth_state == 'authenticated':
             handle_authenticated_state()
-
 
     except Exception as e:
         st.error(f"An unexpected error occurred: {str(e)}")
         logging.error(f"Unhandled exception in main: {str(e)}", exc_info=True)
+
+    if st.session_state.get('should_rerun', False):
+        st.session_state.should_rerun = False
+        st.rerun()
+# def main():
+#     if 'initialized' not in st.session_state:
+#         initialize_session_state()
+    
+#     logging.info(f"main() query_params: {st.query_params}")
+
+#     if 'code' in st.query_params and not st.session_state.get('auth_code_used'):
+#         user = google_callback()
+#         if user:
+#             update_session_state_with_user(user)
+#             st.session_state.auth_state = 'authenticated'
+#             st.success(f"Welcome, {user.name}!")
+#             st.rerun()
+
+#     if st.session_state.get('clear_params'):
+#         st.query_params.clear()
+#         del st.session_state['clear_params']
+#         logging.info("Cleared query params")    
+#         st.rerun()
+
+#     if 'code' in st.query_params:
+#         st.session_state.oauth_state = st.query_params['state']
+#     elif st.session_state.oauth_state is None:
+#         st.session_state.oauth_state = secrets.token_urlsafe(16)
+
+#     # if 'code' in st.query_params and 'state' in st.query_params:
+#     #     st.session_state.auth_code = st.query_params['code']
+#     #     st.session_state.auth_state = st.query_params['state']
+#     #     st.session_state.clear_params = True
+#     #     st.rerun()
+
+#     # oauth_state = st.session_state.oauth_state
+#     # logging.info(f"Current OAuth state from session state: {oauth_state}")
+
+#     try:
+#         session_token = controller.get('session_token')
+#         session_expiry = controller.get('session_expiry')
+        
+#         user = None
+#         if session_token and session_expiry:
+#             expiry = datetime.fromisoformat(session_expiry)
+#             if expiry > datetime.utcnow():
+#                 user = get_user_from_session(session_token)
+#                 if user:
+#                     update_session_state_with_user(user)
+#                     st.session_state.auth_state = 'authenticated'
+#                 else:
+#                     clear_session_data()
+#             else:
+#                 clear_session_data()
+        
+#         if st.session_state.auth_state == 'initial':
+#             handle_initial_state()
+#         elif st.session_state.auth_state == 'authenticated':
+#             handle_authenticated_state()
+
+
+#     except Exception as e:
+#         st.error(f"An unexpected error occurred: {str(e)}")
+#         logging.error(f"Unhandled exception in main: {str(e)}", exc_info=True)
 
 if __name__ == '__main__':
     main()
