@@ -1833,9 +1833,9 @@ def main():
         st.session_state.session_state = SessionState()
 
     if 'code' in st.query_params:
-        st.session_state.session_state._oauth_state = st.query_params['code']
-    elif st.session_state.session_state._oauth_state is None:
-        st.session_state.session_state._oauth_state = secrets.token_urlsafe(16)
+        st.session_state.session_state.oauth_state = st.query_params['code']
+    elif st.session_state.session_state.oauth_state is None:
+        st.session_state.session_state.oauth_state = secrets.token_urlsafe(16)
 
 
     # if 'session_state' not in st.session_state:
