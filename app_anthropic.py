@@ -1724,7 +1724,7 @@ def main():
     
     session_token = st.query_params.get("session")
     session_expiry = st.query_params.get("session_expiry")
-    logger.debug(f"main() st.query_params: {st.query_params}")
+    logger.debug(f"st.query_params: {st.query_params}")
     
     user = None
     user = get_current_user()

@@ -189,7 +189,7 @@ class User:
 class SessionState:
     def __init__(self):
         self.id = secrets.token_hex(8)
-        self._oauth_state = None
+        self.oauth_state = None
         self.user_id = None
         self.authentication_status = None
         self.logout = None
@@ -366,14 +366,12 @@ specialist_data = {
 
 
 ###################### GOOGLE OAUTH ##############################################################
-
 def google_login() -> None:
     if os.getenv('ENVIRONMENT') == 'production':
         REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
     else:
         REDIRECT_URI = 'http://localhost:8501/'
     
-
     flow = Flow.from_client_config(
         client_config=CLIENT_SECRET_JSON,
         scopes=SCOPES,
@@ -381,7 +379,8 @@ def google_login() -> None:
     )
 
     # Generate and store the state
-    oauth_state = st.session_state.session_state._oauth_state
+    oauth_state = secrets.token_urlsafe(16)
+    st.session_state.session_state._oauth_state = oauth_state
     controller.set('oauth_state', oauth_state)
 
     authorization_url, _ = flow.authorization_url(
@@ -391,7 +390,7 @@ def google_login() -> None:
         state=oauth_state
     )
     # Log the state for debugging
-    logging.info(f"Generated OAuth state: {st.session_state.session_state._oauth_state}")
+    logging.info(f"Generated OAuth state: {oauth_state}")
 
     html = f"""
     <style>
@@ -446,7 +445,89 @@ def google_login() -> None:
     """
     # Display the button
     st.markdown(html, unsafe_allow_html=True)
-          
+
+# def google_login() -> None:
+#     if os.getenv('ENVIRONMENT') == 'production':
+#         REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
+#     else:
+#         REDIRECT_URI = 'http://localhost:8501/'
+    
+#     if 'oauth_state' not in st.session_state:
+#         st.session_state.session_state.oauth_state = secrets.token_urlsafe(16)
+
+#     flow = Flow.from_client_config(
+#         client_config=CLIENT_SECRET_JSON,
+#         scopes=SCOPES,
+#         redirect_uri=REDIRECT_URI
+#     )
+
+#     # Generate and store the state
+#     oauth_state = st.session_state.session_state.oauth_state
+#     controller.set('oauth_state', oauth_state)
+
+#     authorization_url, _ = flow.authorization_url(
+#         prompt='consent',
+#         access_type='offline',
+#         include_granted_scopes='true',
+#         state=oauth_state
+#     )
+#     # Log the state for debugging
+#     logging.info(f"Generated OAuth state: {st.session_state.session_state.oauth_state}")
+
+#     html = f"""
+#     <style>
+#         body {{
+#             display: flex;
+#             justify-content: center;
+#             align-items: center;
+#             height: 100vh;
+#             background-color: #f0f2f5;
+#             margin: 0;
+#         }}
+#         .container {{
+#             text-align: center;
+#             font-family: Arial, sans-serif;
+#         }}
+#         .title {{
+#             font-size: 2.5em;
+#             margin-bottom: 20px;
+#         }}
+#         .subtitle {{
+#             font-size: 1.2em;
+#             margin-bottom: 40px;
+#         }}
+#         .google-btn {{
+#             display: inline-block;
+#             width: 191px;
+#             height: 46px;
+#             background-image: url('https://developers.google.com/static/identity/images/branding_guideline_sample_lt_rd_lg.svg');
+#             background-repeat: no-repeat;
+#             background-size: 191px 46px;
+#             border: none;
+#             cursor: pointer;
+#         }}
+#         .google-btn:hover {{
+#             box-shadow: 0 0 8px 4px rgba(4, 182, 234, 0.3);
+#             border-radius: 20px;
+#             background-image: url('https://developers.google.com/static/identity/images/branding_guideline_sample_lt_rd_lg.svg');
+            
+#         }}
+#         .google-btn:active {{
+#             background-image: url('https://developers.google.com/static/identity/images/branding_guideline_sample_lt_rd_lg.svg');
+#         }}
+#     </style>
+#     <div class="container">
+#         <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:200px;height:200px;border-radius:20%;">
+#         <div class="title">Welcome to EMMA</div>
+#         <div class="subtitle">Your Emergency Medicine main assistant</div>
+#         <a href="{authorization_url}" target="_self">
+#             <div class="google-btn"></div>
+#         </a>
+#     </div>
+#     """
+#     # Display the button
+#     st.markdown(html, unsafe_allow_html=True)
+
 def google_callback() -> Optional[User]:
     logging.info("Google callback initiated")
     logging.info(f"Query params: {st.query_params}")
@@ -477,11 +558,6 @@ def google_callback() -> Optional[User]:
         REDIRECT_URI = 'http://localhost:8501/'
     
     logging.info(f"Callback initiated. REDIRECT_URI: {REDIRECT_URI}")
-    
-    if 'code' not in st.query_params:
-        logging.error("Authorization code not found in query parameters")
-        st.error("Authorization code not found. Please try logging in again.")
-        return None
 
     try:
         logging.info("Initializing OAuth flow")
@@ -513,22 +589,25 @@ def google_callback() -> Optional[User]:
         session_token, expiration = create_session(str(user._id))
         logging.info("Session created")
         
-        # controller = CookieController()
         controller.set('session_token', session_token)
         controller.set('session_expiry', expiration.isoformat())
         logging.info("Cookies set")
         
         st.session_state['user'] = user
         
-        del st.query_params['code']
-        logging.info("Query params cleaned")
-
-        if user:
-            # Clear query parameters after successful authentication
-            st.query_params.clear()
+        # Clear query params
+        st.query_params.clear()
+        logging.info("Query params cleared")
         
         return user
     except Exception as e:
+        logging.error(f"Error during token fetch: {str(e)}", exc_info=True)
+        st.error("An error occurred during authentication. Please try again.")
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        return None
+        st.error(f"An error occurred during authentication: {str(e)}")
+        return None
         logging.error(f"Error during token fetch: {str(e)}", exc_info=True)
         st.error("An error occurred during authentication. Please try again.")
         for key in list(st.session_state.keys()):
@@ -1828,22 +1907,18 @@ def process_user_question(user_question, specialist):
         # print("DEBUG: Session State after processing user question")
         st.rerun()
 
+
 def main():
     if 'session_state' not in st.session_state:
         st.session_state.session_state = SessionState()
+    
+    logging.info(f"main() query_params: {st.query_params}")
 
     if 'code' in st.query_params:
-        st.session_state.session_state._oauth_state = st.query_params['code']
+        st.session_state.session_state._oauth_state = st.query_params['state']
     elif st.session_state.session_state._oauth_state is None:
         st.session_state.session_state._oauth_state = secrets.token_urlsafe(16)
 
-
-    # if 'session_state' not in st.session_state:
-    #     st.session_state.session_state = SessionState()
-
-    # logging.info(f"DEBUG INITIALIZE SESSION STATE SESSIONSTATE: {st.session_state.session_state}")
-
-    # Get the current OAuth state from the session state
     oauth_state = st.session_state.session_state._oauth_state
     logging.info(f"Current OAuth state from session state: {oauth_state}")
 
@@ -1894,16 +1969,12 @@ def main():
         elif st.session_state.session_state.auth_state == 'authenticated':
             try:
                 if st.session_state.session_state.differential_diagnosis != []:
-                    
                     col1, col2 = st.columns([2, 1])
-                
                     with col1:
                         with st.container():
                             display_header()
                             display_chat_history()
                             handle_user_input_container() 
-                            
-                        
                     with col2:
                         input_container = st.container()
                         input_container.float(float_css_helper(
