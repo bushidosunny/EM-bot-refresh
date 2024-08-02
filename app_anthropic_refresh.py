@@ -977,7 +977,7 @@ def load_chat_history(collection_name):
     except Exception as e:
         print(f"Error loading chat history: {e}")
     
-    st.rerun()
+    # st.rerun()
 
 def search_sessions(user_id, keywords):
     collections = db.list_collection_names()
