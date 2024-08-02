@@ -230,13 +230,13 @@ class SessionState:
         
     # @property
     # def oauth_state(self):
-    #     if self._oauth_state is None:
-    #         self._oauth_state = secrets.token_urlsafe(16)
-    #     return self._oauth_state
+    #     if self.oauth_state is None:
+    #         self.oauth_state = secrets.token_urlsafe(16)
+    #     return self.oauth_state
 
     # @oauth_state.setter
     # def oauth_state(self, value):
-    #     self._oauth_state = value
+    #     self.oauth_state = value
         
     def __repr__(self):
         return f"<SessionState id={self.id}>"
@@ -380,7 +380,7 @@ def google_login() -> None:
 
     # Generate and store the state
     oauth_state = secrets.token_urlsafe(16)
-    st.session_state.session_state._oauth_state = oauth_state
+    st.session_state.session_state.oauth_state = oauth_state
     controller.set('oauth_state', oauth_state)
 
     authorization_url, _ = flow.authorization_url(
@@ -532,7 +532,7 @@ def google_callback() -> Optional[User]:
     logging.info("Google callback initiated")
     logging.info(f"Query params: {st.query_params}")
 
-    stored_state_session = st.session_state.session_state._oauth_state
+    stored_state_session = st.session_state.session_state.oauth_state
     stored_state_cookie = controller.get('oauth_state')
 
     if 'code' not in st.query_params or 'state' not in st.query_params:
@@ -549,7 +549,7 @@ def google_callback() -> Optional[User]:
         return None
 
     # Clear the stored state
-    st.session_state.session_state._oauth_state = None
+    st.session_state.session_state.oauth_state = None
     if controller.get('oauth_state'):
         controller.remove('oauth_state')
     else:
