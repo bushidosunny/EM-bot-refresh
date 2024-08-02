@@ -366,6 +366,8 @@ specialist_data = {
 
 
 ###################### GOOGLE OAUTH ##############################################################
+
+
 def google_login() -> None:
     if os.getenv('ENVIRONMENT') == 'production':
         REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
@@ -446,87 +448,7 @@ def google_login() -> None:
     # Display the button
     st.markdown(html, unsafe_allow_html=True)
 
-# def google_login() -> None:
-#     if os.getenv('ENVIRONMENT') == 'production':
-#         REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
-#     else:
-#         REDIRECT_URI = 'http://localhost:8501/'
-    
-#     if 'oauth_state' not in st.session_state:
-#         st.session_state.session_state.oauth_state = secrets.token_urlsafe(16)
 
-#     flow = Flow.from_client_config(
-#         client_config=CLIENT_SECRET_JSON,
-#         scopes=SCOPES,
-#         redirect_uri=REDIRECT_URI
-#     )
-
-#     # Generate and store the state
-#     oauth_state = st.session_state.session_state.oauth_state
-#     controller.set('oauth_state', oauth_state)
-
-#     authorization_url, _ = flow.authorization_url(
-#         prompt='consent',
-#         access_type='offline',
-#         include_granted_scopes='true',
-#         state=oauth_state
-#     )
-#     # Log the state for debugging
-#     logging.info(f"Generated OAuth state: {st.session_state.session_state.oauth_state}")
-
-#     html = f"""
-#     <style>
-#         body {{
-#             display: flex;
-#             justify-content: center;
-#             align-items: center;
-#             height: 100vh;
-#             background-color: #f0f2f5;
-#             margin: 0;
-#         }}
-#         .container {{
-#             text-align: center;
-#             font-family: Arial, sans-serif;
-#         }}
-#         .title {{
-#             font-size: 2.5em;
-#             margin-bottom: 20px;
-#         }}
-#         .subtitle {{
-#             font-size: 1.2em;
-#             margin-bottom: 40px;
-#         }}
-#         .google-btn {{
-#             display: inline-block;
-#             width: 191px;
-#             height: 46px;
-#             background-image: url('https://developers.google.com/static/identity/images/branding_guideline_sample_lt_rd_lg.svg');
-#             background-repeat: no-repeat;
-#             background-size: 191px 46px;
-#             border: none;
-#             cursor: pointer;
-#         }}
-#         .google-btn:hover {{
-#             box-shadow: 0 0 8px 4px rgba(4, 182, 234, 0.3);
-#             border-radius: 20px;
-#             background-image: url('https://developers.google.com/static/identity/images/branding_guideline_sample_lt_rd_lg.svg');
-            
-#         }}
-#         .google-btn:active {{
-#             background-image: url('https://developers.google.com/static/identity/images/branding_guideline_sample_lt_rd_lg.svg');
-#         }}
-#     </style>
-#     <div class="container">
-#         <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:200px;height:200px;border-radius:20%;">
-#         <div class="title">Welcome to EMMA</div>
-#         <div class="subtitle">Your Emergency Medicine main assistant</div>
-#         <a href="{authorization_url}" target="_self">
-#             <div class="google-btn"></div>
-#         </a>
-#     </div>
-#     """
-#     # Display the button
-#     st.markdown(html, unsafe_allow_html=True)
 
 def google_callback() -> Optional[User]:
     logging.info("Google callback initiated")
@@ -570,7 +492,12 @@ def google_callback() -> Optional[User]:
         auth_code = st.query_params['code']
         logging.info(f"Fetching token with auth code: {auth_code[:10]}...")  # Log first 10 chars for security
         
-        flow.fetch_token(code=auth_code)
+        try:
+            flow.fetch_token(code=auth_code)
+        except Exception as e:
+            logging.error(f"Error during token fetch: {str(e)}", exc_info=True)
+            st.error("An error occurred during authentication. Please try again.")
+            return None
         logging.info("Token fetched successfully")
         
         credentials = flow.credentials
@@ -1906,6 +1833,9 @@ def process_user_question(user_question, specialist):
         # Debug output
         # print("DEBUG: Session State after processing user question")
         st.rerun()
+
+
+
 
 
 def main():
