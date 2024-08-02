@@ -934,19 +934,50 @@ def delete_session_data(collection_name):
     db.drop_collection(collection_name)
 
 def load_chat_history(collection_name):
-    st.session_state.session_state.chat_history = []
-    st.session_state.session_state.differential_diagnosis = []
-    query = {"type": {"$in": ["user_input", "ai_input"]}}
-    projection = {"message": 1, "sender": 1, "timestamp": 1, "_id": 0}
-    chat_history = list(db[collection_name].find(query, projection).sort("timestamp", 1))
-    formatted_chat_history = []
-    for entry in chat_history:
-        role = "Human" if entry['sender'] == "Human" else "AI"
-        formatted_entry = f"{role}: {entry['message']}"
-        formatted_chat_history.append(formatted_entry)
-    chat_history_string = "\n\n".join(formatted_chat_history)
-    st.session_state.session_state.clean_chat_history = chat_history_string
-    return chat_history_string
+    try:
+        # Check if we've already loaded the chat history
+        st.session_state.session_state.chat_history = []
+        st.session_state.session_state.differential_diagnosis = []
+
+        result = db[collection_name].find_one({"type": "chat_history"})
+        if result and 'session_state_chat_history' in result:
+            serialized_history = result['session_state_chat_history']
+            
+            # Check if serialized_history is already a list
+            if isinstance(serialized_history, list):
+                print("Chat history is already a list, no need to parse JSON")
+            else:
+                try:
+                    # If it's a string, try to parse it as JSON
+                    serialized_history = json.loads(serialized_history)
+                except json.JSONDecodeError:
+                    print("Error decoding JSON from database. Chat history might be in old format.")
+                    # Optionally, add fallback code here to handle old format
+                    return
+
+            for message_data in serialized_history:
+                if isinstance(message_data, dict):
+                    # If it's a dict, assume it's in the new format
+                    if message_data['type'] == 'HumanMessage':
+                        message = HumanMessage(content=message_data['content'], avatar=message_data['avatar'])
+                    elif message_data['type'] == 'AIMessage':
+                        message = AIMessage(content=message_data['content'], avatar=message_data['avatar'])
+                    else:
+                        continue  # Skip unknown message types
+                elif isinstance(message_data, (HumanMessage, AIMessage)):
+                    # If it's already a message object, use it directly
+                    message = message_data
+                else:
+                    print(f"Unknown message format: {type(message_data)}")
+                    continue
+
+                st.session_state.session_state.chat_history.append(message)
+        
+        # print(f'DEBUG LOAD CHAT HISTORY ----collection name: {collection_name}-- SESSION STATE CHAT HISTORY: {st.session_state.session_state.chat_history}')
+    except Exception as e:
+        print(f"Error loading chat history: {e}")
+    
+    st.rerun()
 
 def search_sessions(user_id, keywords):
     collections = db.list_collection_names()
@@ -1489,7 +1520,7 @@ def display_session_data(collection_name):
     if st.button("load the chat history?", on_click=load_chat_history(collection_name)):
         # load_chat_history(collection_name)
         st.success(f"Session Loaded")
-        # st.rerun()
+        st.rerun()
 
         
     display_delete_session_button(collection_name)
