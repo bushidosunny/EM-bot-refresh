@@ -532,7 +532,7 @@ def google_callback() -> Optional[User]:
     logging.info("Google callback initiated")
     logging.info(f"Query params: {st.query_params}")
 
-    stored_state_session = st.session_state.session_state._oauth_state
+    stored_state_session = st.session_state.session_state.oauth_state
     stored_state_cookie = controller.get('oauth_state')
 
     if 'code' not in st.query_params or 'state' not in st.query_params:
@@ -549,7 +549,7 @@ def google_callback() -> Optional[User]:
         return None
 
     # Clear the stored state
-    st.session_state.session_state._oauth_state = None
+    st.session_state.session_state.oauth_state = None
     controller.remove('oauth_state')
 
     if os.getenv('ENVIRONMENT') == 'production':
@@ -1915,11 +1915,11 @@ def main():
     logging.info(f"main() query_params: {st.query_params}")
 
     if 'code' in st.query_params:
-        st.session_state.session_state._oauth_state = st.query_params['state']
-    elif st.session_state.session_state._oauth_state is None:
-        st.session_state.session_state._oauth_state = secrets.token_urlsafe(16)
+        st.session_state.session_state.oauth_state = st.query_params['state']
+    elif st.session_state.session_state.oauth_state is None:
+        st.session_state.session_state.oauth_state = secrets.token_urlsafe(16)
 
-    oauth_state = st.session_state.session_state._oauth_state
+    oauth_state = st.session_state.session_state.oauth_state
     logging.info(f"Current OAuth state from session state: {oauth_state}")
 
     try:
