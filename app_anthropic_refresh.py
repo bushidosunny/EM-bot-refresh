@@ -1833,9 +1833,9 @@ def main():
         st.session_state.session_state = SessionState()
 
     if 'code' in st.query_params:
-        st.session_state.session_state.oauth_state = st.query_params['code']
-    elif st.session_state.session_state.oauth_state is None:
-        st.session_state.session_state.oauth_state = secrets.token_urlsafe(16)
+        st.session_state.session_state._oauth_state = st.query_params['code']
+    elif st.session_state.session_state._oauth_state is None:
+        st.session_state.session_state._oauth_state = secrets.token_urlsafe(16)
 
 
     # if 'session_state' not in st.session_state:
@@ -1844,7 +1844,7 @@ def main():
     # logging.info(f"DEBUG INITIALIZE SESSION STATE SESSIONSTATE: {st.session_state.session_state}")
 
     # Get the current OAuth state from the session state
-    oauth_state = st.session_state.session_state.oauth_state
+    oauth_state = st.session_state.session_state._oauth_state
     logging.info(f"Current OAuth state from session state: {oauth_state}")
 
     try:
