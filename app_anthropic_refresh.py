@@ -228,15 +228,15 @@ class SessionState:
         self.auth_state = 'initial'
         self.auth_completed = False
         
-    # @property
-    # def oauth_state(self):
-    #     if self._oauth_state is None:
-    #         self._oauth_state = secrets.token_urlsafe(16)
-    #     return self._oauth_state
+    @property
+    def oauth_state(self):
+        if self._oauth_state is None:
+            self._oauth_state = secrets.token_urlsafe(16)
+        return self._oauth_state
 
-    # @oauth_state.setter
-    # def oauth_state(self, value):
-    #     self._oauth_state = value
+    @oauth_state.setter
+    def oauth_state(self, value):
+        self._oauth_state = value
         
     def __repr__(self):
         return f"<SessionState id={self.id}>"
@@ -1829,13 +1829,11 @@ def process_user_question(user_question, specialist):
         st.rerun()
 
 def main():
+    if 'code' in st.query_params:
+        st.session_state.session_state._oauth_state = st.query_params['code']
     if 'session_state' not in st.session_state:
         st.session_state.session_state = SessionState()
 
-    if 'code' in st.query_params:
-        st.session_state.session_state._oauth_state = st.query_params['code']
-    elif st.session_state.session_state._oauth_state is None:
-        st.session_state.session_state._oauth_state = secrets.token_urlsafe(16)
 
 
     # if 'session_state' not in st.session_state:
