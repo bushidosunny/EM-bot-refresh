@@ -385,6 +385,12 @@ def google_login() -> None:
     st.session_state.session_state.oauth_state = oauth_state
     controller.set('oauth_state', oauth_state)
 
+    # Verify state is set
+    if st.session_state.session_state.oauth_state != oauth_state or controller.get('oauth_state') != oauth_state:
+        logging.error("Failed to set OAuth state")
+        st.error("An error occurred during login preparation. Please try again.")
+        return
+    
     authorization_url, _ = flow.authorization_url(
         prompt='consent',
         access_type='offline',
@@ -472,7 +478,8 @@ def google_callback() -> Optional[User]:
 
     # Clear the stored state
     st.session_state.session_state.oauth_state = None
-    controller.remove('oauth_state')
+    if controller.get('oauth_state'):
+        controller.remove('oauth_state')
 
     if os.getenv('ENVIRONMENT') == 'production':
         REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
