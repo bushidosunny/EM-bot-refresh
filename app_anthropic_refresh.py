@@ -363,6 +363,7 @@ specialist_data = {
 ###################### GOOGLE OAUTH ##############################################################
 
 def generate_oauth_state():
+    logging.info(f"generate_oauth_state() st.session_state.oauthstate: {st.session_state.oauth_state}")
     if 'oauth_state' not in st.session_state or st.session_state.oauth_state is None:
         st.session_state.oauth_state = secrets.token_urlsafe(16)
     return st.session_state.oauth_state
@@ -457,6 +458,7 @@ def google_login() -> None:
 
 def google_callback() -> Optional[User]:
     logging.info(f"Google callback initiated. Query params: {st.query_params}")
+    logging.info(f"google_callback() st.session_state.oauthstate: {st.session_state.oauth_state}")
 
     if st.session_state.get('auth_code_used'):
         logging.warning("Authorization code has already been used.")
