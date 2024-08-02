@@ -367,8 +367,10 @@ specialist_data = {
 
 ###################### GOOGLE OAUTH ##############################################################
 
-
 def google_login() -> None:
+    # Clear existing session state
+    st.session_state.clear()
+    
     if os.getenv('ENVIRONMENT') == 'production':
         REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
     else:
@@ -454,8 +456,6 @@ def google_login() -> None:
     # Display the button
     st.markdown(html, unsafe_allow_html=True)
 
-
-
 def google_callback() -> Optional[User]:
     logging.info("Google callback initiated")
     logging.info(f"Query params: {st.query_params}")
@@ -499,12 +499,7 @@ def google_callback() -> Optional[User]:
         auth_code = st.query_params['code']
         logging.info(f"Fetching token with auth code: {auth_code[:10]}...")  # Log first 10 chars for security
         
-        try:
-            flow.fetch_token(code=auth_code)
-        except Exception as e:
-            logging.error(f"Error during token fetch: {str(e)}", exc_info=True)
-            st.error("An error occurred during authentication. Please try again.")
-            return None
+        flow.fetch_token(code=auth_code)
         logging.info("Token fetched successfully")
         
         credentials = flow.credentials
@@ -537,15 +532,10 @@ def google_callback() -> Optional[User]:
     except Exception as e:
         logging.error(f"Error during token fetch: {str(e)}", exc_info=True)
         st.error("An error occurred during authentication. Please try again.")
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        return None
-        st.error(f"An error occurred during authentication: {str(e)}")
-        return None
-        logging.error(f"Error during token fetch: {str(e)}", exc_info=True)
-        st.error("An error occurred during authentication. Please try again.")
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
+        # Clear query params and session state
+        st.query_params.clear()
+        st.session_state.clear()
+        st.rerun()
         return None
 
 def init_db() -> None:
@@ -1843,8 +1833,6 @@ def process_user_question(user_question, specialist):
 
 
 
-
-
 def main():
     if 'session_state' not in st.session_state:
         st.session_state.session_state = SessionState()
@@ -1852,7 +1840,31 @@ def main():
     logging.info(f"main() query_params: {st.query_params}")
 
     if 'code' in st.query_params:
-        st.session_state.session_state.oauth_state = st.query_params['state']
+        if 'auth_attempted' not in st.session_state:
+            st.session_state.auth_attempted = True
+            user = google_callback()
+            if user:
+                update_session_state_with_user(user)
+                st.session_state.session_state.auth_state = 'authenticated'
+                st.session_state.session_state.auth_completed = True
+                st.success(f"Welcome, {user.name}!")
+                # Clear query params
+                st.query_params.clear()
+                # Force a rerun to clear the URL
+                st.rerun()
+            else:
+                st.error("Failed to log in. Please try again.")
+                logging.error(f"Failed to log in. Please try again. st.query_params: {st.query_params}")
+                st.session_state.session_state.auth_state = 'initial'
+                st.query_params.clear()
+                st.session_state.clear()
+                st.rerun()
+        else:
+            st.error("Authentication already attempted. Please try logging in again.")
+            st.query_params.clear()
+            st.session_state.clear()
+            st.rerun()
+
     elif st.session_state.session_state.oauth_state is None:
         st.session_state.session_state.oauth_state = secrets.token_urlsafe(16)
 
