@@ -399,7 +399,7 @@ def google_login() -> None:
         state=oauth_state
     )
     # Log the state for debugging
-    logging.info(f"Generated OAuth state: {oauth_state}")
+    logging.info(f"google_login Generated OAuth state: {oauth_state}")
 
     html = f"""
     <style>
@@ -467,7 +467,7 @@ def google_callback() -> Optional[User]:
         return None
 
     received_state = st.query_params['state']
-    stored_state_session = st.session_state.get('oauth_state')
+    stored_state_session = st.session_state.oauth_state
     stored_state_cookie = controller.get('oauth_state')
     logging.info(f"Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
 
@@ -1874,58 +1874,9 @@ def handle_authenticated_state():
             st.error(f"An error occurred: {str(e)}")
             logging.error(f"Unhandled exception in main: {str(e)}", exc_info=True)
 
-def google_callback() -> Optional[User]:
-    logging.info(f"Google callback initiated. Query params: {st.query_params}")
 
-    if st.session_state.get('auth_code_used'):
-        logging.warning("Authorization code has already been used.")
-        return None
-
-    if 'code' not in st.query_params or 'state' not in st.query_params:
-        logging.error("Authorization code or state not found in query parameters")
-        return None
-
-    received_state = st.query_params['state']
-    stored_state_session = st.session_state.get('oauth_state')
-    stored_state_cookie = controller.get('oauth_state')
-    logging.info(f"Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
-
-    if received_state != stored_state_session and received_state != stored_state_cookie:
-        logging.error(f"State mismatch. Received: {received_state}, Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
-        return None
-
-    auth_code = st.query_params['code']
-    
-    if os.getenv('ENVIRONMENT') == 'production':
-        REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
-    else:
-        REDIRECT_URI = 'http://localhost:8501/'
-
-    try:
-        flow = Flow.from_client_config(
-            client_config=CLIENT_SECRET_JSON,
-            scopes=SCOPES,
-            redirect_uri=REDIRECT_URI
-        )
-        
-        logging.info(f"Attempting to fetch token with auth code: {auth_code[:10]}...")
-        flow.fetch_token(code=auth_code)
-        logging.info("Token fetched successfully")
-
-        credentials = flow.credentials
-        user_info_service = build('oauth2', 'v2', credentials=credentials)
-        user_info = user_info_service.userinfo().get().execute()
-        
-        user = get_or_create_user(user_info)
-        st.session_state['auth_code_used'] = True
-        return user
-
-    except Exception as e:
-        logging.error(f"Error during token fetch: {str(e)}", exc_info=True)
-        return None
 
 def main():
-    st.markdown("# EMMA - Emergency Medicine Main Assistant")
 
     if 'initialized' not in st.session_state:
         initialize_session_state()
