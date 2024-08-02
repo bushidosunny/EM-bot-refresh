@@ -363,9 +363,10 @@ specialist_data = {
 ###################### GOOGLE OAUTH ##############################################################
 
 def generate_oauth_state():
-    logging.info(f"generate_oauth_state() st.session_state.oauthstate: {st.session_state.oauth_state}")
+    
     if 'oauth_state' not in st.session_state or st.session_state.oauth_state is None:
         st.session_state.oauth_state = secrets.token_urlsafe(16)
+        logging.info(f"generate_oauth_state() st.session_state.oauthstate: {st.session_state.oauth_state}")
     return st.session_state.oauth_state
 
 def clear_oauth_data():
