@@ -472,6 +472,12 @@ def google_callback() -> Optional[User]:
         return None
 
     received_state = st.query_params['state']
+    stored_state = st.session_state.get('oauth_state')
+    
+    if received_state != stored_state:
+        logging.error(f"State mismatch. Received: {received_state}, Stored: {stored_state}")
+        st.error("Authentication failed due to state mismatch. Please try again.")
+        return None
 
     # Check against both session state and cookie
     if received_state != stored_state_session and received_state != stored_state_cookie:
@@ -502,8 +508,12 @@ def google_callback() -> Optional[User]:
         auth_code = st.query_params['code']
         logging.info(f"Fetching token with auth code: {auth_code}")  # Log first 10 chars for security
 
-        flow.fetch_token(code=auth_code)
-        logging.info("Token fetched successfully")
+        try:
+            flow.fetch_token(code=auth_code)
+        except Exception as e:
+            logging.error(f"Error during token fetch: {str(e)}")
+            st.error("An error occurred during authentication. Please try again.")
+            return None
 
         credentials = flow.credentials
         logging.info("Credentials obtained")
@@ -528,12 +538,12 @@ def google_callback() -> Optional[User]:
         st.session_state['user'] = user
 
         # Clear query params
-        st.query_params()
+        # st.query_params.clear()
         logging.info("Query params cleared")
 
         st.session_state.oauth_flow_complete = True
         # Clear OAuth-related query parameters
-        st.query_params()
+        # st.query_params.clear()
 
         return user
     except Exception as e:
@@ -541,7 +551,7 @@ def google_callback() -> Optional[User]:
         st.error("An error occurred during authentication. Please try again.")
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        st.query_params()
+        # st.query_params.clear()
         return None
 
 def init_db() -> None:
