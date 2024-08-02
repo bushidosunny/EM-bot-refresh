@@ -228,15 +228,15 @@ class SessionState:
         self.auth_state = 'initial'
         self.auth_completed = False
         
-    @property
-    def oauth_state(self):
-        if self._oauth_state is None:
-            self._oauth_state = secrets.token_urlsafe(16)
-        return self._oauth_state
+    # @property
+    # def oauth_state(self):
+    #     if self._oauth_state is None:
+    #         self._oauth_state = secrets.token_urlsafe(16)
+    #     return self._oauth_state
 
-    @oauth_state.setter
-    def oauth_state(self, value):
-        self._oauth_state = value
+    # @oauth_state.setter
+    # def oauth_state(self, value):
+    #     self._oauth_state = value
         
     def __repr__(self):
         return f"<SessionState id={self.id}>"
@@ -1827,12 +1827,21 @@ def process_user_question(user_question, specialist):
         # Debug output
         # print("DEBUG: Session State after processing user question")
         st.rerun()
+
 def main():
-    
     if 'session_state' not in st.session_state:
         st.session_state.session_state = SessionState()
 
-    logging.info(f"DEBUG INITIALIZE SESSION STATE SESSIONSTATE: {st.session_state.session_state}")
+    if 'code' in st.query_params:
+        st.session_state.session_state._oauth_state = st.query_params['code']
+    elif st.session_state.session_state._oauth_state is None:
+        st.session_state.session_state._oauth_state = secrets.token_urlsafe(16)
+
+
+    # if 'session_state' not in st.session_state:
+    #     st.session_state.session_state = SessionState()
+
+    # logging.info(f"DEBUG INITIALIZE SESSION STATE SESSIONSTATE: {st.session_state.session_state}")
 
     # Get the current OAuth state from the session state
     oauth_state = st.session_state.session_state.oauth_state
