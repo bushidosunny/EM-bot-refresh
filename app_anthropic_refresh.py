@@ -550,10 +550,7 @@ def google_callback() -> Optional[User]:
 
     # Clear the stored state
     st.session_state.session_state.oauth_state = None
-    if controller.get('oauth_state'):
-        controller.remove('oauth_state')
-    else:
-        logging.info("oauth_state cookie not found, skipping removal")
+    controller.remove('oauth_state')
 
     if os.getenv('ENVIRONMENT') == 'production':
         REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
@@ -604,6 +601,13 @@ def google_callback() -> Optional[User]:
         
         return user
     except Exception as e:
+        logging.error(f"Error during token fetch: {str(e)}", exc_info=True)
+        st.error("An error occurred during authentication. Please try again.")
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        return None
+        st.error(f"An error occurred during authentication: {str(e)}")
+        return None
         logging.error(f"Error during token fetch: {str(e)}", exc_info=True)
         st.error("An error occurred during authentication. Please try again.")
         for key in list(st.session_state.keys()):
