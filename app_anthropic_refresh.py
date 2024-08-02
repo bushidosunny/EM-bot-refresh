@@ -456,119 +456,54 @@ def google_login() -> None:
     st.markdown(html, unsafe_allow_html=True)
 
 def google_callback() -> Optional[User]:
-    logging.info("Google callback initiated")
-    
+    logging.info(f"Google callback initiated. Query params: {st.query_params}")
+
     if st.session_state.get('auth_code_used'):
-        st.error("This authorization code has already been used. Please log in again.")
+        logging.warning("Authorization code has already been used.")
         return None
-
-    auth_code = st.query_params.get('code')
-    
-    if not auth_code:
-        st.error("No authorization code found. Please try logging in again.")
-        return None
-
-    if st.session_state.oauth_flow_complete:
-        return None
-    
-    logging.info(f"Query params: {st.query_params}")
-
-    stored_state_session = st.session_state.oauth_state
-    stored_state_cookie = controller.get('oauth_state')
-    logging.error(f"Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
 
     if 'code' not in st.query_params or 'state' not in st.query_params:
         logging.error("Authorization code or state not found in query parameters")
-        st.error("Authorization failed. Please try logging in again.")
         return None
 
     received_state = st.query_params['state']
-    stored_state = st.session_state.get('oauth_state')
-    
-    if received_state != stored_state:
-        logging.error(f"State mismatch. Received: {received_state}, Stored: {stored_state}")
-        st.error("Authentication failed due to state mismatch. Please try again.")
-        return None
+    stored_state_session = st.session_state.get('oauth_state')
+    stored_state_cookie = controller.get('oauth_state')
+    logging.info(f"Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
 
-    # Check against both session state and cookie
     if received_state != stored_state_session and received_state != stored_state_cookie:
         logging.error(f"State mismatch. Received: {received_state}, Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
-        st.error("Authentication failed due to state mismatch. Please try again.")
         return None
 
-    # Clear the stored state
-    st.session_state.oauth_state = None
-    if stored_state_cookie is not None:
-        controller.remove('oauth_state')
-
+    auth_code = st.query_params['code']
+    
     if os.getenv('ENVIRONMENT') == 'production':
         REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
     else:
         REDIRECT_URI = 'http://localhost:8501/'
 
-    logging.info(f"Callback initiated. REDIRECT_URI: {REDIRECT_URI}")
-
     try:
-        logging.info("Initializing OAuth flow")
         flow = Flow.from_client_config(
-            CLIENT_SECRET_JSON,
+            client_config=CLIENT_SECRET_JSON,
             scopes=SCOPES,
             redirect_uri=REDIRECT_URI
         )
-
-        logging.info(f"Fetching token with auth code: {auth_code}")  # Log first 10 chars for security
-
-        try:
-            flow.fetch_token(code=auth_code)
-            st.session_state.auth_code_used = True
-        except Exception as e:
-            logging.error(f"Error during token fetch: {str(e)}")
-            st.error("An error occurred during authentication. Please try again.")
-            return None
-        finally:
-            # Clear query parameters
-            st.query_params.clear()
-            
         
+        logging.info(f"Attempting to fetch token with auth code: {auth_code[:10]}...")
+        flow.fetch_token(code=auth_code)
+        logging.info("Token fetched successfully")
+
         credentials = flow.credentials
-        logging.info("Credentials obtained")
-
-        user_info_service = build('oauth2', 'v2', credentials=credentials, cache_discovery=False)
-        logging.info("User info service built")
-
-        google_user_info = user_info_service.userinfo().get().execute()
-        logging.info("User info retrieved from Google")
-
-        user = get_or_create_user(google_user_info)
-        logging.info(f"User retrieved/created: {user.email}")
-        logging.info(f"User retrieved/created: {user.picture}")
-
-        session_token, expiration = create_session(str(user._id))
-        logging.info("Session created")
-
-        controller.set('session_token', session_token)
-        controller.set('session_expiry', expiration.isoformat())
-        logging.info("Cookies set")
-
-        st.session_state['user'] = user
-
-        # Clear query params
-        # st.query_params.clear()
-        logging.info("Query params cleared")
-
-        st.session_state.oauth_flow_complete = True
-        # Clear OAuth-related query parameters
-        # st.query_params.clear()
-
+        user_info_service = build('oauth2', 'v2', credentials=credentials)
+        user_info = user_info_service.userinfo().get().execute()
+        
+        user = get_or_create_user(user_info)
+        st.session_state['auth_code_used'] = True
         return user
+
     except Exception as e:
         logging.error(f"Error during token fetch: {str(e)}", exc_info=True)
-        st.error("An error occurred during authentication. Please try again.")
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        # st.query_params.clear()
         return None
-
 def init_db() -> None:
     users_collection.create_index([("google_id", ASCENDING)], unique=True)
     users_collection.create_index([("email", ASCENDING)], unique=True)
@@ -1939,32 +1874,85 @@ def handle_authenticated_state():
             st.error(f"An error occurred: {str(e)}")
             logging.error(f"Unhandled exception in main: {str(e)}", exc_info=True)
 
+def google_callback() -> Optional[User]:
+    logging.info(f"Google callback initiated. Query params: {st.query_params}")
+
+    if st.session_state.get('auth_code_used'):
+        logging.warning("Authorization code has already been used.")
+        return None
+
+    if 'code' not in st.query_params or 'state' not in st.query_params:
+        logging.error("Authorization code or state not found in query parameters")
+        return None
+
+    received_state = st.query_params['state']
+    stored_state_session = st.session_state.get('oauth_state')
+    stored_state_cookie = controller.get('oauth_state')
+    logging.info(f"Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
+
+    if received_state != stored_state_session and received_state != stored_state_cookie:
+        logging.error(f"State mismatch. Received: {received_state}, Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
+        return None
+
+    auth_code = st.query_params['code']
+    
+    if os.getenv('ENVIRONMENT') == 'production':
+        REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
+    else:
+        REDIRECT_URI = 'http://localhost:8501/'
+
+    try:
+        flow = Flow.from_client_config(
+            client_config=CLIENT_SECRET_JSON,
+            scopes=SCOPES,
+            redirect_uri=REDIRECT_URI
+        )
+        
+        logging.info(f"Attempting to fetch token with auth code: {auth_code[:10]}...")
+        flow.fetch_token(code=auth_code)
+        logging.info("Token fetched successfully")
+
+        credentials = flow.credentials
+        user_info_service = build('oauth2', 'v2', credentials=credentials)
+        user_info = user_info_service.userinfo().get().execute()
+        
+        user = get_or_create_user(user_info)
+        st.session_state['auth_code_used'] = True
+        return user
+
+    except Exception as e:
+        logging.error(f"Error during token fetch: {str(e)}", exc_info=True)
+        return None
+
 def main():
-    st.markdown("""
-    # EMMA - Emergency Medicine Main Assistant
-    """)
+    st.markdown("# EMMA - Emergency Medicine Main Assistant")
 
     if 'initialized' not in st.session_state:
         initialize_session_state()
     
     logging.info(f"main() query_params: {st.query_params}")
 
-    if st.session_state.get('clear_params'):
+    if 'code' in st.query_params and not st.session_state.get('auth_code_used'):
+        user = google_callback()
+        if user:
+            update_session_state_with_user(user)
+            st.session_state.auth_state = 'authenticated'
+            st.success(f"Welcome, {user.name}!")
+            st.session_state.clear_params = True
+            st.rerun()
+        else:
+            st.error("Authentication failed. Please try again.")
+            st.session_state.auth_state = 'initial'
+    elif st.session_state.get('clear_params'):
         st.query_params.clear()
         del st.session_state['clear_params']
-        logging.info("Cleared query params")    
+        logging.info("Cleared query params")
         st.rerun()
-
-    if 'code' in st.query_params:
-        st.session_state.oauth_state = st.query_params['state']
-    elif st.session_state.oauth_state is None:
-        st.session_state.oauth_state = secrets.token_urlsafe(16)
 
     try:
         session_token = controller.get('session_token')
         session_expiry = controller.get('session_expiry')
         
-        user = None
         if session_token and session_expiry:
             expiry = datetime.fromisoformat(session_expiry)
             if expiry > datetime.utcnow():
@@ -1978,18 +1966,7 @@ def main():
                 clear_session_data()
         
         if st.session_state.auth_state == 'initial':
-            if 'code' in st.query_params and not st.session_state.get('auth_code_used'):
-                user = google_callback()
-                if user:
-                    update_session_state_with_user(user)
-                    st.session_state.auth_state = 'authenticated'
-                    st.success(f"Welcome, {user.name}!")
-                    st.session_state.clear_params = True
-                    st.rerun()
-                else:
-                    st.session_state.auth_state = 'initial'
-            else:
-                google_login()
+            google_login()
         elif st.session_state.auth_state == 'authenticated':
             handle_authenticated_state()
 
