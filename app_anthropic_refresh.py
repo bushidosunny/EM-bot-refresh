@@ -500,7 +500,7 @@ def google_callback() -> Optional[User]:
         )
 
         auth_code = st.query_params['code']
-        logging.info(f"Fetching token with auth code: {auth_code[:10]}...")  # Log first 10 chars for security
+        logging.info(f"Fetching token with auth code: {auth_code}")  # Log first 10 chars for security
 
         flow.fetch_token(code=auth_code)
         logging.info("Token fetched successfully")
@@ -528,12 +528,12 @@ def google_callback() -> Optional[User]:
         st.session_state['user'] = user
 
         # Clear query params
-        st.query_params.clear()
+        st.query_params()
         logging.info("Query params cleared")
 
         st.session_state.oauth_flow_complete = True
         # Clear OAuth-related query parameters
-        st.query_params.clear()
+        st.query_params()
 
         return user
     except Exception as e:
@@ -541,7 +541,7 @@ def google_callback() -> Optional[User]:
         st.error("An error occurred during authentication. Please try again.")
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        st.query_params.clear()
+        st.query_params()
         return None
 
 def init_db() -> None:
