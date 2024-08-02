@@ -855,7 +855,7 @@ def update_session_state_with_user(user: User):
 def clear_session(session_token: str) -> None:
     sessions_collection.delete_one({"token": session_token})
 
-# @st.cache_data(ttl=60)
+@st.cache_data(ttl=60)
 def list_user_sessions(user_id: str):
     collections = db.list_collection_names()
     user_sessions = [col for col in collections if col.startswith(f'user_{user_id}')]
@@ -1764,7 +1764,6 @@ def handle_user_input_container():
         with col2:
             user_chat = record_audio()
 
-                return
         
     if user_question:
         process_user_question(user_question, specialist)
