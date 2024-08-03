@@ -1571,35 +1571,57 @@ def chat_history_string():
 
 def parse_json(chat_history):
     
-    pt_json = create_json(text=chat_history)
-    print(f'DEBUG PARSE_JSON: {pt_json}')
+    pt_json_dirty = create_json(text=chat_history)
+    pt_json = pt_json_dirty.replace('```', '')
+    print(f'DEBUG PARSE_JSON PT_JSON_DIRTY: {pt_json_dirty}')
+    print(f'DEBUG PARSE_JSON PT_JSON: {pt_json}')
     if not pt_json or pt_json.strip() == '{}':
-        #print("No data was extracted from the chat history.")
+        print("No data was extracted from the chat history.")
         return
     try:
         data = json.loads(pt_json)
         patient_data = data.get('patient', {})
-        print(f'DEBUG PARSE_JSON patient_data: {patient_data}')
+        # print(f'DEBUG PARSE_JSON patient_data: {patient_data}')
         # Update session state
-        st.session_state.session_state.pt_data = patient_data
-        st.session_state.session_state.differential_diagnosis = patient_data.get('differential_diagnosis', [])
-        st.session_state.session_state.critical_actions = patient_data.get('critical_actions', [])
-        st.session_state.session_state.follow_up_steps = patient_data.get('follow_up_steps', [])
+        st.session_state.pt_data = patient_data
         
+        # Ensure differential_diagnosis, critical_actions, and follow_up_steps are not None
+        st.session_state.differential_diagnosis = patient_data.get('differential_diagnosis', [])
+        if st.session_state.differential_diagnosis is None:
+            st.session_state.differential_diagnosis = []
+
+        st.session_state.critical_actions = patient_data.get('critical_actions', [])
+        if st.session_state.critical_actions is None:
+            st.session_state.critical_actions = []
+
+        st.session_state.follow_up_steps = patient_data.get('follow_up_steps', [])
+        if st.session_state.follow_up_steps is None:
+            st.session_state.follow_up_steps = []
+
+        print(f'DEBUG PARSE_JSON session_state.differential_diagnosis: {st.session_state.differential_diagnosis}')
+        print(f'DEBUG PARSE_JSON st.session_state.critical_actionss: {st.session_state.critical_actions}')
+        print(f'DEBUG PARSE_JSON st.session_state.follow_up_steps: {st.session_state.follow_up_steps}')
+
         # Only save case details if there's meaningful data
-        if any([st.session_state.session_state.differential_diagnosis, 
-                st.session_state.session_state.critical_actions, 
-                st.session_state.session_state.follow_up_steps]):
-            save_case_details(st.session_state.session_state.username, "ddx")
+        if any([st.session_state.differential_diagnosis, 
+                st.session_state.critical_actions, 
+                st.session_state.follow_up_steps]):
+            save_case_details(st.session_state.username, "ddx")
         
+        # Ensure lab_results and imaging_results are not None
         lab_results = patient_data.get('lab_results', {})
+        if lab_results is None:
+            lab_results = {}
+
         imaging_results = patient_data.get('imaging_results', {})
+        if imaging_results is None:
+            imaging_results = {}
         
         sequence_number = 1
         for results in [lab_results, imaging_results]:
             for test_name, test_result in results.items():
                 if test_result:  # Only upsert if there's a result
-                    conditional_upsert_test_result(st.session_state.session_state.username, test_name, test_result, sequence_number)
+                    conditional_upsert_test_result(st.session_state.username, test_name, test_result, sequence_number)
                     sequence_number += 1
 
     except json.JSONDecodeError:
@@ -1607,6 +1629,7 @@ def parse_json(chat_history):
     except Exception as e:
         print(f"An unexpected error occurred: {str(e)}")
         print(f"Full error details: {repr(e)}")  # This will print more detailed error information
+
 
 def display_chat_history():    
     messages_per_page = 20
