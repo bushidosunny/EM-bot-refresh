@@ -471,7 +471,7 @@ def google_callback() -> Optional[User]:
         return None
 
     received_state = st.query_params['state']
-    stored_state_session = st.session_state.oauth_state
+    stored_state_session = st.session_state.get('oauth_state')
     stored_state_cookie = controller.get('oauth_state')
     logging.info(f"Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
 
