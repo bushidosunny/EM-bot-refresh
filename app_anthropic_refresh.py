@@ -541,7 +541,7 @@ def google_callback() -> Optional[User]:
         st.error("An error occurred during authentication. Please try again.")
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        st.query_params()
+        st.query_params.clear()
         return None
 
 def init_db() -> None:
