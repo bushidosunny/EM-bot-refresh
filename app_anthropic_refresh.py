@@ -390,7 +390,7 @@ def google_login() -> None:
     )
 
     # Generate and store the state
-    oauth_state = generate_oauth_state()
+    oauth_state = secrets.token_urlsafe(16)
     st.session_state.oauth_state = oauth_state
     controller.set('oauth_state', oauth_state)
 
@@ -400,8 +400,8 @@ def google_login() -> None:
         include_granted_scopes='true',
         state=oauth_state
     )
-    # Log the state for debugging
-    logging.info(f"google_login Generated OAuth state: {oauth_state}")
+    logging.info(f"Generated OAuth state: {oauth_state}")
+
 
     html = f"""
     <style>
@@ -457,6 +457,7 @@ def google_login() -> None:
     # Display the button
     st.markdown(html, unsafe_allow_html=True)
 
+
 def google_callback() -> Optional[User]:
     logging.info(f"Google callback initiated. Query params: {st.query_params}")
     logging.info(f"google_callback() st.session_state.oauthstate: {st.session_state.oauth_state}")
@@ -477,6 +478,11 @@ def google_callback() -> Optional[User]:
     if received_state != stored_state_session and received_state != stored_state_cookie:
         logging.error(f"State mismatch. Received: {received_state}, Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
         return None
+
+    # Clear the stored state
+    st.session_state.oauth_state = None
+    if stored_state_cookie is not None:
+        controller.remove('oauth_state')
 
     auth_code = st.query_params['code']
     
@@ -1884,6 +1890,7 @@ def handle_authenticated_state():
 def main():
 
     if 'initialized' not in st.session_state:
+        logging.info(f"main() initialized not in st.session_state going to run initialize_session_state()")
         initialize_session_state()
     
     logging.info(f"main() query_params: {st.query_params}")
