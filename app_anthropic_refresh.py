@@ -393,14 +393,15 @@ def google_login() -> None:
     oauth_state = secrets.token_urlsafe(16)
     st.session_state.oauth_state = oauth_state
     controller.set('oauth_state', oauth_state)
-
+    logging.info(f"google_login oauth_state: {oauth_state}")
+    logging.info(f"google_login conroller cookie of oauth_State: {controller.get('oauth_state')}")
     authorization_url, _ = flow.authorization_url(
         prompt='consent',
         access_type='offline',
         include_granted_scopes='true',
         state=oauth_state
     )
-    logging.info(f"Generated OAuth state: {oauth_state}")
+    
 
 
     html = f"""
