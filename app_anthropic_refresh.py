@@ -27,6 +27,7 @@ from googleapiclient.discovery import build
 # from urllib.parse import urljoin
 import toml
 from streamlit_cookies_controller import CookieController
+import webbrowser
 
 st.set_page_config(page_title="EMMA", page_icon="🤖", initial_sidebar_state="collapsed", layout="wide")
 
@@ -1822,7 +1823,7 @@ def auth_flow():
     st.write("Welcome to EMMA!")
     auth_code = st.query_params.get("code")
     REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
-    flow = google_auth_oauthlib.flow.Flow.from_client_config(
+    flow = Flow.from_client_config(
         client_config=CLIENT_SECRET_JSON,
         scopes=SCOPES,
         redirect_uri=REDIRECT_URI
