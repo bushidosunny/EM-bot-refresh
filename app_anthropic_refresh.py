@@ -27,6 +27,7 @@ from googleapiclient.discovery import build
 # from urllib.parse import urljoin
 import toml
 from streamlit_cookies_controller import CookieController
+import webbrowser
 
 st.set_page_config(page_title="EMMA", page_icon="🤖", initial_sidebar_state="collapsed", layout="wide")
 
@@ -393,12 +394,13 @@ def google_login() -> None:
     st.session_state.oauth_state = oauth_state
     controller.set('oauth_state', oauth_state)
 
-    authorization_url, _ = flow.authorization_url(
+    authorization_url, state = flow.authorization_url(
         prompt='consent',
         access_type='offline',
         include_granted_scopes='true',
         state=oauth_state
     )
+    webbrowser.open_new_tab(authorization_url)
     # Log the state for debugging
     logging.info(f"google_login Generated OAuth state: {oauth_state}")
 
@@ -1924,7 +1926,6 @@ def main():
         
         if st.session_state.auth_state == 'initial':
             google_login()
-            user = google_callback()
         elif st.session_state.auth_state == 'authenticated':
             handle_authenticated_state()
 
