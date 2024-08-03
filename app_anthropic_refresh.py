@@ -189,7 +189,7 @@ class User:
 
 def initialize_session_state():
     session_state = st.session_state
-    session_state.initilized = True
+    session_state.initialized = True
     session_state.count = 0
     session_state.id = secrets.token_hex(8)
     session_state.oauth_state = None
