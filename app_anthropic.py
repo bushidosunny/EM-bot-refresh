@@ -1576,7 +1576,7 @@ def parse_json(chat_history):
     print(f'DEBUG PARSE_JSON PT_JSON_DIRTY: {pt_json_dirty}')
     print(f'DEBUG PARSE_JSON PT_JSON: {pt_json}')
     if not pt_json or pt_json.strip() == '{}':
-        print("No data was extracted from the chat history.")
+        print("No data was extracted from the chat history.") 
         return
     try:
         data = json.loads(pt_json)
