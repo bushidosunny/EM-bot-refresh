@@ -1889,7 +1889,7 @@ def main():
     logging.info(f"main() query_params: {st.query_params}")
 
     if 'code' in st.query_params and not st.session_state.get('auth_code_used'):
-        logging.info(f"main() if 'code' in st.query_params and not st.session_state.get('auth_code_used') initiated"
+        logging.info(f"main() if 'code' in st.query_params and not st.session_state.get('auth_code_used') initiated")
         user = google_callback()
         if user:
             update_session_state_with_user(user)
