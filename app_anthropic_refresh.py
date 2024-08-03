@@ -194,6 +194,7 @@ def initialize_session_state():
     session_state.id = secrets.token_hex(8)
     session_state.oauth_state = None
     session_state.user_id = None
+    session_state.user = None
     session_state.authentication_status = None
     session_state.logout = None
     session_state.collection_name = ""
@@ -232,7 +233,7 @@ def initialize_session_state():
     session_state.auth_completed = False
     session_state.oauth_flow_complete = False
     session_state.auth_code_used = None
-
+    logging.info(f"Session state initialized: {st.session_state}")
 
     
 specialist_data = {
@@ -394,7 +395,8 @@ def google_login() -> None:
     st.session_state.oauth_state = oauth_state
     controller.set('oauth_state', oauth_state)
     logging.info(f"google_login oauth_state: {oauth_state}")
-    logging.info(f"google_login conroller cookie of oauth_State: {controller.get('oauth_state')}")
+    logging.info(f"google_login controller cookie of oauth_State: {controller.get('oauth_state')}")
+    
     authorization_url, _ = flow.authorization_url(
         prompt='consent',
         access_type='offline',
@@ -463,27 +465,25 @@ def google_callback() -> Optional[User]:
     logging.info(f"Google callback initiated. Query params: {st.query_params}")
     logging.info(f"google_callback() st.session_state.oauthstate: {st.session_state.oauth_state}")
 
-    if st.session_state.get('auth_code_used'):
-        logging.warning("Authorization code has already been used.")
+    auth_code = st.query_params.get('code')
+    if not auth_code:
+        logging.error("No authorization code found in query parameters")
         return None
+    
 
-    if 'code' not in st.query_params or 'state' not in st.query_params:
-        logging.error("Authorization code or state not found in query parameters")
-        return None
+    # received_state = st.query_params['state']
+    # stored_state_session = st.session_state.get('oauth_state')
+    # stored_state_cookie = controller.get('oauth_state')
+    # logging.info(f"Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
 
-    received_state = st.query_params['state']
-    stored_state_session = st.session_state.get('oauth_state')
-    stored_state_cookie = controller.get('oauth_state')
-    logging.info(f"Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
+    # if received_state != stored_state_session and received_state != stored_state_cookie:
+    #     logging.error(f"State mismatch. Received: {received_state}, Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
+    #     return None
 
-    if received_state != stored_state_session and received_state != stored_state_cookie:
-        logging.error(f"State mismatch. Received: {received_state}, Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
-        return None
-
-    # Clear the stored state
-    st.session_state.oauth_state = None
-    if stored_state_cookie is not None:
-        controller.remove('oauth_state')
+    # # Clear the stored state
+    # st.session_state.oauth_state = None
+    # if stored_state_cookie is not None:
+    #     controller.remove('oauth_state')
 
     auth_code = st.query_params['code']
     
@@ -1891,22 +1891,32 @@ def handle_authenticated_state():
 def main():
 
     if 'initialized' not in st.session_state:
-        logging.info(f"main() initialized not in st.session_state going to run initialize_session_state()")
         initialize_session_state()
     
     logging.info(f"main() query_params: {st.query_params}")
 
-    if 'code' in st.query_params and not st.session_state.get('auth_code_used'):
-        logging.info(f"main() if 'code' in st.query_params and not st.session_state.get('auth_code_used') initiated")
-        user = google_callback()
+    # Check for OAuth callback
+    if 'code' in st.query_params and 'state' in st.query_params:
+        received_state = st.query_params['state']
+        stored_state_session = st.session_state.get('oauth_state')
+        stored_state_cookie = controller.get('oauth_state')
+        logging.info(f"Received state: {received_state}, Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
+
+        if received_state == stored_state_session or received_state == stored_state_cookie:
+            user = google_callback()
         if user:
             update_session_state_with_user(user)
             st.session_state.auth_state = 'authenticated'
             st.success(f"Welcome, {user.name}!")
-            st.session_state.clear_params = True
+            # Clear OAuth state
+            st.session_state.oauth_state = None
+            controller.remove('oauth_state')
+            # Clear query params
+            st.query_params.clear()
             st.rerun()
         else:
-            st.error("Authentication failed. Please try again.")
+            logging.error(f"State mismatch. Received: {received_state}, Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
+            st.error("Authentication failed due to state mismatch. Please try again.")
             st.session_state.auth_state = 'initial'
     elif st.session_state.get('clear_params'):
         logging.info(f"main() elif st.session_state.get('clear_params'): initiated")
