@@ -1797,6 +1797,7 @@ def clear_session_data():
     st.warning("Your session has expired. Please log in again.")
 
 def handle_initial_state():
+    logging.info(f" handle_initial_state(): initiated") 
     if 'code' in st.query_params and not st.session_state.oauth_flow_complete:
         user = google_callback()
         if user:
@@ -1811,7 +1812,8 @@ def handle_initial_state():
     else:
         google_login()
 
-def handle_authenticated_state():       
+def handle_authenticated_state(): 
+    logging.info(f" handle_authenticated_state(): initiated")      
     # Check for OAuth callback first
     if 'code' in st.query_params:
         user = google_callback()
@@ -1887,6 +1889,7 @@ def main():
     logging.info(f"main() query_params: {st.query_params}")
 
     if 'code' in st.query_params and not st.session_state.get('auth_code_used'):
+        logging.info(f"main() if 'code' in st.query_params and not st.session_state.get('auth_code_used') initiated"
         user = google_callback()
         if user:
             update_session_state_with_user(user)
@@ -1898,6 +1901,7 @@ def main():
             st.error("Authentication failed. Please try again.")
             st.session_state.auth_state = 'initial'
     elif st.session_state.get('clear_params'):
+        logging.info(f"main() elif st.session_state.get('clear_params'): initiated")
         st.query_params.clear()
         del st.session_state['clear_params']
         logging.info("Cleared query params")
