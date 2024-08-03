@@ -66,7 +66,7 @@ anthropic = Anthropic(api_key=ANTHROPIC_API_KEY)
 # Initialize MongoDB connection
 @st.cache_resource
 def init_mongodb_connection():
-    return MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000, maxPoolSize=50)
+    return MongoClient(MONGODB_URI, maxPoolSize=1, connect=False)
 
 try:
     # MongoDB setup
