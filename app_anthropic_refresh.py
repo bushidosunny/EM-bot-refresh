@@ -232,8 +232,7 @@ def initialize_session_state():
     session_state.auth_completed = False
     session_state.oauth_flow_complete = False
     session_state.auth_code_used = None
-
-
+    logging.info(f'Initializing Session state iwth initialize_session_state')
     
 specialist_data = {
   "Emergency Medicine": {
@@ -1925,6 +1924,7 @@ def main():
         
         if st.session_state.auth_state == 'initial':
             google_login()
+            user = google_callback()
         elif st.session_state.auth_state == 'authenticated':
             handle_authenticated_state()
 
