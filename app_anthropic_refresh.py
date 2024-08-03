@@ -528,12 +528,12 @@ def google_callback() -> Optional[User]:
         st.session_state['user'] = user
 
         # Clear query params
-        st.query_params()
+        st.query_params.clear()
         logging.info("Query params cleared")
 
         st.session_state.oauth_flow_complete = True
         # Clear OAuth-related query parameters
-        st.query_params()
+  
 
         return user
     except Exception as e:
