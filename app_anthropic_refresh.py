@@ -233,7 +233,7 @@ def initialize_session_state():
     session_state.auth_completed = False
     session_state.oauth_flow_complete = False
     session_state.auth_code_used = None
-    logging.info(f"Session state initialized: {st.session_state}")
+    logging.info(f"Session state initialized")
 
     
 specialist_data = {
@@ -485,8 +485,6 @@ def google_callback() -> Optional[User]:
     # if stored_state_cookie is not None:
     #     controller.remove('oauth_state')
 
-    auth_code = st.query_params['code']
-    
     if os.getenv('ENVIRONMENT') == 'production':
         REDIRECT_URI = 'https://em-bot-ef123b005ca5.herokuapp.com/'
     else:
@@ -1895,6 +1893,8 @@ def main():
     
     logging.info(f"main() query_params: {st.query_params}")
 
+    user = None  # Initialize user variable
+
     # Check for OAuth callback
     if 'code' in st.query_params and 'state' in st.query_params:
         received_state = st.query_params['state']
@@ -1904,26 +1904,29 @@ def main():
 
         if received_state == stored_state_session or received_state == stored_state_cookie:
             user = google_callback()
-        if user:
-            update_session_state_with_user(user)
-            st.session_state.auth_state = 'authenticated'
-            st.success(f"Welcome, {user.name}!")
-            # Clear OAuth state
-            st.session_state.oauth_state = None
-            controller.remove('oauth_state')
-            # Clear query params
-            st.query_params.clear()
-            st.rerun()
+            if user:
+                update_session_state_with_user(user)
+                st.session_state.auth_state = 'authenticated'
+                st.success(f"Welcome, {user.name}!")
+                # Clear OAuth state
+                st.session_state.oauth_state = None
+                controller.remove('oauth_state')
+                # Clear query params
+                st.query_params.clear()
+                st.rerun()
+            else:
+                st.error("Authentication failed. Please try again.")
+                st.session_state.auth_state = 'initial'
         else:
             logging.error(f"State mismatch. Received: {received_state}, Stored (session): {stored_state_session}, Stored (cookie): {stored_state_cookie}")
             st.error("Authentication failed due to state mismatch. Please try again.")
             st.session_state.auth_state = 'initial'
-    elif st.session_state.get('clear_params'):
-        logging.info(f"main() elif st.session_state.get('clear_params'): initiated")
-        st.query_params.clear()
-        del st.session_state['clear_params']
-        logging.info("Cleared query params")
-        st.rerun()
+    # elif st.session_state.get('clear_params'):
+    #     logging.info(f"main() elif st.session_state.get('clear_params'): initiated")
+    #     st.query_params.clear()
+    #     del st.session_state['clear_params']
+    #     logging.info("Cleared query params")
+    #     st.rerun()
 
     try:
         session_token = controller.get('session_token')
