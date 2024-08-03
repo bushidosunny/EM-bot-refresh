@@ -400,7 +400,15 @@ def google_login() -> None:
         include_granted_scopes='true',
         state=oauth_state
     )
-    webbrowser.open_new_tab(authorization_url)
+    try:
+        success = webbrowser.webbrowser.open_new_tab(authorization_url)
+        if success:
+                print(f"Authorization URL opened in a new tab: {url}")
+        else:
+            print(f"Failed to open the authorization URL: {url}")
+    except Exception as e:
+        print(f"An error occurred while trying to open the URL: {e}")
+ 
     # Log the state for debugging
     logging.info(f"google_login Generated OAuth state: {oauth_state}")
 
