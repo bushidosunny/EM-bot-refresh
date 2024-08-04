@@ -96,7 +96,7 @@ class User:
         self.google_id = google_id
         self.email = email
         self.name = name
-        self.family_name = family_name
+        self.family_name = family_name if family_name is not None else ""
         self.picture = picture
         self.created_at = datetime.now()
         self.last_login = datetime.now()
@@ -935,7 +935,7 @@ def search_sessions_for_searchbox(search_term):
     
     user_id = st.session_state.session_state.username
     collections = db.list_collection_names()
-    user_sessions = [col for col in collections if col.startswith(f'user_{user_id}_session_')]
+    user_sessions = [col for col in collections if col.startswith(f'user_{user_id}')]
     
     results = []
     for collection_name in user_sessions:
@@ -1042,7 +1042,7 @@ def transcribe_audio(audio_file):
 
 def record_audio():
     audio_data = mic_recorder(
-        start_prompt="🔵Record",
+        start_prompt="Record",
         stop_prompt="🔴Stop",
         just_once=True,
         callback=None
