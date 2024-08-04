@@ -1483,7 +1483,7 @@ def display_session_data(collection_name):
     with st.spinner("Loading session..."):
         categorized_data = load_session_data_from_db(collection_name)
     
-    # initialize_text_indexes(collection_name)
+    initialize_text_indexes(collection_name)
     
     st.session_state.collection_name = collection_name
     #st.write(f"**Data of session: {collection_name}**")
