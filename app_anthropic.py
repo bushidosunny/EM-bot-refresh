@@ -341,7 +341,8 @@ def get_or_create_user(google_user_info: Dict[str, Any]) -> User:
                 "last_login": user.last_login,
                 "login_count": user.login_count,
                 "preferences": user.preferences,
-                "picture": user.picture
+                "picture": user.picture,
+                "family_name": google_user_info.get('family_name') or ''
             }}
         )
     else:
@@ -349,7 +350,7 @@ def get_or_create_user(google_user_info: Dict[str, Any]) -> User:
             google_id=google_user_info['id'],
             email=google_user_info['email'],
             name=google_user_info['name'],
-            family_name=google_user_info['family_name'],
+            family_name=google_user_info.get('family_name') or '',
             picture=google_user_info.get('picture')
         )
         user.update_login()
