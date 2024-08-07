@@ -3,5 +3,5 @@ base="light"
 primaryColor="#04b6ea"
 
 [server]
-enableXsrfProtection = false
-enableCORS = false
+enableXsrfProtection = true
+enableCORS = true
