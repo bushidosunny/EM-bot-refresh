@@ -2014,7 +2014,7 @@ def main():
             authenticated_user()
 
     # except Exception as e:
-        logging.error(f"Error in main function: {e}")
+        # logging.error(f"Error in main function: {e}")
 
 if __name__ == '__main__':
     main()
