@@ -461,6 +461,7 @@ def google_callback() -> Optional[User]:
 
     stored_state_session = st.session_state.oauth_state
     stored_state_cookie = controller.get('oauth_state')
+    logging.info(f"Stored state (session): {stored_state_session}, Stored state (cookie): {stored_state_cookie}")
 
     if 'code' not in st.query_params or 'state' not in st.query_params:
         logging.error("Authorization code or state not found in query parameters")
@@ -1359,8 +1360,8 @@ def display_sidebar():
         with tab4:
             display_variables_tab()
 
-        with tab5:
-            display_sessions_tab()
+        # with tab5:
+        #     display_sessions_tab()
 
 def display_functions_tab():
     # st.subheader('Process Management')
