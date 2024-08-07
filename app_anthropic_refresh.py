@@ -511,14 +511,19 @@ def google_callback() -> Optional[User]:
         logging.info("User info retrieved from Google")
         
         user = get_or_create_user(google_user_info)
-        logging.info(f"User retrieved/created: {user.email}")
-        logging.info(f"User retrieved/created: {user.picture}")
+        logging.info(f"User retrieved/created user email: {user.email}")
+        logging.info(f"User retrieved/created user picture: {user.picture}")
         
+        # session_token, expiration = create_session(str(user._id))
+        # logging.info("Session created")
+        
+        # controller.set('session_token', session_token)
+        # controller.set('session_expiry', expiration.isoformat())
+
         session_token, expiration = create_session(str(user._id))
-        logging.info("Session created")
-        
-        controller.set('session_token', session_token)
-        controller.set('session_expiry', expiration.isoformat())
+        controller.set('session_token', session_token, expires=expiration)
+        controller.set('user_id', str(user._id), expires=expiration)
+        logging.info(f"session_token: {session_token} and user_id: {str(user._id)} expires at: {expiration}")
         logging.info("Cookies set")
         
         st.session_state['user'] = user
@@ -1311,9 +1316,14 @@ def logout_user():
         # Add a unique key to the logout button
         if st.button("Logout", key="logout_button"):
             # controller = CookieController()
+            # controller.remove('session_token')
+            # controller.remove('session_expiry')
+            # st.session_state.clear()
+            # st.rerun()
             controller.remove('session_token')
-            controller.remove('session_expiry')
-            st.session_state.clear()
+            controller.remove('user_id')
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
             st.rerun()
 
 def display_sidebar():
@@ -1349,8 +1359,8 @@ def display_sidebar():
         with tab4:
             display_variables_tab()
 
-        # with tab5:
-            # display_sessions_tab()
+        with tab5:
+            display_sessions_tab()
 
 def display_functions_tab():
     # st.subheader('Process Management')
@@ -1894,6 +1904,17 @@ def authenticated_user():
         # archive_old_sessions(st.session_state.username)
         # logging.debug("Archived old sessions")
 
+def check_existing_session() -> Optional[User]:
+    session_token = controller.get('session_token')
+    user_id = controller.get('user_id')
+    
+    if session_token and user_id:
+        user = get_user_from_session(session_token)
+        if user and str(user._id) == user_id:
+            return user
+    
+    return None
+
 def main():
     logging.debug("Entered main function")
 
@@ -1901,67 +1922,98 @@ def main():
         initialize_session_state()
         logging.info("Initialized session state")
 
-    if 'code' in st.query_params:
-        st.session_state.oauth_state = st.query_params['state']
-    elif st.session_state.oauth_state is None:
-        st.session_state.oauth_state = secrets.token_urlsafe(16)
-
-    oauth_state = st.session_state.oauth_state
-    logging.info(f"Current OAuth state from session state: {oauth_state}")
-
-    try:
-        session_token = controller.get('session_token')
-        session_expiry = controller.get('session_expiry')
-        
-        user = None
-        if session_token and session_expiry:
-            expiry = datetime.fromisoformat(session_expiry)
-            if expiry > datetime.utcnow():
-                user = get_user_from_session(session_token)
-                if user:
-                    update_session_state_with_user(user)
-                    st.session_state.auth_state = 'authenticated'
-                    logging.info("User authenticated from session token")
-                    # authenticated_user()
-                else:
-                    logging.error("Failed to load user from session token")
-                    controller.remove('session_token')
-                    controller.remove('session_expiry')
-                    st.session_state.auth_state = 'initial'
-            else:
-                st.warning("Your session has expired. Please log in again.")
-                clear_session(session_token)
-                controller.remove('session_token')
-                controller.remove('session_expiry')
-                st.session_state.auth_state = 'initial'
-                logging.info("Session expired, user needs to log in again")
-        
-        # Check for OAuth callback first
+    existing_user = check_existing_session()
+    if existing_user:
+        update_session_state_with_user(existing_user)
+        st.session_state.auth_state = 'authenticated'
+        authenticated_user()
+    else:
         if 'code' in st.query_params:
             user = google_callback()
             if user:
                 update_session_state_with_user(user)
                 st.session_state.auth_state = 'authenticated'
-                st.session_state.auth_completed = True
                 st.success(f"Welcome, {user.name}!")
-                logging.info(f"User {user.name} authenticated via OAuth callback")
-                # Clear query params
-                st.query_params.clear()
-                # Force a rerun to clear the URL
                 st.rerun()
             else:
                 st.error("Failed to log in. Please try again.")
-                logging.error(f"Failed to log in. Please try again. st.query_params: {st.query_params}")
                 st.session_state.auth_state = 'initial'
-                st.query_params.clear()
         
         if st.session_state.auth_state == 'initial':
-            logging.debug("User needs to log in")
             google_login()
         elif st.session_state.auth_state == 'authenticated':
             authenticated_user()
+   
+   
+   
+   
+   
+   
+   
+   
+   
+    # if 'code' in st.query_params:
+    #     st.session_state.oauth_state = st.query_params['state']
+    # elif st.session_state.oauth_state is None:
+    #     st.session_state.oauth_state = secrets.token_urlsafe(16)
 
-    except Exception as e:
+    # oauth_state = st.session_state.oauth_state
+    # logging.info(f"Current OAuth state from session state: {oauth_state}")
+
+    # try:
+    #     session_token = controller.get('session_token')
+    #     session_expiry = controller.get('session_expiry')
+    #     user_id = controller.get('user_id')
+        
+        
+    #     if session_token and session_expiry:
+    #         expiry = datetime.fromisoformat(session_expiry)
+    #         if expiry > datetime.utcnow():
+    #             user = get_user_from_session(session_token)
+    #             if user:
+    #                 update_session_state_with_user(user)
+    #                 st.session_state.auth_state = 'authenticated'
+    #                 logging.info("User authenticated from session token")
+    #                 # authenticated_user()
+    #             else:
+    #                 logging.error("Failed to load user from session token")
+    #                 controller.remove('session_token')
+    #                 controller.remove('session_expiry')
+    #                 st.session_state.auth_state = 'initial'
+    #         else:
+    #             st.warning("Your session has expired. Please log in again.")
+    #             clear_session(session_token)
+    #             controller.remove('session_token')
+    #             controller.remove('session_expiry')
+    #             st.session_state.auth_state = 'initial'
+    #             logging.info("Session expired, user needs to log in again")
+        
+    #     # Check for OAuth callback first
+    #     if 'code' in st.query_params:
+    #         user = google_callback()
+    #         if user:
+    #             update_session_state_with_user(user)
+    #             st.session_state.auth_state = 'authenticated'
+    #             st.session_state.auth_completed = True
+    #             st.success(f"Welcome, {user.name}!")
+    #             logging.info(f"User {user.name} authenticated via OAuth callback")
+    #             # Clear query params
+    #             st.query_params.clear()
+    #             # Force a rerun to clear the URL
+    #             st.rerun()
+    #         else:
+    #             st.error("Failed to log in. Please try again.")
+    #             logging.error(f"Failed to log in. Please try again. st.query_params: {st.query_params}")
+    #             st.session_state.auth_state = 'initial'
+    #             st.query_params.clear()
+        
+    #     if st.session_state.auth_state == 'initial':
+    #         logging.debug("User needs to log in")
+    #         google_login()
+    #     elif st.session_state.auth_state == 'authenticated':
+            authenticated_user()
+
+    # except Exception as e:
         logging.error(f"Error in main function: {e}")
 
 if __name__ == '__main__':
