@@ -17,6 +17,8 @@ from login import *
 
 st.set_page_config(page_title=f"EMMA", page_icon="🤖", initial_sidebar_state="collapsed")
 
+cookie_manager = stx.CookieManager()
+
 # Load variables
 load_dotenv()
 ema_v2 = "asst_na7TnRA4wkDbflTYKzo9kmca"
@@ -763,7 +765,9 @@ def main():
 
     # Authentication with streamlit authenticator 
     name, authentication_status, username = authenticator.login('main')
-    if authentication_status == True:
+    if username:
+        cookie_manager.set('user_id', username)
+    if authentication_status == True or username:
         # User is authenticated, show the app content# Create a thread where the conversation will happen and keep Streamlit from initiating a new session state
         if "thread_id" not in st.session_state:
             thread = client.beta.threads.create()
