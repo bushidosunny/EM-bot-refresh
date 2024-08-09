@@ -776,9 +776,7 @@ def main():
             process_other_queries() 
             display_sidebar()
 
-        
-        # Authentication with streamlit authenticator 
-        elif:
+        else:
             name, authentication_status, username = authenticator.login('main')
             if username:
                 cookie_manager.set('user_id', username)
@@ -793,8 +791,8 @@ def main():
                 handle_user_input_container()   
                 process_other_queries() 
                 display_sidebar()
-        else:
-            authenticate_user()
+            else:
+                authenticate_user()
     except:
         authenticate_user()
   
