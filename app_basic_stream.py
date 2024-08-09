@@ -15,6 +15,7 @@ from login import *
 # from presidio_anonymizer import AnonymizerEngine
 # from presidio_analyzer.predefined_recognizers import SpacyRecognizer, EmailRecognizer, PhoneRecognizer, UsLicenseRecognizer, UsSsnRecognizer
 
+st.set_page_config(page_title=f"EMMA", page_icon="🤖", initial_sidebar_state="collapsed")
 
 # Load variables
 load_dotenv()
@@ -758,7 +759,7 @@ def anonymize_text(user_question):
 
 def main():
     initialize_session_state()
-    display_header()
+    # display_header()
 
     # Authentication with streamlit authenticator 
     name, authentication_status, username = authenticator.login('main')
