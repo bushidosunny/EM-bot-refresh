@@ -11,9 +11,9 @@ from extract_json import extract_json, create_json
 from datetime import datetime
 import pytz
 from login import *
-from presidio_analyzer import AnalyzerEngine, RecognizerRegistry, PatternRecognizer, Pattern
-from presidio_anonymizer import AnonymizerEngine
-from presidio_analyzer.predefined_recognizers import SpacyRecognizer, EmailRecognizer, PhoneRecognizer, UsLicenseRecognizer, UsSsnRecognizer
+# from presidio_analyzer import AnalyzerEngine, RecognizerRegistry, PatternRecognizer, Pattern
+# from presidio_anonymizer import AnonymizerEngine
+# from presidio_analyzer.predefined_recognizers import SpacyRecognizer, EmailRecognizer, PhoneRecognizer, UsLicenseRecognizer, UsSsnRecognizer
 
 
 # Load variables
