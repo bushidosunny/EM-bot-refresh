@@ -764,21 +764,35 @@ def main():
     initialize_session_state()
     # display_header()
 
-    # Authentication with streamlit authenticator 
-    name, authentication_status, username = authenticator.login('main')
-    if username:
-        cookie_manager.set('user_id', username)
-    if authentication_status == True or username:
-        # User is authenticated, show the app content# Create a thread where the conversation will happen and keep Streamlit from initiating a new session state
+    # check cookie for authentication
+    try:
+        user_id = cookie_manager.get('user_id')
+    if user_id:
         if "thread_id" not in st.session_state:
-            thread = client.beta.threads.create()
-            st.session_state.thread_id = thread.id
-    
+                thread = client.beta.threads.create()
+                st.session_state.thread_id = thread.id
         display_chat_history() 
         handle_user_input_container()   
         process_other_queries() 
-
         display_sidebar()
+
+        
+    # Authentication with streamlit authenticator 
+    elif:
+        name, authentication_status, username = authenticator.login('main')
+        if username:
+            cookie_manager.set('user_id', username)
+        
+        if authentication_status == True or username:
+            # User is authenticated, show the app content# Create a thread where the conversation will happen and keep Streamlit from initiating a new session state
+            if "thread_id" not in st.session_state:
+                thread = client.beta.threads.create()
+                st.session_state.thread_id = thread.id
+        
+            display_chat_history() 
+            handle_user_input_container()   
+            process_other_queries() 
+            display_sidebar()
     else:
         authenticate_user()
   
