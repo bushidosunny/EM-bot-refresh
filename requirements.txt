@@ -89,6 +89,7 @@ streamlit-searchbox==0.1.13
 streamlit_mic_recorder==0.0.8
 streamlit_cookies_controller
 streamlit-authenticator
+extra-streamlit-components-better-cookie-manager
 tenacity==8.5.0
 tokenizers==0.19.1
 toml==0.10.2
