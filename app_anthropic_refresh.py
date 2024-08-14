@@ -382,7 +382,7 @@ def generate_oauth_state():
 
 def google_login() -> None:
     if os.getenv('ENVIRONMENT') == 'production':
-        REDIRECT_URI = 'https://emmahealth.ai/'
+        REDIRECT_URI = 'https://emmahealth.streamlit.app/'
     else:
         REDIRECT_URI = 'http://localhost:8501/'
     
@@ -492,7 +492,7 @@ def google_callback() -> Optional[User]:
         cookie_manager.delete('oauth_state')
 
     if os.getenv('ENVIRONMENT') == 'production':
-        REDIRECT_URI = 'https://emmmahealth.ai/'
+        REDIRECT_URI = 'https://emmahealth.streamlit.app/'
     else:
         REDIRECT_URI = 'http://localhost:8501/'
     
