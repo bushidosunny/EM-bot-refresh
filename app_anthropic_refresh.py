@@ -13,9 +13,8 @@ import json
 from datetime import datetime, timedelta
 import pytz
 from pymongo import MongoClient, ASCENDING, TEXT, DESCENDING, UpdateOne
-from pymongo.errors import BulkWriteError, ServerSelectionTimeoutError, OperationFailure, ConfigurationError#,DuplicateKeyError, BulkWriteError, InvalidName, 
-from bson import ObjectId #, Regex
-#from streamlit_searchbox import st_searchbox
+from pymongo.errors import BulkWriteError, ServerSelectionTimeoutError, OperationFailure, ConfigurationError
+from bson import ObjectId
 from streamlit_mic_recorder import mic_recorder
 from deepgram import DeepgramClient, PrerecordedOptions
 from streamlit.components.v1 import html
@@ -24,25 +23,19 @@ import logging
 import secrets
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
-# from urllib.parse import urljoin
 import toml
-# from streamlit_cookies_controller import CookieController
 import extra_streamlit_components as stx
-import oauthlib.oauth2.rfc6749.errors  # Add this import
+import oauthlib.oauth2.rfc6749.errors
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-
 logger = logging.getLogger(__name__)
 
-
 st.set_page_config(page_title="EMMA", page_icon="🤖", initial_sidebar_state="collapsed", layout="wide")
-
 
 load_dotenv()
 
 # Initialize Cookies
-# controller = CookieController()
 cookie_manager = stx.CookieManager()
 
 # Constants
@@ -50,10 +43,10 @@ DB_NAME = 'emma-dev'
 SCOPES = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile', 'openid']
 SECRET_KEY = secrets.token_hex(32)
 
+# Load configuration
 if os.path.exists('/.streamlit/secrets.toml'):
     with open('/.streamlit/secrets.toml', 'r') as f:
         config = toml.load(f)
-    # Use the config dictionary to set up your application
     DEEPGRAM_API_KEY = config['DEEPGRAM_API_KEY']
     OPENAI_API_KEY = config['OPENAI_API_KEY']
     ANTHROPIC_API_KEY = config['ANTHROPIC_API_KEY']
@@ -61,7 +54,6 @@ if os.path.exists('/.streamlit/secrets.toml'):
     CLIENT_SECRET_JSON = config['CLIENT_SECRET_JSON']['web']
     ENVIRONMENT = config['ENVIRONMENT']
 else:
-    # Run as usual, using environment variables or other configuration methods
     DEEPGRAM_API_KEY = os.getenv('DEEPGRAM_API_KEY')
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
@@ -95,8 +87,6 @@ try:
 except (ServerSelectionTimeoutError, OperationFailure, ConfigurationError) as err:
     logging.error(f"Error connecting to MongoDB Atlas: {err}")
     st.error(f"Error connecting to MongoDB Atlas: {err}")
-    # st.stop()
-
 
 class User:
     def __init__(self, google_id: str, email: str, name: str, family_name: str, picture: Optional[str] = None, _id: Optional[ObjectId] = None):
@@ -156,7 +146,6 @@ class User:
     def update_login(self) -> None:
         self.last_login = datetime.now()
         self.login_count += 1
-        print(f'DEBUG USER.UPDATE_LOGIN: {self.login_count}')
 
     def update_activity(self) -> None:
         self.last_active = datetime.now()
@@ -243,11 +232,10 @@ def initialize_session_state():
     session_state.auth_completed = False
     session_state.oauth_flow_complete = False
     session_state.auth_code_used = None
-    logging.info(f'Initializing Session state iwth initialize_session_state')
+    logging.info(f'Initializing Session state with initialize_session_state')
         
     def __repr__(self):
-        return f"<SessionState id={self.id}>"
-    
+        return f"<SessionState id={self.id}>"   
 specialist_data = {
   "Emergency Medicine": {
     "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
@@ -492,7 +480,7 @@ def google_callback() -> Optional[User]:
         cookie_manager.delete('oauth_state')
 
     if os.getenv('ENVIRONMENT') == 'production':
-        REDIRECT_URI = 'https://emmahealth.streamlit.app/'
+        REDIRECT_URI = 'https://emmmahealth.ai/'
     else:
         REDIRECT_URI = 'http://localhost:8501/'
     
@@ -1929,6 +1917,7 @@ def check_existing_session() -> Optional[User]:
     
     return None
 
+
 def main():
     logging.debug("Entered main function")
 
@@ -1957,78 +1946,6 @@ def main():
             google_login()
         elif st.session_state.auth_state == 'authenticated':
             authenticated_user()
-   
-   
-   
-   
-   
-   
-   
-   
-   
-    # if 'code' in st.query_params:
-    #     st.session_state.oauth_state = st.query_params['state']
-    # elif st.session_state.oauth_state is None:
-    #     st.session_state.oauth_state = secrets.token_urlsafe(16)
-
-    # oauth_state = st.session_state.oauth_state
-    # logging.info(f"Current OAuth state from session state: {oauth_state}")
-
-    # try:
-    #     session_token = controller.get('session_token')
-    #     session_expiry = controller.get('session_expiry')
-    #     user_id = controller.get('user_id')
-        
-        
-    #     if session_token and session_expiry:
-    #         expiry = datetime.fromisoformat(session_expiry)
-    #         if expiry > datetime.utcnow():
-    #             user = get_user_from_session(session_token)
-    #             if user:
-    #                 update_session_state_with_user(user)
-    #                 st.session_state.auth_state = 'authenticated'
-    #                 logging.info("User authenticated from session token")
-    #                 # authenticated_user()
-    #             else:
-    #                 logging.error("Failed to load user from session token")
-    #                 controller.remove('session_token')
-    #                 controller.remove('session_expiry')
-    #                 st.session_state.auth_state = 'initial'
-    #         else:
-    #             st.warning("Your session has expired. Please log in again.")
-    #             clear_session(session_token)
-    #             controller.remove('session_token')
-    #             controller.remove('session_expiry')
-    #             st.session_state.auth_state = 'initial'
-    #             logging.info("Session expired, user needs to log in again")
-        
-    #     # Check for OAuth callback first
-    #     if 'code' in st.query_params:
-    #         user = google_callback()
-    #         if user:
-    #             update_session_state_with_user(user)
-    #             st.session_state.auth_state = 'authenticated'
-    #             st.session_state.auth_completed = True
-    #             st.success(f"Welcome, {user.name}!")
-    #             logging.info(f"User {user.name} authenticated via OAuth callback")
-    #             # Clear query params
-    #             st.query_params.clear()
-    #             # Force a rerun to clear the URL
-    #             st.rerun()
-    #         else:
-    #             st.error("Failed to log in. Please try again.")
-    #             logging.error(f"Failed to log in. Please try again. st.query_params: {st.query_params}")
-    #             st.session_state.auth_state = 'initial'
-    #             st.query_params.clear()
-        
-    #     if st.session_state.auth_state == 'initial':
-    #         logging.debug("User needs to log in")
-    #         google_login()
-    #     elif st.session_state.auth_state == 'authenticated':
-            authenticated_user()
-
-    # except Exception as e:
-        # logging.error(f"Error in main function: {e}")
 
 if __name__ == '__main__':
     main()
