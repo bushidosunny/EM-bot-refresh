@@ -649,10 +649,52 @@ def update_user_session_time(user: User, duration: timedelta) -> None:
 
 
 def initialize_session_state():
-    
-    if "session_state" not in st.session_state:
-        st.session_state = SessionState()
-        print(f'DEEBUG INITALIZE SESSIONT STATE SESSIONSTATE: {st.session_state}')
+    session_state = st.session_state
+    session_state.initilized = True
+    session_state.count = 0
+    session_state.id = secrets.token_hex(8)
+    session_state.oauth_state = None
+    session_state.user_id = None
+    session_state.authentication_status = None
+    session_state.logout = None
+    session_state.collection_name = ""
+    session_state.name = ""
+    session_state.username = ""
+    session_state.family_name = ""
+    session_state.chat_history = []
+    session_state.user_question = ""
+    session_state.legal_question = ""
+    session_state.note_input = ""
+    session_state.json_data = {}
+    session_state.pt_data = {}
+    session_state.user_photo_url = ""
+    session_state.differential_diagnosis = []
+    session_state.danger_diag_list = {}
+    session_state.critical_actions = {}
+    session_state.follow_up_steps = {}
+    session_state.completed_tasks_str = ""
+    session_state.sidebar_state = 1
+    session_state.assistant_response = ""
+    session_state.patient_language = "English"
+    session_state.specialist_input = ""
+    session_state.should_rerun = False
+    session_state.user_question_sidebar = ""
+    session_state.old_user_question_sidebar = ""
+    session_state.messages = []
+    session_state.system_instructions = emma_system
+    session_state.pt_title = ""
+    session_state.patient_cc = ""
+    session_state.clean_chat_history = ""
+    session_state.specialist = list(specialist_data.keys())[0]
+    session_state.assistant_id = specialist_data[session_state.specialist]["assistant_id"]
+    session_state.specialist_avatar = specialist_data[session_state.specialist]["avatar"]
+    session_state.session_id = None
+    session_state.auth_state = 'initial'
+    session_state.auth_completed = False
+    session_state.oauth_flow_complete = False
+    session_state.auth_code_used = None
+    logging.info(f'Initializing Session state iwth initialize_session_state')
+
 
 def create_new_session():
     user_id = st.session_state.user_id  # Use Google ID instead of username
