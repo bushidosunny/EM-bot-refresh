@@ -26,7 +26,8 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 # from urllib.parse import urljoin
 import toml
-from streamlit_cookies_controller import CookieController
+# from streamlit_cookies_controller import CookieController
+import extra_streamlit_components as stx
 import oauthlib.oauth2.rfc6749.errors  # Add this import
 
 # Configure logging
@@ -39,7 +40,11 @@ st.set_page_config(page_title="EMMA", page_icon="🤖", initial_sidebar_state="c
 
 
 load_dotenv()
-controller = CookieController()
+
+# Initialize Cookies
+# controller = CookieController()
+cookie_manager = stx.CookieManager()
+
 # Constants
 DB_NAME = 'emma-dev'
 SCOPES = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile', 'openid']
@@ -390,7 +395,8 @@ def google_login() -> None:
     # Generate and store the state
     oauth_state = generate_oauth_state()
     st.session_state.oauth_state = oauth_state
-    controller.set('oauth_state', oauth_state)
+    # controller.set('oauth_state', oauth_state)
+    cookie_manager.set('oauth_state', oauth_state)
 
     authorization_url, _ = flow.authorization_url(
         prompt='consent',
@@ -460,7 +466,9 @@ def google_callback() -> Optional[User]:
     logging.info(f"Query params: {st.query_params}")
 
     stored_state_session = st.session_state.oauth_state
-    stored_state_cookie = controller.get('oauth_state')
+    # stored_state_cookie = controller.get('oauth_state')
+    stored_state_cookie = cookie_manager.get('oauth_state')
+    
     logging.info(f"Stored state (session): {stored_state_session}, Stored state (cookie): {stored_state_cookie}")
 
     if 'code' not in st.query_params or 'state' not in st.query_params:
@@ -478,8 +486,10 @@ def google_callback() -> Optional[User]:
 
     # Clear the stored state
     st.session_state.oauth_state = None
-    if controller.get('oauth_state') is not None:
-        controller.remove('oauth_state')
+    # if controller.get('oauth_state') is not None:
+    #     controller.remove('oauth_state')
+    if cookie_manager.get('oauth_state') is not None:
+        cookie_manager.delete('oauth_state')
 
     if os.getenv('ENVIRONMENT') == 'production':
         REDIRECT_URI = 'https://emmmahealth.ai/'
@@ -522,8 +532,10 @@ def google_callback() -> Optional[User]:
         # controller.set('session_expiry', expiration.isoformat())
 
         session_token, expiration = create_session(str(user._id))
-        controller.set('session_token', session_token, expires=expiration)
-        controller.set('user_id', str(user._id), expires=expiration)
+        # controller.set('session_token', session_token, expires=expiration)
+        # controller.set('user_id', str(user._id), expires=expiration)
+        cookie_manager.set('session_token', session_token, expires=expiration)
+        cookie_manager.set('user_id', str(user._id), expires=expiration)
         logging.info(f"session_token: {session_token} and user_id: {str(user._id)} expires at: {expiration}")
         logging.info("Cookies set")
         
@@ -1316,13 +1328,12 @@ def logout_user():
     with colR:
         # Add a unique key to the logout button
         if st.button("Logout", key="logout_button"):
-            # controller = CookieController()
-            # controller.remove('session_token')
-            # controller.remove('session_expiry')
             # st.session_state.clear()
             # st.rerun()
-            controller.remove('session_token')
-            controller.remove('user_id')
+            # controller.remove('session_token')
+            # controller.remove('user_id')
+            cookie_manager.delete('user_id')
+            cookie_manager.delete('session_token')
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
             st.rerun()
@@ -1906,8 +1917,10 @@ def authenticated_user():
         # logging.debug("Archived old sessions")
 
 def check_existing_session() -> Optional[User]:
-    session_token = controller.get('session_token')
-    user_id = controller.get('user_id')
+    # session_token = controller.get('session_token')
+    # user_id = controller.get('user_id')
+    session_token = cookie_manager.get('session_token')
+    user_id = cookie_manager.get('user_id')
     
     if session_token and user_id:
         user = get_user_from_session(session_token)
