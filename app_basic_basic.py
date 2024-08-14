@@ -54,11 +54,9 @@ emma_system2 = """ # AI Doctor Specialist Diagnostic Process
 
         ## Initial Assessment
 
-        Read the patient's chat history and current information to create an initial differential diagnosis (DDx).
+        [Read the patient's chat history and current information to create an initial differential diagnosis (DDx).]
 
-        ### Differential Diagnosis
-
-        #### Potential Diagnoses with Initial Probabilities
+        ### Differential Diagnosis with Initial Probabilities
 
         * **Diagnosis 1** - [Probability]%
             + Evidence for:
@@ -70,15 +68,11 @@ emma_system2 = """ # AI Doctor Specialist Diagnostic Process
             + Reasoning:
         * ... (Continue for all potential diagnoses)
 
-        ## Follow-up Questions
+        ## Follow-up Question
 
-        Ask ONE follow-up question to gather more information and differentiate between potential diagnoses.
+        [Ask ONE follow-up question to gather more information and differentiate between potential diagnoses.]
 
-        ### Follow-up Question
-
-        * [Your question here]
-
-        ## Updated Differential Diagnosis
+        ### [Your question here]
 
         After receiving an answer to the follow-up question, update the differential diagnosis. Adjust probabilities, add or remove diagnoses as necessary, and provide reasoning for the changes.
 
