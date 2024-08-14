@@ -10,10 +10,16 @@ credentials:
       logged_in: true
       name: guest
       password: $2b$12$t80AisinKXzJiHhu9JYyr.HdA845YDo0mHNX3CJ.ys34tqh05Wu1C
+    jester:
+      email: tester@gmail.com
+      failed_login_attempts: 0
+      logged_in: true
+      name: jester
+      password: $2b$12$/jW8iMnMMetZCvmFaHSLse1KjPCjR18UngUWzsfAd7GDhgUvGe9o6
     sunny:
       email: sunny@mail.com
       failed_login_attempts: 0
-      logged_in: true
+      logged_in: false
       name: Sunny
       password: $2b$12$sPIjCHMCW/d6ovsQpQm7mOpeRR4jjwVK4AeThq4UwOe5WlhECyElq
     tester1:
