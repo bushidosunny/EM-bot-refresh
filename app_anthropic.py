@@ -219,10 +219,10 @@ def initialize_session_state():
 
 
 
-################################### AUTHENTICATION #############################################
-# # Creating a login widget
-# with open('config.yaml') as file:
-#     config = yaml.load(file, Loader=SafeLoader)
+################################## AUTHENTICATION #############################################
+# Creating a login widget
+with open('config.yaml') as file:
+    config = yaml.load(file, Loader=SafeLoader)
 
 # authenticator = stauth.Authenticate(
 #     config['credentials'],
@@ -249,8 +249,8 @@ def authenticate_user():
         col1, col2 = st.columns([2,1])
         with col1:
             st.write(f'Welcome *{st.session_state["name"]}*')
-        with col2:
-            authenticator.logout()
+        # with col2:
+            # authenticator.logout()
             #if authenticator.logout():
                 #update_user_config_file()
     elif st.session_state["authentication_status"] is False:

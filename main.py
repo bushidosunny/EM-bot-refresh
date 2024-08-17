@@ -3,24 +3,35 @@ from streamlit_float import float_css_helper
 from openai import OpenAI
 from langchain_core.messages import HumanMessage, AIMessage
 import os
+import time
 import io
 from dotenv import load_dotenv
+from typing import List, Dict, Any, Optional
+from dataclasses import dataclass, field
 from prompts import *
 import json
 from extract_json import extract_json, create_json
-from datetime import datetime
+import datetime
 import pytz
-from login import *
+from pymongo import MongoClient
+from auth.MongoAuthenticator import MongoAuthenticator
 import extra_streamlit_components as stx
+import logging
+from bson import ObjectId
+import secrets
+import bcrypt
+# from pages.login import login_page
 # from presidio_analyzer import AnalyzerEngine, RecognizerRegistry, PatternRecognizer, Pattern
 # from presidio_anonymizer import AnonymizerEngine
 # from presidio_analyzer.predefined_recognizers import SpacyRecognizer, EmailRecognizer, PhoneRecognizer, UsLicenseRecognizer, UsSsnRecognizer
 
-st.set_page_config(page_title=f"EMMA", page_icon="🤖", initial_sidebar_state="collapsed")
+# st.set_page_config(page_title=f"EMMA", page_icon="🤖", initial_sidebar_state="collapsed")
 
-cookie_manager = stx.CookieManager()
 
-# Load variables
+
+########################## Constants and Configuration ##############################
+DB_NAME = 'emma-dev'
+MONGODB_URI = os.getenv('MONGODB_ATLAS_URI')
 load_dotenv()
 ema_v2 = "asst_na7TnRA4wkDbflTYKzo9kmca"
 api_key = os.getenv("OPENAI_API_KEY")
@@ -28,10 +39,212 @@ if not api_key:
     st.error("API Key not found! Please check your environment variables.")
 legal_attorney = "asst_ZI3rML4v8eG1vhQ3Fis5ikOd"
 note_writer = 'asst_Ua6cmp6dpTc33cSpuZxutGsX'
+PREAUTHORIZED_EMAILS = ['user1@example.com', 'user2@example.com', 'bushidosunny@gmail.com', 'user@example.com']
+openai_client = OpenAI(api_key=api_key)
 
-client = OpenAI(api_key=api_key)
+############################# MongoDB connection ####################################
+@st.cache_resource
+def init_mongodb_connection():
+    logging.info("Initializing MongoDB connection")
+    return MongoClient(MONGODB_URI, maxPoolSize=10, connect=False)
 
-# Define the avatar URLs
+try:
+    mongo_client = init_mongodb_connection()
+    db = mongo_client[DB_NAME]
+    users_collection = db['users']
+    mongo_client.admin.command('ping')
+    logging.info("Successfully connected to MongoDB")
+except Exception as e:
+    st.error(f"Failed to connect to MongoDB: {str(e)}")
+    st.stop()
+
+
+###################################### Cookie Manager ##################################
+
+#################################### User Class ########################################
+@dataclass
+class User:
+    username: str
+    email: str
+    name: str
+    _id: Optional[ObjectId] = None
+    password: Optional[bytes] = None
+    user_id: str = field(default_factory=lambda: secrets.token_hex(16))
+    created_at: datetime = field(default_factory=datetime.datetime.now)
+    last_login: datetime = field(default_factory=datetime.datetime.now)
+    login_count: int = 0
+    last_active: datetime = field(default_factory=datetime.datetime.now)
+    total_session_time: int = 0
+    preferences: Dict[str, List] = field(default_factory=lambda: {"note_templates": []})
+    recordings_count: int = 0
+    transcriptions_count: int = 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "_id": self._id,
+            "username": self.username,
+            "password": self.password,
+            "email": self.email,
+            "name": self.name,
+            "created_at": self.created_at,
+            "last_login": self.last_login,
+            "login_count": self.login_count,
+            "last_active": self.last_active,
+            "total_session_time": self.total_session_time,
+            "preferences": self.preferences,
+            "recordings_count": self.recordings_count,
+            "transcriptions_count": self.transcriptions_count
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'User':
+        user = cls(
+            username=data["username"],
+            email=data["email"],
+            name=data["name"],
+            _id=data.get("_id")
+        )
+        user.created_at = data.get("created_at", user.created_at)
+        user.last_login = data.get("last_login", user.last_login)
+        user.login_count = data.get("login_count", 0)
+        user.last_active = data.get("last_active", user.last_active)
+        user.total_session_time = data.get("total_session_time", 0)
+        user.preferences = data.get("preferences", {"note_templates": []})
+        user.recordings_count = data.get("recordings_count", 0)
+        user.transcriptions_count = data.get("transcriptions_count", 0)
+        return user
+
+    def update_login(self) -> None:
+        self.last_login = datetime.datetime.now()
+        self.login_count += 1
+
+    def update_activity(self) -> None:
+        self.last_active = datetime.datetime.now()
+
+    def add_session_time(self, duration: int) -> None:
+        self.total_session_time += duration
+
+    def increment_recordings(self) -> None:
+        self.recordings_count += 1
+
+    def increment_transcriptions(self) -> None:
+        self.transcriptions_count += 1
+
+    def add_note_template(self, title: str, template_type: str, content: str) -> None:
+        template = {
+            "id": str(ObjectId()),
+            "title": title,
+            "type": template_type,
+            "content": content
+        }
+        self.preferences["note_templates"].append(template)
+
+    def get_note_template(self, template_id: str) -> Optional[Dict[str, Any]]:
+        return next((t for t in self.preferences["note_templates"] if t["id"] == template_id), None)
+
+    def get_note_templates(self) -> List[Dict[str, Any]]:
+        return self.preferences.get("note_templates", [])
+
+    def update_note_template(self, template_id: str, title: Optional[str] = None, template_type: Optional[str] = None, content: Optional[str] = None) -> None:
+        template = self.get_note_template(template_id)
+        if template:
+            if title:
+                template["title"] = title
+            if template_type:
+                template["type"] = template_type
+            if content:
+                template["content"] = content
+
+    def delete_note_template(self, template_id: str) -> None:
+        self.preferences["note_templates"] = [t for t in self.preferences["note_templates"] if t["id"] != template_id]
+  
+  #############################################################################################
+
+################################# Authentication Functions #################################
+# @st.cache_resource
+def get_cookie_manager():
+    return stx.CookieManager(key="main_cookie_manager")
+
+cookie_manager = get_cookie_manager()
+
+
+# Initialize the authenticator
+authenticator = MongoAuthenticator(
+    users_collection=users_collection,
+    cookie_name='EMMA_auth_cookie',
+    cookie_expiry_days=30,
+    cookie_manager=cookie_manager 
+)
+
+
+def register_user(username, name, password, email, users_collection):
+    if email not in PREAUTHORIZED_EMAILS:
+        return False, "Email not preauthorized"
+    
+    if users_collection.find_one({"$or": [{"username": username}, {"email": email}]}):
+        return False, "Username or email already exists"
+    
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    user = User(email=email, username=username, name=name, password=hashed_password)
+    user.update_login()
+    result = users_collection.insert_one(user.to_dict())
+    user._id = result.inserted_id
+    
+    st.session_state.user = user
+    st.session_state.username = user.name
+    return True, "Registration successful"
+
+def register_page():
+    st.header("Register")
+    with st.form("register_form"):
+        username = st.text_input("Username")
+        name = st.text_input("Name")
+        email = st.text_input("Email")
+        password = st.text_input("Password", type="password")
+        submit = st.form_submit_button("Register")
+
+    if submit:
+        if authenticator.register_user(username, name, password, email):
+            st.success("Registration successful. Please login.")
+            # Set a flag to return to login page
+            st.session_state.show_login = True
+            st.session_state.show_registration = False
+            time.sleep(1)  # Give user time to see the message
+            st.rerun()
+        else:
+            st.error("Username or email already exists")
+
+    # Add this part for returning to login page
+    if st.button("Already have an account? Login here"):
+        st.session_state.show_login = True
+        st.session_state.show_registration = False
+        st.rerun()
+
+
+def login_page():
+    st.header("Login")
+    with st.form("login_form"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submit = st.form_submit_button("Login")
+
+    if submit:
+        name, authentication_status, username = authenticator.login(username, password)
+        if authentication_status:
+            st.session_state.authentication_status = True
+            st.session_state.name = name
+            st.session_state.username = username
+            st.success(f"Welcome {name}!")
+            time.sleep(1)  # Give user time to see the message
+            st.rerun()
+        else:
+            st.error("Incorrect username or password")
+
+    # Add this part for the registration link
+    if st.button("Don't have an account? Register here"):
+        st.session_state.show_registration = True
+        st.rerun()
+
 user_avatar_url = "https://cdn.pixabay.com/photo/2016/12/21/07/36/profession-1922360_1280.png"
 
 specialist_id_caption = {
@@ -167,8 +380,8 @@ def initialize_session_state():
         "user_question_sidebar": "",
         "old_user_question_sidebar": "",
         "completed_tasks_str": "",
-        "follow_up_steps":""
-
+        "follow_up_steps":"",
+        "show_registration": False,
     }
 
     if "initialized" not in st.session_state:
@@ -184,26 +397,26 @@ def initialize_session_state():
 
 
 # Setup the main page display and header
-def display_header():
-    if st.session_state.pt_data != {}:
-        cc = st.session_state.pt_data['patient']["chief_complaint_two_word"]
-        age = st.session_state.pt_data['patient']["age"]
-        age_units = st.session_state.pt_data['patient']["age_unit"]
-        sex = st.session_state.pt_data['patient']["sex"]
-        st.set_page_config(page_title=f"{age}{age_units}{sex} {cc}", page_icon="🤖", initial_sidebar_state="collapsed")
-    else:
-        st.set_page_config(page_title=f"EMMA", page_icon="🤖", initial_sidebar_state="collapsed")
-    st.markdown(
-            f"""
-            <div style="text-align: center;">
-                <h2>
-                    <span style="color:deepskyblue;">Emergency Medicine </span>                    
-                    <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:80px;height:80px;border-radius:20%;">
-                    Main Assistant
-                </h2>
-            </div>
-            """, 
-            unsafe_allow_html=True)
+# def display_header():
+#     if st.session_state.pt_data != {}:
+#         cc = st.session_state.pt_data['patient']["chief_complaint_two_word"]
+#         age = st.session_state.pt_data['patient']["age"]
+#         age_units = st.session_state.pt_data['patient']["age_unit"]
+#         sex = st.session_state.pt_data['patient']["sex"]
+#         st.set_page_config(page_title=f"{age}{age_units}{sex} {cc}", page_icon="🤖", initial_sidebar_state="collapsed")
+#     else:
+#         st.set_page_config(page_title=f"EMMA", page_icon="🤖", initial_sidebar_state="collapsed")
+#     st.markdown(
+#             f"""
+#             <div style="text-align: center;">
+#                 <h2>
+#                     <span style="color:deepskyblue;">Emergency Medicine </span>                    
+#                     <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:80px;height:80px;border-radius:20%;">
+#                     Main Assistant
+#                 </h2>
+#             </div>
+#             """, 
+#             unsafe_allow_html=True)
 
 def display_critical_tasks():
     if st.session_state.critical_actions:
@@ -306,12 +519,20 @@ def display_sidebar():
         with tab3:
             display_note_analysis_tab()
             
-        with tab4:
-            update_patient_language()
+        # with tab4:
+        #     update_patient_language()
         container = st.container()
         container.float(float_css_helper(bottom="10px"))
         with container:
-            authenticate_user()
+            st.markdown(f'Welcome {st.session_state.name}!')
+            if st.sidebar.button("Logout", key="logout_button"):
+                authenticator.logout()
+                print(f"main sidebar logut - Cookie {authenticator.cookie_name} should be deleted. Current value: {authenticator.cookie_manager.get(authenticator.cookie_name)}")
+                st.success("You have been logged out successfully.")
+                time.sleep(1)  # Give user time to see the message
+                st.rerun()
+                
+
 def consult_specialist_and_update_ddx(button_name, prompt):
     # Consult the specific specialist
     specialist = st.session_state.specialist
@@ -513,7 +734,7 @@ def button_input(specialist, prompt):
         specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
         st.session_state.specialist_avatar = specialist_avatar
         timezone = pytz.timezone("America/Los_Angeles")
-        current_datetime = datetime.now(timezone).strftime("%H:%M:%S")
+        current_datetime = datetime.datetime.now(timezone).strftime("%H:%M:%S")
         user_question = current_datetime + f"""    \n{user_question}. 
         \n{st.session_state.completed_tasks_str}
         """
@@ -568,7 +789,7 @@ def process_other_queries():
 
 # Create new thread
 def new_thread():
-    thread = client.beta.threads.create()
+    thread = openai_client.beta.threads.create()
     st.session_state.thread_id = thread.id
     st.session_state.chat_history = []
     st.rerun()
@@ -578,9 +799,9 @@ def handle_user_legal_input(legal_question):
     # Append user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": legal_question, "avatar": user_avatar_url})
         
-    client.beta.threads.messages.create(thread_id=st.session_state.thread_id, role="user", content=legal_question)
+    openai_client.beta.threads.messages.create(thread_id=st.session_state.thread_id, role="user", content=legal_question)
 
-    with client.beta.threads.runs.stream(thread_id=st.session_state.thread_id, assistant_id=legal_attorney) as stream:
+    with openai_client.beta.threads.runs.stream(thread_id=st.session_state.thread_id, assistant_id=legal_attorney) as stream:
         assistant_response = "".join(generate_response_stream(stream))
         st.write_stream(generate_response_stream(stream))
     st.session_state.chat_history.append({"role": "legal consultant", "content": assistant_response, "avatar": "https://avatars.dicebear.com/api/avataaars/legal_consultant.svg"})  # Add assistant response to chat history
@@ -615,9 +836,9 @@ def write_note(note_input):
     # Append user message to chat history
     st.session_state.chat_history.append({"role": "user", "content": note_input, "avatar": user_avatar_url})
         
-    client.beta.threads.messages.create(thread_id=st.session_state.thread_id, role="user", content=note_input)
+    openai_client.beta.threads.messages.create(thread_id=st.session_state.thread_id, role="user", content=note_input)
 
-    with client.beta.threads.runs.stream(thread_id=st.session_state.thread_id, assistant_id=note_writer) as stream:
+    with openai_client.beta.threads.runs.stream(thread_id=st.session_state.thread_id, assistant_id=note_writer) as stream:
         assistant_response = "".join(generate_response_stream(stream))
         st.write_stream(generate_response_stream(stream))
 # Function to generate the response stream
@@ -629,12 +850,12 @@ def generate_response_stream(stream):
                     yield delta.text.value
 
 def get_response(user_question):
-    client.beta.threads.messages.create(thread_id=st.session_state.thread_id, role="user", content=user_question)
+    openai_client.beta.threads.messages.create(thread_id=st.session_state.thread_id, role="user", content=user_question)
     response_placeholder = st.empty()  # Placeholder for streaming response text
     response_text = ""  # To accumulate response text
 
     # Stream response from the assistant
-    with client.beta.threads.runs.stream(thread_id=st.session_state.thread_id, assistant_id=st.session_state.assistant_id) as stream:
+    with openai_client.beta.threads.runs.stream(thread_id=st.session_state.thread_id, assistant_id=st.session_state.assistant_id) as stream:
         for chunk in stream:
             if chunk.event == 'thread.message.delta':  # Check if it is the delta message
                 for delta in chunk.data.delta.content:
@@ -687,7 +908,7 @@ def handle_user_input_container():
 def process_user_question(user_question, specialist):
     if user_question is not None and user_question != "":
         timezone = pytz.timezone("America/Los_Angeles")
-        current_datetime = datetime.now(timezone).strftime("%H:%M:%S")
+        current_datetime = datetime.datetime.now(timezone).strftime("%H:%M:%S")
         user_question = current_datetime + f"""    \n{user_question}. 
         \n{st.session_state.completed_tasks_str}
         """
@@ -711,91 +932,51 @@ def process_user_question(user_question, specialist):
         chat_history = chat_history_string()
         parse_json(chat_history)   
 
-def anonymize_text(user_question):
-    # Define a pattern for MRN (adjust this regex pattern to match your specific MRN format)
-    mrn_pattern = Pattern(
-        name="mrn_pattern",
-        regex=r"\b[0-9]{7,10}\b",
-        score=0.7
-    )
-
-    # Create a PatternRecognizer for MRN
-    mrn_recognizer = PatternRecognizer(
-        supported_entity="MEDICAL_RECORD_NUMBER",
-        patterns=[mrn_pattern]
-    )
-    # Create a custom recognizer registry
-    registry = RecognizerRegistry()
-
-    # Create a custom SpacyRecognizer with specific entities
-    custom_spacy = SpacyRecognizer(supported_entities=["PERSON", "ORG", "LOC"])
-
-    # Add only the recognizers you want
-    registry.add_recognizer(mrn_recognizer)
-    registry.add_recognizer(custom_spacy)
-    registry.add_recognizer(EmailRecognizer())
-    registry.add_recognizer(PhoneRecognizer())
-    registry.add_recognizer(UsLicenseRecognizer())
-    registry.add_recognizer(UsSsnRecognizer())
-    # Add other recognizers as needed, but exclude DateTimeRecognizer
-
-    # Create an AnalyzerEngine with the custom registry
-    analyzer = AnalyzerEngine(registry=registry)
-
-    # Define an allow list
-    allow_list = allowed_list
-
-    # Analyze text
-    results = analyzer.analyze(
-        text=user_question, 
-        language='en',
-        allow_list=allow_list,
-        context=emergency_dept_context,
-        score_threshold=0.7)
-
-    anonymizer = AnonymizerEngine()
-    
-    # Anonymize the text based on the analysis results
-    anonymized_text = anonymizer.anonymize(text=user_question, analyzer_results=results)
-    
-    return anonymized_text.text
 
 def main():
     initialize_session_state()
     # display_header()
+    st.markdown(
+        f"""
+        <div style="text-align: center;">
+            <h2>
+                <span style="color:deepskyblue;">Emergency Medicine </span>                    
+                <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:80px;height:80px;border-radius:20%;">
+                Main Assistant
+            </h2>
+        </div>
+        """, 
 
-    # check cookie for authentication
-    try:
-        user_id = cookie_manager.get('user_id')
-        if user_id:
-            if "thread_id" not in st.session_state:
-                    thread = client.beta.threads.create()
-                    st.session_state.thread_id = thread.id
-            display_chat_history() 
-            handle_user_input_container()   
-            process_other_queries() 
-            display_sidebar()
-
-        else:
-            name, authentication_status, username = authenticator.login('main')
-            if username:
-                cookie_manager.set('user_id', username)
-            
-            if authentication_status == True or username:
-                # User is authenticated, show the app content# Create a thread where the conversation will happen and keep Streamlit from initiating a new session state
-                if "thread_id" not in st.session_state:
-                    thread = client.beta.threads.create()
-                    st.session_state.thread_id = thread.id
-            
-                display_chat_history() 
-                handle_user_input_container()   
-                process_other_queries() 
-                display_sidebar()
+        unsafe_allow_html=True)
+    # Add a small delay to allow cookie to be read
+    time.sleep(.1)
+    
+    # Check if user is already authenticated
+    if st.session_state.get('authentication_status'):
+        if "thread_id" not in st.session_state:
+            thread = openai_client.beta.threads.create()
+            st.session_state.thread_id = thread.id
+        display_chat_history() 
+        handle_user_input_container()   
+        process_other_queries() 
+        display_sidebar()
+    elif st.session_state.get('show_registration', False):
+        register_page()
+    else:
+        # If not authenticated, check the cookie
+        user_id = cookie_manager.get('EMMA_auth_cookie')
+        if user_id and user_id != "":
+            user = users_collection.find_one({"_id": ObjectId(user_id)})
+            if user:
+                st.session_state.authentication_status = True
+                st.session_state.name = user['name']
+                st.session_state.username = user['username']
+                st.rerun()
             else:
-                authenticate_user()
-    except:
-        authenticate_user()
-  
+                login_page()
+        else:
+            login_page()
+
 
 if __name__ == '__main__':
     main()

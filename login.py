@@ -1,35 +1,133 @@
+import os
+import secrets
+import logging
+import datetime
+from typing import List, Dict, Any, Optional
+
 import streamlit as st
-import streamlit_authenticator as stauth
-from streamlit_float import float_css_helper
+import extra_streamlit_components as stx
+import pandas as pd
 from pymongo import MongoClient
 import bcrypt
-import secrets
-import os
-import toml
-import logging
+from bson import ObjectId
+from dataclasses import dataclass, field
 
-# Constants
+from auth.MongoAuthenticator import MongoAuthenticator
+
+########################## Constants and Configuration ##############################
 DB_NAME = 'emma-dev'
-SECRET_KEY = secrets.token_hex(32)
+MONGODB_URI = os.getenv('MONGODB_ATLAS_URI')
+PREAUTHORIZED_EMAILS = ['user1@example.com', 'user2@example.com', 'bushidosunny@gmail.com']
 
-# Load configuration
-if os.path.exists('/.streamlit/secrets.toml'):
-    with open('/.streamlit/secrets.toml', 'r') as f:
-        config = toml.load(f)
-    MONGODB_URI = config['MONGODB_ATLAS_URI']
-    ENVIRONMENT = config['ENVIRONMENT']
-else:
-    MONGODB_URI = os.getenv('MONGODB_ATLAS_URI')
-    ENVIRONMENT = os.getenv('ENVIRONMENT')
+logging.basicConfig(level=logging.INFO)
+# st.set_page_config(page_title="Login Page", page_icon="🔑", layout="centered")
 
-# Initialize MongoDB connection
-@st.cache_resource
+#################################### User Class ########################################
+@dataclass
+class User:
+    username: str
+    email: str
+    name: str
+    _id: Optional[ObjectId] = None
+    password: Optional[bytes] = None
+    user_id: str = field(default_factory=lambda: secrets.token_hex(16))
+    created_at: datetime = field(default_factory=datetime.datetime.now)
+    last_login: datetime = field(default_factory=datetime.datetime.now)
+    login_count: int = 0
+    last_active: datetime = field(default_factory=datetime.datetime.now)
+    total_session_time: int = 0
+    preferences: Dict[str, List] = field(default_factory=lambda: {"note_templates": []})
+    recordings_count: int = 0
+    transcriptions_count: int = 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "_id": self._id,
+            "username": self.username,
+            "password": self.password,
+            "email": self.email,
+            "name": self.name,
+            "created_at": self.created_at,
+            "last_login": self.last_login,
+            "login_count": self.login_count,
+            "last_active": self.last_active,
+            "total_session_time": self.total_session_time,
+            "preferences": self.preferences,
+            "recordings_count": self.recordings_count,
+            "transcriptions_count": self.transcriptions_count
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'User':
+        user = cls(
+            username=data["username"],
+            email=data["email"],
+            name=data["name"],
+            _id=data.get("_id")
+        )
+        user.created_at = data.get("created_at", user.created_at)
+        user.last_login = data.get("last_login", user.last_login)
+        user.login_count = data.get("login_count", 0)
+        user.last_active = data.get("last_active", user.last_active)
+        user.total_session_time = data.get("total_session_time", 0)
+        user.preferences = data.get("preferences", {"note_templates": []})
+        user.recordings_count = data.get("recordings_count", 0)
+        user.transcriptions_count = data.get("transcriptions_count", 0)
+        return user
+
+    def update_login(self) -> None:
+        self.last_login = datetime.now()
+        self.login_count += 1
+
+    def update_activity(self) -> None:
+        self.last_active = datetime.now()
+
+    def add_session_time(self, duration: int) -> None:
+        self.total_session_time += duration
+
+    def increment_recordings(self) -> None:
+        self.recordings_count += 1
+
+    def increment_transcriptions(self) -> None:
+        self.transcriptions_count += 1
+
+    def add_note_template(self, title: str, template_type: str, content: str) -> None:
+        template = {
+            "id": str(ObjectId()),
+            "title": title,
+            "type": template_type,
+            "content": content
+        }
+        self.preferences["note_templates"].append(template)
+
+    def get_note_template(self, template_id: str) -> Optional[Dict[str, Any]]:
+        return next((t for t in self.preferences["note_templates"] if t["id"] == template_id), None)
+
+    def get_note_templates(self) -> List[Dict[str, Any]]:
+        return self.preferences.get("note_templates", [])
+
+    def update_note_template(self, template_id: str, title: Optional[str] = None, template_type: Optional[str] = None, content: Optional[str] = None) -> None:
+        template = self.get_note_template(template_id)
+        if template:
+            if title:
+                template["title"] = title
+            if template_type:
+                template["type"] = template_type
+            if content:
+                template["content"] = content
+
+    def delete_note_template(self, template_id: str) -> None:
+        self.preferences["note_templates"] = [t for t in self.preferences["note_templates"] if t["id"] != template_id]
+  
+  #############################################################################################
+
+############################# Initialize MongoDB connection #################################
+# @st.cache_resource
 def init_mongodb_connection():
     logging.info("Initializing MongoDB connection")
-    return MongoClient(MONGODB_URI, maxPoolSize=1, connect=False)
+    return MongoClient(MONGODB_URI, maxPoolSize=10, connect=False)
 
 try:
-    logging.info("Attempting to connect to MongoDB")
     client = init_mongodb_connection()
     db = client[DB_NAME]
     users_collection = db['users']
@@ -39,221 +137,106 @@ except Exception as e:
     st.error(f"Failed to connect to MongoDB: {str(e)}")
     st.stop()
 
-# Custom authentication functions
-
-def verify_password(password, hashed_password):
-    return bcrypt.checkpw(password.encode('utf-8'), hashed_password)
-
-
-def get_user_credentials():
-    users = list(users_collection.find({}, {'_id': 0, 'name': 1, 'username': 1, 'password': 1}))
-    credentials = {"usernames": {}}
-    for user in users:
-        credentials["usernames"][user['username']] = {
-            "name": user['name'],
-            "password": user['password']
-        }
-    return credentials
+# def get_users_from_db(users_collection):
+#     users_cursor = users_collection.find()
+#     return list(users_cursor)
 
 
-# Streamlit Authenticator setup
-authenticator = stauth.Authenticate(
-    get_user_credentials(),
-    cookie_name='emma_auth',
-    cookie_key=SECRET_KEY,
-    cookie_expiry_days=30
+################################# Authentication Functions #################################
+# @st.cache_resource
+def get_cookie_manager():
+    return stx.CookieManager(key="login_cookie_manager")
+
+cookie_manager = get_cookie_manager()
+
+
+# Initialize the authenticator
+authenticator = MongoAuthenticator(
+    users_collection=users_collection,
+    cookie_name='EMMA_auth_cookie',
+    cookie_expiry_days=30,
+    cookie_manager=cookie_manager 
 )
 
-def main():
-    name, authentication_status, username = authenticator.login('main')
-    if st.button('Register new user', type='secondary'):
-        register_new_user()
-    if authentication_status:
-        # User is authenticated, show the app content
-        st.header("EMA - Emergency Medicine Assistant 🤖🩺")
-        
-        with st.sidebar:
-            st.title("Top Section")
-            container = st.container()
-            container.float(float_css_helper(bottom="10px"))
-            with container:
-                authenticate_user()
-        
-        import time
-        
-        if st.button('Three cheers', type='primary'):
-            st.toast('Hip!')
-            time.sleep(.5)
-            st.toast('Hip!')
-            time.sleep(.5)
-            st.toast('Hooray!', icon='🎉')
+
+
+
+def register_user(username, name, password, email, users_collection):
+    if email not in PREAUTHORIZED_EMAILS:
+        return False, "Email not preauthorized"
     
-    elif authentication_status is False:
-        # Authentication failed
-        st.error('Username/password is incorrect')
+    if users_collection.find_one({"$or": [{"username": username}, {"email": email}]}):
+        return False, "Username or email already exists"
     
-    else:
-        # Authentication status is None, show login form
-        st.warning('Please enter your username and password')
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    user = User(email=email, username=username, name=name, password=hashed_password)
+    user.update_login()
+    result = users_collection.insert_one(user.to_dict())
+    user._id = result.inserted_id
+    
+    st.session_state.user = user
+    st.session_state.username = user.name
+    return True, "Registration successful"
 
-def authenticate_user():
-    if st.session_state["authentication_status"]:
-        col1, col2 = st.columns([2,1])
-        with col1:
-            st.write(f'Welcome *{st.session_state["name"]}*')
-        with col2:
-            authenticator.logout('Logout', 'main')
-    elif st.session_state["authentication_status"] is False:
-        st.error('Username/password is incorrect')
-    elif st.session_state["authentication_status"] is None:
-        st.warning('Please enter your username and password')
+def register_page():
+    st.header("Register")
+    with st.form("register_form"):
+        username = st.text_input("Username")
+        name = st.text_input("Name")
+        email = st.text_input("Email")
+        password = st.text_input("Password", type="password")
+        submit = st.form_submit_button("Register")
 
-def register_new_user():
-    try:
-        email, username, name = authenticator.register_user(pre_authorization=False)
-        if email:
-            st.success('User registered successfully')
-            new_user = {
-                'username': st.session_state.username,
-                'name': st.session_state.name,
-                'password': bcrypt.hashpw(st.session_state.password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8'),
-                'email': st.session_state.email
-            }
-            users_collection.insert_one(new_user)
-    except Exception as e:
-        st.error(e)
+    if submit:
+        if authenticator.register_user(username, name, password, email):
+            st.success("Registration successful. Please login.")
+        else:
+            st.error("Username or email already exists")
 
+
+def login_page(authenticator):
+    st.header("Login")
+    with st.form("login_form"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        submit = st.form_submit_button("Login")
+
+    if submit:
+        name, authentication_status, username = authenticator.login(username, password)
+        if authentication_status:
+            st.success(f"Welcome {name}!")
+            st.rerun()
+        else:
+            st.error("Incorrect username or password")
+
+    st.markdown("Don't have an account? [Register here](#)")
+
+# def main_page():
+#     st.success(f"Welcome {st.session_state.name}")
+#     st.title("Main Page")
+
+#     with st.sidebar:
+#         st.write(f"Welcome {st.session_state.name}")
+
+#     if st.sidebar.button("Logout", key="logout_button_login"):        
+#         authenticator.logout()
+#         st.rerun()
         
-def reset_password():
-    if authenticator.reset_password(st.session_state["username"]):
-        st.success('Password modified successfully')
-        # Update the password in MongoDB
-        users_collection.update_one(
-            {'username': st.session_state["username"]},
-            {'$set': {'password': authenticator.credentials['passwords'][st.session_state["username"]]}}
-        )
-
-def forgot_password():
-    username_of_forgotten_password, email_of_forgotten_password, new_random_password = authenticator.forgot_password()
-    if username_of_forgotten_password:
-        st.success('New password to be sent securely')
-        # Update the password in MongoDB
-        users_collection.update_one(
-            {'username': username_of_forgotten_password},
-            {'$set': {'password': authenticator.credentials['passwords'][username_of_forgotten_password]}}
-        )
-    elif username_of_forgotten_password == False:
-        st.error('Username not found')
-
-def forgot_username():
-    username_of_forgotten_username, email_of_forgotten_username = authenticator.forgot_username()
-    if username_of_forgotten_username:
-        st.success('Username to be sent securely')
-    elif username_of_forgotten_username == False:
-        st.error('Email not found')
-
-def update_user_details():
-    if authenticator.update_user_details(st.session_state["username"]):
-        st.success('Entries updated successfully')
-        # Update user details in MongoDB
-        users_collection.update_one(
-            {'username': st.session_state["username"]},
-            {'$set': {
-                'name': authenticator.credentials['names'][st.session_state["username"]],
-                'email': authenticator.credentials['emails'][st.session_state["username"]]
-            }}
-        )
-
-def setup_initial_passwords():
-    users = list(users_collection.find({}))
-    for user in users:
-        if 'password' not in user:
-            # Generate a random password (in a real scenario, you'd want to let users set their own)
-            password = secrets.token_urlsafe(12)
-            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-            
-            users_collection.update_one(
-                {'_id': user['_id']},
-                {'$set': {'password': hashed_password}}
-            )
-            print(f"Set initial password for user {user['username']}: {password}")
 
 
-# Path: add_user_to_mongodb.py
-import bcrypt
+################################## Main App Function ########################################
+# def main():
+#     if 'authentication_status' not in st.session_state:
+#         st.session_state.authentication_status = False
 
-def add_user_to_mongodb(username, name, email, password):
-    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-    user = {
-        'username': username,
-        'name': name,
-        'email': email,
-        'password': hashed_password
-    }
-    users_collection.insert_one(user)
+#     if st.session_state.authentication_status:
+#         main_page()
+#     else:
+#         tab1, tab2 = st.tabs(["Login", "Register"])
+#         with tab1:
+#             login_page()
+#         with tab2:
+#             register_page()
 
-
-
-
-if __name__ == '__main__':
-    main()
-
-#######################################################################################
-
-# import streamlit as st
-# import streamlit_authenticator as stauth
-# from pymongo import MongoClient
-
-# # MongoDB connection
-# client = MongoClient('your_mongodb_connection_string')
-# db = client['your_database_name']
-# users_collection = db['users']
-
-# # Load initial config (you might want to replace this with loading from MongoDB)
-# config = {
-#     'credentials': {
-#         'usernames': {}
-#     },
-#     'cookie': {
-#         'name': 'your_cookie_name',
-#         'key': 'your_cookie_key',
-#         'expiry_days': 30
-#     },
-#     'pre-authorized': []
-# }
-
-# # Initialize authenticator
-# authenticator = stauth.Authenticate(
-#     config['credentials'],
-#     config['cookie']['name'],
-#     config['cookie']['key'],
-#     config['cookie']['expiry_days'],
-#     config['pre-authorized']
-# )
-
-# def update_user_config_file():
-#     # Instead of updating a file, update MongoDB
-#     for username, user_data in config['credentials']['usernames'].items():
-#         users_collection.update_one(
-#             {'username': username},
-#             {'$set': user_data},
-#             upsert=True
-#         )
-
-# def register_new_user():
-#     try:
-#         email_of_registered_user, username_of_registered_user, name_of_registered_user = authenticator.register_user(pre_authorization=False)
-#         if email_of_registered_user:
-#             st.success('User registered successfully')
-#             update_user_config_file()
-#     except Exception as e:
-#         st.error(e)
-
-# # Load users from MongoDB into config
-# users = users_collection.find()
-# for user in users:
-#     config['credentials']['usernames'][user['username']] = {
-#         'email': user['email'],
-#         'name': user['name'],
-#         'password': user['password']
-#     }
+# if __name__ == "__main__":
+#     main()
