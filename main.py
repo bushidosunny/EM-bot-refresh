@@ -39,7 +39,7 @@ if not api_key:
     st.error("API Key not found! Please check your environment variables.")
 legal_attorney = "asst_ZI3rML4v8eG1vhQ3Fis5ikOd"
 note_writer = 'asst_Ua6cmp6dpTc33cSpuZxutGsX'
-PREAUTHORIZED_EMAILS = ['user1@example.com', 'user2@example.com', 'bushidosunny@gmail.com', 'user@example.com']
+PREAUTHORIZED_EMAILS = os.getenv("EMAIL_LIST")
 openai_client = OpenAI(api_key=api_key)
 
 ############################# MongoDB connection ####################################
