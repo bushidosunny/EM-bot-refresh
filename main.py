@@ -14,32 +14,29 @@ from extract_json import extract_json, create_json
 import datetime
 import pytz
 from pymongo import MongoClient
-from auth.MongoAuthenticator import MongoAuthenticator
+from auth.MongoAuthenticator import MongoAuthenticator, User
 import extra_streamlit_components as stx
 import logging
 from bson import ObjectId
 import secrets
 import bcrypt
-# from pages.login import login_page
-# from presidio_analyzer import AnalyzerEngine, RecognizerRegistry, PatternRecognizer, Pattern
-# from presidio_anonymizer import AnonymizerEngine
-# from presidio_analyzer.predefined_recognizers import SpacyRecognizer, EmailRecognizer, PhoneRecognizer, UsLicenseRecognizer, UsSsnRecognizer
-
+from util.recorder import record_audio, transcribe_audio
 # st.set_page_config(page_title=f"EMMA", page_icon="🤖", initial_sidebar_state="collapsed")
 
 
 
 ########################## Constants and Configuration ##############################
+load_dotenv()
 DB_NAME = 'emma-dev'
 MONGODB_URI = os.getenv('MONGODB_ATLAS_URI')
-load_dotenv()
+PREAUTHORIZED_EMAILS = os.getenv("EMAIL_LIST")
 ema_v2 = "asst_na7TnRA4wkDbflTYKzo9kmca"
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
     st.error("API Key not found! Please check your environment variables.")
 legal_attorney = "asst_ZI3rML4v8eG1vhQ3Fis5ikOd"
 note_writer = 'asst_Ua6cmp6dpTc33cSpuZxutGsX'
-PREAUTHORIZED_EMAILS = os.getenv("EMAIL_LIST")
+
 openai_client = OpenAI(api_key=api_key)
 
 ############################# MongoDB connection ####################################
@@ -62,101 +59,101 @@ except Exception as e:
 ###################################### Cookie Manager ##################################
 
 #################################### User Class ########################################
-@dataclass
-class User:
-    username: str
-    email: str
-    name: str
-    _id: Optional[ObjectId] = None
-    password: Optional[bytes] = None
-    user_id: str = field(default_factory=lambda: secrets.token_hex(16))
-    created_at: datetime = field(default_factory=datetime.datetime.now)
-    last_login: datetime = field(default_factory=datetime.datetime.now)
-    login_count: int = 0
-    last_active: datetime = field(default_factory=datetime.datetime.now)
-    total_session_time: int = 0
-    preferences: Dict[str, List] = field(default_factory=lambda: {"note_templates": []})
-    recordings_count: int = 0
-    transcriptions_count: int = 0
+# @dataclass
+# class User:
+#     username: str
+#     email: str
+#     name: str
+#     _id: Optional[ObjectId] = None
+#     password: Optional[bytes] = None
+#     user_id: str = field(default_factory=lambda: secrets.token_hex(16))
+#     created_at: datetime = field(default_factory=datetime.datetime.now)
+#     last_login: datetime = field(default_factory=datetime.datetime.now)
+#     login_count: int = 0
+#     last_active: datetime = field(default_factory=datetime.datetime.now)
+#     total_session_time: int = 0
+#     preferences: Dict[str, List] = field(default_factory=lambda: {"note_templates": []})
+#     recordings_count: int = 0
+#     transcriptions_count: int = 0
 
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "_id": self._id,
-            "username": self.username,
-            "password": self.password,
-            "email": self.email,
-            "name": self.name,
-            "created_at": self.created_at,
-            "last_login": self.last_login,
-            "login_count": self.login_count,
-            "last_active": self.last_active,
-            "total_session_time": self.total_session_time,
-            "preferences": self.preferences,
-            "recordings_count": self.recordings_count,
-            "transcriptions_count": self.transcriptions_count
-        }
+#     def to_dict(self) -> Dict[str, Any]:
+#         return {
+#             "_id": self._id,
+#             "username": self.username,
+#             "password": self.password,
+#             "email": self.email,
+#             "name": self.name,
+#             "created_at": self.created_at,
+#             "last_login": self.last_login,
+#             "login_count": self.login_count,
+#             "last_active": self.last_active,
+#             "total_session_time": self.total_session_time,
+#             "preferences": self.preferences,
+#             "recordings_count": self.recordings_count,
+#             "transcriptions_count": self.transcriptions_count
+#         }
 
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'User':
-        user = cls(
-            username=data["username"],
-            email=data["email"],
-            name=data["name"],
-            _id=data.get("_id")
-        )
-        user.created_at = data.get("created_at", user.created_at)
-        user.last_login = data.get("last_login", user.last_login)
-        user.login_count = data.get("login_count", 0)
-        user.last_active = data.get("last_active", user.last_active)
-        user.total_session_time = data.get("total_session_time", 0)
-        user.preferences = data.get("preferences", {"note_templates": []})
-        user.recordings_count = data.get("recordings_count", 0)
-        user.transcriptions_count = data.get("transcriptions_count", 0)
-        return user
+#     @classmethod
+#     def from_dict(cls, data: Dict[str, Any]) -> 'User':
+#         user = cls(
+#             username=data["username"],
+#             email=data["email"],
+#             name=data["name"],
+#             _id=data.get("_id")
+#         )
+#         user.created_at = data.get("created_at", user.created_at)
+#         user.last_login = data.get("last_login", user.last_login)
+#         user.login_count = data.get("login_count", 0)
+#         user.last_active = data.get("last_active", user.last_active)
+#         user.total_session_time = data.get("total_session_time", 0)
+#         user.preferences = data.get("preferences", {"note_templates": []})
+#         user.recordings_count = data.get("recordings_count", 0)
+#         user.transcriptions_count = data.get("transcriptions_count", 0)
+#         return user
 
-    def update_login(self) -> None:
-        self.last_login = datetime.datetime.now()
-        self.login_count += 1
+#     def update_login(self) -> None:
+#         self.last_login = datetime.datetime.now()
+#         self.login_count += 1
 
-    def update_activity(self) -> None:
-        self.last_active = datetime.datetime.now()
+#     def update_activity(self) -> None:
+#         self.last_active = datetime.datetime.now()
 
-    def add_session_time(self, duration: int) -> None:
-        self.total_session_time += duration
+#     def add_session_time(self, duration: int) -> None:
+#         self.total_session_time += duration
 
-    def increment_recordings(self) -> None:
-        self.recordings_count += 1
+#     def increment_recordings(self) -> None:
+#         self.recordings_count += 1
 
-    def increment_transcriptions(self) -> None:
-        self.transcriptions_count += 1
+#     def increment_transcriptions(self) -> None:
+#         self.transcriptions_count += 1
 
-    def add_note_template(self, title: str, template_type: str, content: str) -> None:
-        template = {
-            "id": str(ObjectId()),
-            "title": title,
-            "type": template_type,
-            "content": content
-        }
-        self.preferences["note_templates"].append(template)
+#     def add_note_template(self, title: str, template_type: str, content: str) -> None:
+#         template = {
+#             "id": str(ObjectId()),
+#             "title": title,
+#             "type": template_type,
+#             "content": content
+#         }
+#         self.preferences["note_templates"].append(template)
 
-    def get_note_template(self, template_id: str) -> Optional[Dict[str, Any]]:
-        return next((t for t in self.preferences["note_templates"] if t["id"] == template_id), None)
+#     def get_note_template(self, template_id: str) -> Optional[Dict[str, Any]]:
+#         return next((t for t in self.preferences["note_templates"] if t["id"] == template_id), None)
 
-    def get_note_templates(self) -> List[Dict[str, Any]]:
-        return self.preferences.get("note_templates", [])
+#     def get_note_templates(self) -> List[Dict[str, Any]]:
+#         return self.preferences.get("note_templates", [])
 
-    def update_note_template(self, template_id: str, title: Optional[str] = None, template_type: Optional[str] = None, content: Optional[str] = None) -> None:
-        template = self.get_note_template(template_id)
-        if template:
-            if title:
-                template["title"] = title
-            if template_type:
-                template["type"] = template_type
-            if content:
-                template["content"] = content
+#     def update_note_template(self, template_id: str, title: Optional[str] = None, template_type: Optional[str] = None, content: Optional[str] = None) -> None:
+#         template = self.get_note_template(template_id)
+#         if template:
+#             if title:
+#                 template["title"] = title
+#             if template_type:
+#                 template["type"] = template_type
+#             if content:
+#                 template["content"] = content
 
-    def delete_note_template(self, template_id: str) -> None:
-        self.preferences["note_templates"] = [t for t in self.preferences["note_templates"] if t["id"] != template_id]
+#     def delete_note_template(self, template_id: str) -> None:
+#         self.preferences["note_templates"] = [t for t in self.preferences["note_templates"] if t["id"] != template_id]
   
   #############################################################################################
 
@@ -177,77 +174,77 @@ authenticator = MongoAuthenticator(
 )
 
 
-def register_user(username, name, password, email, users_collection):
-    if email not in PREAUTHORIZED_EMAILS:
-        return False, "Email not preauthorized"
+# def register_user(username, name, password, email, users_collection):
+#     if email not in PREAUTHORIZED_EMAILS:
+#         return False, "Email not preauthorized"
     
-    if users_collection.find_one({"$or": [{"username": username}, {"email": email}]}):
-        return False, "Username or email already exists"
+#     if users_collection.find_one({"$or": [{"username": username}, {"email": email}]}):
+#         return False, "Username or email already exists"
     
-    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-    user = User(email=email, username=username, name=name, password=hashed_password)
-    user.update_login()
-    result = users_collection.insert_one(user.to_dict())
-    user._id = result.inserted_id
+#     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+#     user = User(email=email, username=username, name=name, password=hashed_password)
+#     user.update_login()
+#     result = users_collection.insert_one(user.to_dict())
+#     user._id = result.inserted_id
     
-    st.session_state.user = user
-    st.session_state.username = user.name
-    return True, "Registration successful"
+#     st.session_state.user = user
+#     st.session_state.username = user.name
+#     return True, "Registration successful"
 
-def register_page():
-    st.header("Register")
-    with st.form("register_form"):
-        username = st.text_input("Username")
-        name = st.text_input("Name")
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        submit = st.form_submit_button("Register")
+# def register_page():
+#     st.header("Register")
+#     with st.form("register_form"):
+#         username = st.text_input("Username")
+#         name = st.text_input("Name")
+#         email = st.text_input("Email")
+#         password = st.text_input("Password", type="password")
+#         submit = st.form_submit_button("Register")
 
-    if submit:
-        if authenticator.register_user(username, name, password, email):
-            st.success("Registration successful. Please login.")
-            # Set a flag to return to login page
-            st.session_state.show_login = True
-            st.session_state.show_registration = False
-            time.sleep(1)  # Give user time to see the message
-            st.rerun()
-        else:
-            st.error("Username or email already exists")
+#     if submit:
+#         if authenticator.register_user(username, name, password, email):
+#             st.success("Registration successful. Please login.")
+#             # Set a flag to return to login page
+#             st.session_state.show_login = True
+#             st.session_state.show_registration = False
+#             time.sleep(1)  # Give user time to see the message
+#             st.rerun()
+#         else:
+#             st.error("Username or email already exists")
 
-    # Add this part for returning to login page
-    if st.button("Already have an account? Login here"):
-        st.session_state.show_login = True
-        st.session_state.show_registration = False
-        st.rerun()
+#     # Add this part for returning to login page
+#     if st.button("Already have an account? Login here"):
+#         st.session_state.show_login = True
+#         st.session_state.show_registration = False
+#         st.rerun()
 
 
-def login_page():
-    st.header("Login")
-    with st.form("login_form"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        submit = st.form_submit_button("Login")
+# def login_page():
+#     st.header("Login")
+#     with st.form("login_form"):
+#         username = st.text_input("Username")
+#         password = st.text_input("Password", type="password")
+#         submit = st.form_submit_button("Login")
 
-    if submit:
-        name, authentication_status, username = authenticator.login(username, password)
-        if authentication_status:
-            st.session_state.authentication_status = True
-            st.session_state.name = name
-            st.session_state.username = username
-            st.success(f"Welcome {name}!")
-            time.sleep(1)  # Give user time to see the message
-            st.rerun()
-        else:
-            st.error("Incorrect username or password")
+#     if submit:
+#         name, authentication_status, username = authenticator.login(username, password)
+#         if authentication_status:
+#             st.session_state.authentication_status = True
+#             st.session_state.name = name
+#             st.session_state.username = username
+#             st.success(f"Welcome {name}!")
+#             time.sleep(1)  # Give user time to see the message
+#             st.rerun()
+#         else:
+#             st.error("Incorrect username or password")
 
-    # Add this part for the registration link
-    if st.button("Don't have an account? Register here"):
-        st.session_state.show_registration = True
-        st.rerun()
+#     # Add this part for the registration link
+#     if st.button("Don't have an account? Register here"):
+#         st.session_state.show_registration = True
+#         st.rerun()
 
 user_avatar_url = "https://cdn.pixabay.com/photo/2016/12/21/07/36/profession-1922360_1280.png"
 
-specialist_id_caption = {
+specialist_data = {
   "Emergency Medicine": {
     "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
     "caption": "👨‍⚕️EM, Peds EM, ☠️Toxicology, Wilderness",
@@ -390,10 +387,10 @@ def initialize_session_state():
             if key not in st.session_state:
                 st.session_state[key] = default
 
-        primary_specialist = list(specialist_id_caption.keys())[0]
+        primary_specialist = list(specialist_data.keys())[0]
         st.session_state.specialist = primary_specialist
-        st.session_state.assistant_id = specialist_id_caption[primary_specialist]["assistant_id"]
-        st.session_state.specialist_avatar = specialist_id_caption[primary_specialist]["avatar"]
+        st.session_state.assistant_id = specialist_data[primary_specialist]["assistant_id"]
+        st.session_state.specialist_avatar = specialist_data[primary_specialist]["avatar"]
 
 
 # Setup the main page display and header
@@ -693,8 +690,8 @@ def display_note_analysis_tab():
 
 # Choosing the specialty group
 def choose_specialist_radio():
-    specialities = list(specialist_id_caption.keys())
-    captions = [specialist_id_caption[speciality]["caption"] for speciality in specialities]
+    specialities = list(specialist_data.keys())
+    captions = [specialist_data[speciality]["caption"] for speciality in specialities]
 
     if 'specialist' in st.session_state:
         selected_specialist = st.session_state.specialist
@@ -715,8 +712,8 @@ def choose_specialist_radio():
     #if specialist and specialist != st.session_state.specialist and not st.session_state.button_clicked:
 
         st.session_state.specialist = specialist
-        st.session_state.assistant_id = specialist_id_caption[specialist]["assistant_id"]
-        st.session_state.specialist_avatar = specialist_id_caption[specialist]["avatar"]
+        st.session_state.assistant_id = specialist_data[specialist]["assistant_id"]
+        st.session_state.specialist_avatar = specialist_data[specialist]["avatar"]
         # No need to call st.rerun() here
         st.rerun()
 
@@ -724,14 +721,14 @@ def choose_specialist_radio():
 def button_input(specialist, prompt):
     st.session_state.button_clicked = True
     #call the specialist
-    st.session_state.assistant_id = specialist_id_caption[specialist]["assistant_id"]
+    st.session_state.assistant_id = specialist_data[specialist]["assistant_id"]
  
     # set st.sesssion_state.user_question_sidebar for process_other_queries() 
     user_question = prompt
     if user_question is not None and user_question != "":
         st.session_state.specialist = specialist
 
-        specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
+        specialist_avatar = specialist_data[st.session_state.specialist]["avatar"]
         st.session_state.specialist_avatar = specialist_avatar
         timezone = pytz.timezone("America/Los_Angeles")
         current_datetime = datetime.datetime.now(timezone).strftime("%H:%M:%S")
@@ -757,7 +754,7 @@ def process_other_queries():
     if st.session_state.user_question_sidebar != "" and st.session_state.user_question_sidebar != st.session_state.old_user_question_sidebar:
 
         # set specialist_avatar for chat history
-        specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
+        specialist_avatar = specialist_data[st.session_state.specialist]["avatar"]
         
         # set user_question to sidebar user_question
         user_question = st.session_state.user_question_sidebar
@@ -884,27 +881,34 @@ def handle_user_input_container():
     input_container.float(float_css_helper(bottom="50px"))
     with input_container:
         
-        specialist = st.session_state.specialist
-        #obtain specialist avatar
-        specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
-            # Replace with your avatar URL
-        st.markdown(
-            f"""
-            <div style="text-align: center;">
-                <h6>
-                    Specialty Group: 
-                    <img src="{specialist_avatar}" alt="Avatar" style="width:30px;height:30px;border-radius:50%;">
-                    <span style="color:deepskyblue;">{specialist}</span>
-                </h6>
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
-        user_question = st.chat_input("How may I help you?") 
-        #if user_question:
-            #user_question = anonymize_text(user_question)
+        col_specialist, col1, col2= st.columns([1, 6, 1])
+        with col_specialist:
+            specialist = st.session_state.specialist
+            specialist_avatar = specialist_data[specialist]["avatar"]
+            st.markdown(
+                f"""
+                <div style="text-align: right; display: flex; justify-content: flex-end; align-items: center;">
+                    <div style="display: flex; align-items: center; border: ; padding: 5px; border-radius: 5px;">
+                        <span style="color:#048DEA; max-width: 100px; line-height: 1.2; display: inline-block; text-align: right; margin-right: 5px;">{specialist}</span>
+                        <img src="{specialist_avatar}" alt="Avatar" style="width:30px;height:30px;border-radius:50%;">
+                    </div>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
+
+        with col1:
+            user_question = st.chat_input("How may I help you?") 
+        with col2:
+            user_chat = record_audio()
         
-    process_user_question(user_question, specialist)
+    if user_question:
+        process_user_question(user_question, specialist)
+        st.rerun()
+    elif user_chat:
+        process_user_question(user_chat, specialist)
+        st.rerun()
+
 def process_user_question(user_question, specialist):
     if user_question is not None and user_question != "":
         timezone = pytz.timezone("America/Los_Angeles")
@@ -915,7 +919,7 @@ def process_user_question(user_question, specialist):
         st.session_state.completed_tasks_str = ''
         st.session_state.critical_actions  = []
         st.session_state.specialist = specialist
-        specialist_avatar = specialist_id_caption[st.session_state.specialist]["avatar"]
+        specialist_avatar = specialist_data[st.session_state.specialist]["avatar"]
         st.session_state.specialist_avatar = specialist_avatar
         
         st.session_state.chat_history.append(HumanMessage(user_question, avatar=user_avatar_url))
@@ -949,33 +953,22 @@ def main():
 
         unsafe_allow_html=True)
     # Add a small delay to allow cookie to be read
-    time.sleep(.1)
+    time.sleep(.3)
     
     # Check if user is already authenticated
-    if st.session_state.get('authentication_status'):
-        if "thread_id" not in st.session_state:
-            thread = openai_client.beta.threads.create()
-            st.session_state.thread_id = thread.id
-        display_chat_history() 
-        handle_user_input_container()   
-        process_other_queries() 
-        display_sidebar()
+    if authenticator.authenticate():
+        if st.session_state.get('authentication_status'):
+            if "thread_id" not in st.session_state:
+                thread = openai_client.beta.threads.create()
+                st.session_state.thread_id = thread.id
+            display_chat_history() 
+            handle_user_input_container()   
+            process_other_queries() 
+            display_sidebar()
     elif st.session_state.get('show_registration', False):
-        register_page()
+        authenticator.register_page()
     else:
-        # If not authenticated, check the cookie
-        user_id = cookie_manager.get('EMMA_auth_cookie')
-        if user_id and user_id != "":
-            user = users_collection.find_one({"_id": ObjectId(user_id)})
-            if user:
-                st.session_state.authentication_status = True
-                st.session_state.name = user['name']
-                st.session_state.username = user['username']
-                st.rerun()
-            else:
-                login_page()
-        else:
-            login_page()
+        authenticator.login_page()
 
 
 if __name__ == '__main__':
