@@ -20,7 +20,7 @@ import logging
 from bson import ObjectId
 import secrets
 import bcrypt
-from util.recorder import record_audio, transcribe_audio
+from util.recorder import record_audio, record_audio_and_transcribe
 # st.set_page_config(page_title=f"EMMA", page_icon="🤖", initial_sidebar_state="collapsed")
 
 

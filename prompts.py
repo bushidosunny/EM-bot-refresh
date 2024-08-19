@@ -629,3 +629,36 @@ emma_doctor_system = """ # AI Doctor Specialist Diagnostic Process
         [Suggest any additional tests, treatments, or referrals if necessary]
 
     """
+
+disclaimer = """
+### Professional Use Only
+
+This application is currently in alpha testing phase and is intended for use by licensed medical professionals only. While designed to assist in patient treatment, this tool should be used in conjunction with clinical judgment and established medical practices.
+
+### Important Notice
+
+**Intended Users:** This app is exclusively for use by qualified healthcare providers in clinical settings.
+
+**Clinical Decision Support:** Information provided by this app is meant to support, not replace, clinical decision-making. Always rely on your professional judgment and current medical standards.
+
+**Experimental Status:** As an alpha version, this app may contain errors or inconsistencies. Verify all information through standard medical resources before application in patient care.
+
+### Data and Privacy
+
+This app processes patient data. By using this app, you acknowledge that:
+
+- You have obtained necessary patient consents for data processing
+- You will comply with all applicable data protection and privacy laws
+- Data security measures are being continually improved but may not be fully implemented
+
+### Liability and Indemnification
+
+Users agree to indemnify and hold harmless the developers from any claims arising from the use of this app. The app is provided 'as is' without warranties of any kind, either expressed or implied.
+
+## Regulatory Compliance
+
+This app has not yet received regulatory approval (e.g., FDA clearance). It should not be used as the sole basis for medical decisions until such approvals are obtained.
+
+By using this application, you confirm that you are a licensed medical professional and agree to these terms, acknowledging the experimental nature of this software in clinical practice."
+
+"""

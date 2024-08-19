@@ -1,4 +1,17 @@
 import streamlit as st
+from prompts import *
+print("Starting app")
+
+if "page_config_set" not in st.session_state:
+    print("About to set page config")
+    st.set_page_config(
+        page_title="EMMA", page_icon="🤖", initial_sidebar_state="auto", layout="wide", menu_items={
+        'Get Help': 'https://www.perplexity.ai/',
+        'Report a bug': 'mailto:bushidosunny@gmail.com',
+        'About': disclaimer})
+    st.session_state.page_config_set = True
+    print("Page config set")
+
 from streamlit_float import float_css_helper
 from anthropic import Anthropic
 from langchain_anthropic import ChatAnthropic
@@ -8,7 +21,7 @@ import io
 import time
 from dotenv import load_dotenv
 # from dataclasses import dataclass, field
-from prompts import *
+
 from extract_json import *
 import json
 # from datetime import datetime, timedelta
@@ -17,7 +30,8 @@ import pytz
 from pymongo import MongoClient, ASCENDING, TEXT, DESCENDING, UpdateOne
 from pymongo.errors import BulkWriteError, ServerSelectionTimeoutError, OperationFailure, ConfigurationError
 from bson import ObjectId
-from streamlit_mic_recorder import mic_recorder
+# from streamlit_mic_recorder import mic_recorder
+from util.recorder import record_audio, safe_mic_recorder
 from deepgram import DeepgramClient, PrerecordedOptions
 from streamlit.components.v1 import html
 from typing import List, Dict, Any, Optional
@@ -29,13 +43,13 @@ import secrets
 # from yaml.loader import SafeLoader
 from auth.MongoAuthenticator import MongoAuthenticator, User
 import extra_streamlit_components as stx
-# from util.recorder import record_audio, transcribe_audio
+
+# temp
+from streamlit_mic_recorder import mic_recorder
 
 # Configure logging
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-st.set_page_config(page_title="EMMA", page_icon="🤖", initial_sidebar_state="auto", layout="wide")
 
 load_dotenv()
 
@@ -281,72 +295,6 @@ def logout_user():
             time.sleep(1)  # Give user time to see the message
             st.rerun()
 
-
-# def login_page():
-#     st.header("Login")
-#     with st.form("login_form"):
-#         username = st.text_input("Username")
-#         password = st.text_input("Password", type="password")
-#         submit = st.form_submit_button("Login")
-
-#     if submit:
-#         name, authentication_status, username = authenticator.login(username, password)
-#         if authentication_status:
-#             user = users_collection.find_one({"username": username})
-#             if user:
-#                 st.session_state.user = User.from_dict(user)
-#                 st.session_state.authentication_status = True
-#                 st.session_state.name = name
-#                 st.session_state.username = username
-#                 st.success(f"Welcome {name}!")
-#                 time.sleep(1)
-#                 st.rerun()
-#         else:
-#             st.error("Incorrect username or password")
-
-#     if st.button("Don't have an account? Register here"):
-#         st.session_state.show_registration = True
-#         st.rerun()
-
-# def register_page():
-#     st.header("Register")
-#     with st.form("register_form"):
-#         username = st.text_input("Username")
-#         name = st.text_input("Name")
-#         email = st.text_input("Email")
-#         password = st.text_input("Password", type="password")
-#         submit = st.form_submit_button("Register")
-
-#     if submit:
-#         if authenticator.register_user(username, name, password, email):
-#             st.success("Registration successful. Please login.")
-#             st.session_state.show_registration = False
-#             time.sleep(1)  # Give user time to see the message
-#             st.rerun()
-#         else:
-#             st.error("Username or email already exists")
-
-#     if st.button("Already have an account? Login here"):
-#         st.session_state.show_registration = False
-#         st.rerun()
-
-# def register_user(username, name, password, email, users_collection):
-#     if email not in PREAUTHORIZED_EMAILS:
-#         return False, "Email not preauthorized"
-    
-#     if users_collection.find_one({"$or": [{"username": username}, {"email": email}]}):
-#         return False, "Username or email already exists"
-    
-#     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-#     user = User(email=email, username=username, name=name, password=hashed_password)
-#     user.update_login()
-#     result = users_collection.insert_one(user.to_dict())
-#     user._id = result.inserted_id
-    
-#     st.session_state.user = user
-#     st.session_state.username = user.name
-#     return True, "Registration successful"
-
 ############################## Mongo DB ##################################################
 
 def init_db() -> None:
@@ -585,6 +533,7 @@ def clear_session(session_token: str) -> None:
 @st.cache_data(ttl=60)
 def list_user_sessions(username: str):
     collections = db.list_collection_names()
+    username = st.session_state.username
     user_sessions = [col for col in collections if col.startswith(f'user_{username}')]
     session_details = []
     
@@ -829,54 +778,6 @@ def archive_old_sessions(user_id, days_threshold=30):
                     db[archive_collection_name].insert_many(db[collection_name].find())
                     db[collection_name].drop()
             st.info(f"Archived old session: {collection_name}")
-
-def transcribe_audio(audio_file):
-    try:
-        deepgram = DeepgramClient(DEEPGRAM_API_KEY)
-        options = PrerecordedOptions(
-            model="nova-2-medical",
-            language="en",
-            intents=False, 
-            smart_format=True, 
-            punctuate=True, 
-            paragraphs=True, 
-            diarize=True, 
-            filler_words=True, 
-            sentiment=False, 
-        )
-        source = {'buffer': audio_file, 'mimetype': 'audio/wav'}
-        response = deepgram.listen.rest.v("1").transcribe_file(source, options)
-        return response
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
-        return None
-
-def record_audio():
-    print("Recording audio...")
-    audio_data = mic_recorder(
-        start_prompt="Record",
-        stop_prompt="🔴Stop",
-        just_once=True,
-        callback=None
-    )
-    if audio_data:
-        print("Audio recorded successfully.")
-        audio_bytes = io.BytesIO(audio_data['bytes'])
-        audio_bytes.seek(0)
-        with st.spinner("transcribing audio...."):
-            raw_transcript = transcribe_audio(audio_bytes)
-        if raw_transcript:
-            transcript = raw_transcript['results']['channels'][0]['alternatives'][0]['paragraphs']['transcript']
-            specialist = 'Emergency Medicine'
-            st.session_state.specialist = specialist
-
-            if "Speaker 1" in transcript:
-                prompt = f"{transcript_prompt} '''{transcript}'''"
-                return prompt
-            else:
-                prompt = transcript.replace("Speaker 0:", "").strip()
-                return prompt
-    return None
 
 def get_response(user_question: str) -> str:
     with st.spinner("Waiting for EMMA's response..."):
@@ -1404,7 +1305,7 @@ def display_session_data(collection_name):
             st.write(f"Timestamp: {doc.get('timestamp', 'N/A')}")
             st.write("---")
     
-    initialize_text_indexes(collection_name)
+    # initialize_text_indexes(collection_name)
     
     # load_chat_history(collection_name)
     if st.button("load the chat history?", on_click=load_chat_history(collection_name)):
@@ -1425,9 +1326,12 @@ def display_delete_session_button(collection_name):
         col1, col2 = st.columns(2)
         with col1:
             if st.button(f"Yes, delete {collection_name} data", type='primary', use_container_width=True):
+                print(f'DEBUG DELETE SESSION DATA COLLECTION NAME: {collection_name}')
                 delete_session_data(collection_name)
                 st.success(f"Session data {collection_name} deleted successfully.")
                 st.session_state.delete_confirmation = False
+                load_session_data.clear()
+                time.sleep(1)  # Give user time to see the message
                 st.rerun()
         with col2:
             if st.button("No, cancel", use_container_width=True):
@@ -1448,7 +1352,7 @@ def handle_user_input_container():
                     background="white"  
         ))
     with input_container:
-        
+
         col_specialist, col1, col2= st.columns([1, 6, 1])
         with col_specialist:
             specialist = st.session_state.specialist
@@ -1469,7 +1373,7 @@ def handle_user_input_container():
             user_question = st.chat_input("How may I help you?") 
         with col2:
             user_chat = record_audio()
-        
+            
     if user_question:
         process_user_question(user_question, specialist)
         st.rerun()
@@ -1570,8 +1474,11 @@ def authenticated_user():
 
 
 def main():
+    
     initialize_session_state()
+    
     display_header()
+    
 
     # Add a small delay to allow cookie to be read
     time.sleep(.3)

@@ -1,7 +1,7 @@
 # recorder.py
 
 import streamlit as st
-from streamlit_mic_recorder import mic_recorder
+from streamlit_mic_recorder import mic_recorder, speech_to_text
 from deepgram import DeepgramClient, PrerecordedOptions
 import io
 import os
@@ -12,17 +12,24 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
+
 load_dotenv()
 
 DEEPGRAM_API_KEY = os.getenv('DEEPGRAM_API_KEY')
 
+def on_mic_ready():
+    st.session_state.mic_ready = True
+
+
 def record_audio():
+    
     print("Recording audio...")
     audio_data = mic_recorder(
-        start_prompt="Record",
+        start_prompt="🎙️Record",
         stop_prompt="🔴Stop",
         just_once=True,
-        callback=None
+        callback=None,
+        key="main_recorder"
     )
     if audio_data:
         print("Audio recorded successfully.")
@@ -63,3 +70,32 @@ def transcribe_audio(audio_file):
     except Exception as e:
         st.error(f"Error: {str(e)}")
         return None
+
+
+
+# free google speech to text
+def record_audio_and_transcribe():
+    print("Recording audio from record_uadio_and_transcribe...")
+    audio_data = speech_to_text(
+        start_prompt="🎙️",
+        stop_prompt="🔴Stop",
+        just_once=True,
+        callback=None
+    )
+    print(f'audio_data: {audio_data}')
+
+def safe_mic_recorder():
+    if 'mic_initialized' not in st.session_state:
+        st.session_state.mic_initialized = False
+    
+    if not st.session_state.mic_initialized:
+        st.session_state.mic_initialized = True
+        return None
+    
+    return mic_recorder(
+        start_prompt="🎙️Record",
+        stop_prompt="🔴Stop",
+        just_once=True,
+        key=f"mic_recorder_{st.session_state.get('rerun_count', 0)}"
+    )
+

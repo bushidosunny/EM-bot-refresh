@@ -174,14 +174,6 @@ class MongoAuthenticator:
     def is_authenticated(self):
         return self.cookie_manager.get(self.cookie_name) is not None
 
-    def reset_password(self, username, current_password, new_password):
-        user = self.users.find_one({"username": username})
-        if user and bcrypt.checkpw(current_password.encode('utf-8'), user['password']):
-            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
-            self.users.update_one({"username": username}, {"$set": {"password": hashed_password}})
-            return True
-        return False
-
  # Modified: Now creates a User object and inserts it into the database
     def register_user(self, username, name, password, email):
         if self.users.find_one({"$or": [{"username": username}, {"email": email}]}):
@@ -207,12 +199,6 @@ class MongoAuthenticator:
             return username, user['email'], new_password
         return None, None, None
 
-    def update_user_details(self, username, field, new_value):
-        if field in ['name', 'email']:
-            self.users.update_one({"username": username}, {"$set": {field: new_value}})
-            return True
-        return False
-    
     def login_page(self):
         st.header("Login")
         with st.form("login_form"):
@@ -280,3 +266,26 @@ class MongoAuthenticator:
                     st.session_state.username = user['username']
                     return True
             return False
+
+    def change_password(self, username, current_password, new_password):
+        user = self.users.find_one({"username": username})
+        if user and bcrypt.checkpw(current_password.encode('utf-8'), user['password']):
+            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+            self.users.update_one({"username": username}, {"$set": {"password": hashed_password}})
+            return True
+        return False
+
+    def reset_password(self, username, email):
+        user = self.users.find_one({"username": username, "email": email})
+        if user:
+            new_password = secrets.token_urlsafe(12)
+            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+            self.users.update_one({"username": username}, {"$set": {"password": hashed_password}})
+            return new_password
+        return None
+
+    def update_user_details(self, username, field, new_value):
+        if field in ['name', 'email']:
+            self.users.update_one({"username": username}, {"$set": {field: new_value}})
+            return True
+        return False
