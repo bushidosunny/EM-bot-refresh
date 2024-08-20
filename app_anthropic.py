@@ -451,6 +451,7 @@ def save_case_details(user_id, doc_type, content=None):
         "type": doc_type,
         "user_id": user_id,
         "ddx": st.session_state.differential_diagnosis,
+        "critical_actions": st.session_state.critical_actions,
         "content": content,
         "patient_cc": st.session_state.patient_cc,
         "timestamp": datetime.datetime.now(),
@@ -676,7 +677,7 @@ def load_chat_history(collection_name):
         ddx_doc = db[collection_name].find_one({"type": "ddx"}, sort=[("timestamp", -1)])
         if ddx_doc:
             st.session_state.differential_diagnosis = ddx_doc.get('ddx', [])
-            st.session_state.critical_actions = ddx_doc.get('critical_actions', {})
+            st.session_state.critical_actions = ddx_doc.get('critical_actions', [])
 
         # Load other necessary session state variables
         st.session_state.patient_cc = ddx_doc.get('patient_cc', '') if ddx_doc else ''
@@ -1012,14 +1013,23 @@ def display_header():
         """, 
         unsafe_allow_html=True)
 
+# def display_critical_tasks():
+#     #print(f'DEBUG SS TATE CRITICAL ACTIONS:{st.session_state.critical_actions}')
+#     if st.session_state.critical_actions:
+#         st.markdown(f"<h5>❗Critical Actions</h5>", unsafe_allow_html=True)
+#         tasks = st.session_state.critical_actions.keys() if isinstance(st.session_state.critical_actions, dict) else st.session_state.critical_actions
+        
+#         for task in tasks:
+#             key = f"critical_{task}"
+#             if st.checkbox(f"❗{task}", key=key):
+#                 if task not in st.session_state.completed_tasks_str:
+#                     st.session_state.completed_tasks_str += f"Completed: {task}. "
+
 def display_critical_tasks():
-    #print(f'DEBUG SS TATE CRITICAL ACTIONS:{st.session_state.critical_actions}')
     if st.session_state.critical_actions:
         st.markdown(f"<h5>❗Critical Actions</h5>", unsafe_allow_html=True)
-        tasks = st.session_state.critical_actions.keys() if isinstance(st.session_state.critical_actions, dict) else st.session_state.critical_actions
-        
-        for task in tasks:
-            key = f"critical_{task}"
+        for i, task in enumerate(st.session_state.critical_actions):
+            key = f"critical_{i}"
             if st.checkbox(f"❗{task}", key=key):
                 if task not in st.session_state.completed_tasks_str:
                     st.session_state.completed_tasks_str += f"Completed: {task}. "
@@ -1272,7 +1282,8 @@ def display_sessions_tab():
                 with col1:
                     if st.button("Load Selected Session"):
                         st.session_state.load_session = collection_name
-                        st.success(f"Session '{session_name}' selected. Click 'Refresh' to load the chat history.")
+                        st.session_state.show_load_success = True
+                        # st.success(f"Click 'Refresh' to load the chat history.")
                 with col2:
                     if st.button("Delete Selected Session"):
                         if 'delete_confirmation' not in st.session_state:
@@ -1280,6 +1291,13 @@ def display_sessions_tab():
                         st.session_state.delete_confirmation = True
                         st.session_state.delete_session_name = session_name
                         st.session_state.delete_collection_name = collection_name
+                
+                # Display success message outside of columns
+                if st.session_state.get('show_load_success', False):
+                    st.success(f"Session '{session_name}' selected. Click 'Refresh' to load the chat history.")
+                    st.session_state.show_load_success = False  # Reset the flag
+                    time.sleep(1)  # Give user time to see the message
+                    st.rerun()
 
                 if st.session_state.get('delete_confirmation', False):
                     st.warning(f"Are you sure you want to delete the session '{st.session_state.delete_session_name}'? This action cannot be undone.")
@@ -1303,8 +1321,7 @@ def display_sessions_tab():
     else:
         st.write("No sessions found for this user.")
 
-    if st.button("Refresh"):
-        st.rerun()
+    
 
 def display_session_data(collection_name):
     st.session_state.session_id = collection_name
