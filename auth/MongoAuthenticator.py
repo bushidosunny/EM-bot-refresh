@@ -34,6 +34,7 @@ class User:
     created_at: datetime = field(default_factory=datetime.datetime.now)
     last_login: datetime = field(default_factory=datetime.datetime.now)
     login_count: int = 0
+    sessions_count: int = 0
     last_active: datetime = field(default_factory=datetime.datetime.now)
     total_session_time: int = 0
     preferences: Dict[str, List] = field(default_factory=lambda: {"note_templates": []})
@@ -50,6 +51,7 @@ class User:
             "last_login": self.last_login,
             "login_count": self.login_count,
             "last_active": self.last_active,
+            "sessions_count": self.sessions_count, 
             "total_session_time": self.total_session_time,
             "preferences": self.preferences,
             "recordings_count": self.recordings_count,
@@ -71,6 +73,7 @@ class User:
         user.created_at = data.get("created_at", user.created_at)
         user.last_login = data.get("last_login", user.last_login)
         user.login_count = data.get("login_count", 0)
+        user.sessions_count = data.get("sessions_count", 0)
         user.last_active = data.get("last_active", user.last_active)
         user.total_session_time = data.get("total_session_time", 0)
         user.preferences = data.get("preferences", {"note_templates": []})
@@ -84,6 +87,60 @@ class User:
 
     def update_activity(self) -> None:
         self.last_active = datetime.datetime.now()
+
+    # def create_or_update_daily_session(self, user_id: str) -> None:
+    #     logging.info(f"Checking daily session for user_id: {user_id}")
+    #     try:
+    #         user_data = self.users.find_one({"_id": ObjectId(user_id)})
+    #         if user_data is None:
+    #             logging.error(f"No user found with id: {user_id}")
+    #             st.error("Session error: User not found. Please log in again.")
+    #             self.logout()
+    #             st.rerun()
+    #             return
+
+    #         today = datetime.datetime.now().date()
+    #         last_login = user_data.get('last_login')
+
+    #         if last_login is None or last_login.date() < today:
+    #             # It's a new day, increment the session count
+    #             result = self.users.update_one(
+    #                 {"_id": ObjectId(user_id)},
+    #                 {
+    #                     "$inc": {"sessions_count": 1},
+    #                     "$set": {"last_login": datetime.datetime.now()}
+    #                 }
+    #             )
+
+    #             if result.modified_count == 1:
+    #                 logging.info(f"Incremented daily session count for user: {user_data['username']}")
+    #             else:
+    #                 logging.warning(f"Failed to increment daily session count for user: {user_data['username']}")
+    #         else:
+    #             logging.info(f"User {user_data['username']} already has an active session today")
+
+    #     except Exception as e:
+    #         logging.error(f"Error updating daily session for user {user_id}: {str(e)}")
+    #         st.error("An error occurred while updating your session. Please try again.")
+
+    def update_user_metrics(self, user_id: str) -> None:
+        user_obj = User.from_dict(self.users.find_one({"_id": ObjectId(user_id)}))
+        user_obj.update_login()
+        user_obj.update_activity()
+
+        self.users.update_one(
+            {"_id": ObjectId(user_id)},
+            {
+                "$set": {
+                    "last_login": user_obj.last_login,
+                    "login_count": user_obj.login_count,
+                    "last_active": user_obj.last_active,
+                }
+            }
+        )
+
+    def increment_sessions_count(self) -> None:
+            self.sessions_count += 1
 
     def add_session_time(self, duration: int) -> None:
         self.total_session_time += duration
@@ -124,7 +181,7 @@ class User:
   
   ################################### MongoAuthenticator Class ##########################################################
 
-
+#################################### MongoAuthenticator Class ########################################
 class MongoAuthenticator:
     def __init__(self, users_collection, cookie_name, cookie_expiry_days, cookie_manager):
         self.users = users_collection
@@ -140,8 +197,64 @@ class MongoAuthenticator:
             st.session_state.authentication_status = True
             st.session_state.name = user['name']
             st.session_state.username = username
+
+            # Update user metrics
+            self.update_user_metrics(user_id)
+
             return user['name'], True, username
         return None, False, None
+
+    def update_user_metrics(self, user_id: str) -> None:
+        logging.info(f"Updating user metrics for user_id: {user_id}")
+        try:
+            user_data = self.users.find_one({"_id": ObjectId(user_id)})
+            if user_data is None:
+                logging.error(f"No user found with id: {user_id}")
+                return
+
+            today = datetime.datetime.now().date()
+            last_login = user_data.get('last_login')
+
+            update_fields = {
+                "last_active": datetime.datetime.now()
+            }
+
+            if last_login is None or last_login.date() < today:
+                # It's a new day, update last_login and increment login_count
+                update_fields.update({
+                    "last_login": datetime.datetime.now(),
+                    "login_count": user_data.get('login_count', 0) + 1
+                })
+
+            result = self.users.update_one(
+                {"_id": ObjectId(user_id)},
+                {"$set": update_fields}
+            )
+
+            if result.modified_count == 1:
+                logging.info(f"Updated user metrics for user: {user_data['username']}")
+            else:
+                logging.warning(f"Failed to update user metrics for user: {user_data['username']}")
+
+        except Exception as e:
+            logging.error(f"Error updating user metrics for user {user_id}: {str(e)}")
+
+    def create_new_session(self, user_id: str) -> None:
+        logging.info(f"Creating new chat session for user_id: {user_id}")
+        try:
+            result = self.users.update_one(
+                {"_id": ObjectId(user_id)},
+                {"$inc": {"sessions_count": 1}}
+            )
+
+            if result.modified_count == 1:
+                logging.info(f"Incremented chat session count for user: {user_id}")
+            else:
+                logging.warning(f"Failed to increment chat session count for user: {user_id}")
+
+        except Exception as e:
+            logging.error(f"Error creating new chat session for user {user_id}: {str(e)}")
+            st.error("An error occurred while creating a new chat session. Please try again.")
 
     def create_cookie(self, user_id):
         expiry = datetime.datetime.now() + datetime.timedelta(days=self.cookie_expiry_days)
@@ -174,7 +287,6 @@ class MongoAuthenticator:
     def is_authenticated(self):
         return self.cookie_manager.get(self.cookie_name) is not None
 
- # Modified: Now creates a User object and inserts it into the database
     def register_user(self, username, name, password, email):
         if self.users.find_one({"$or": [{"username": username}, {"email": email}]}):
             return False
@@ -199,12 +311,73 @@ class MongoAuthenticator:
             return username, user['email'], new_password
         return None, None, None
 
+    def authenticate(self):
+        logging.info("Authenticating user...")
+        if st.session_state.get('authentication_status'):
+            logging.info("User already authenticated in session state")
+            return True
+        else:
+            user_id = self.cookie_manager.get(self.cookie_name)
+            logging.info(f"Retrieved user_id from cookie: {user_id}")
+            if user_id and user_id != "":
+                try:
+                    user = self.users.find_one({"_id": ObjectId(user_id)})
+                    if user:
+                        logging.info(f"Found user: {user['username']}")
+                        st.session_state.authentication_status = True
+                        st.session_state.name = user['name']
+                        st.session_state.username = user['username']
+                        st.session_state.user_id = str(user['_id'])
+                        
+                        # Update user metrics and check/update daily login
+                        self.update_user_metrics(user_id)
+                  
+                        
+                        return True
+                    else:
+                        logging.warning(f"No user found for id: {user_id}")
+                except Exception as e:
+                    logging.error(f"Error during authentication: {str(e)}")
+                
+                # User not found or error occurred, clear the invalid cookie
+                self.logout()
+                st.error("Your session has expired. Please log in again.")
+                st.rerun()
+            else:
+                logging.info("No user_id found in cookie")
+            return False
+
+    def change_password(self, username, current_password, new_password):
+        user = self.users.find_one({"username": username})
+        if user and bcrypt.checkpw(current_password.encode('utf-8'), user['password']):
+            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+            self.users.update_one({"username": username}, {"$set": {"password": hashed_password}})
+            return True
+        return False
+
+    def reset_password(self, username, email):
+        user = self.users.find_one({"username": username, "email": email})
+        if user:
+            new_password = secrets.token_urlsafe(12)
+            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+            self.users.update_one({"username": username}, {"$set": {"password": hashed_password}})
+            return new_password
+        return None
+
+    def update_user_details(self, username, field, new_value):
+        if field in ['name', 'email']:
+            self.users.update_one({"username": username}, {"$set": {field: new_value}})
+            return True
+        return False
+
+######################################### UI ##########################################################
+
     def login_page(self):
         c1, c2, c3 = st.columns([1,1,1])
         with c2:
             st.header("Login")
             with st.form("login_form"):
-                username = st.text_input("Username")
+                username = st.text_input("Username").lower() 
                 password = st.text_input("Password", type="password")
                 submit = st.form_submit_button("Login", type='primary')
 
@@ -314,39 +487,3 @@ class MongoAuthenticator:
                 st.session_state.show_change_password = False
                 st.rerun()
 
-    def authenticate(self):
-        if st.session_state.get('authentication_status'):
-            return True
-        else:
-            user_id = self.cookie_manager.get(self.cookie_name)
-            if user_id and user_id != "":
-                user = self.users.find_one({"_id": ObjectId(user_id)})
-                if user:
-                    st.session_state.authentication_status = True
-                    st.session_state.name = user['name']
-                    st.session_state.username = user['username']
-                    return True
-            return False
-
-    def change_password(self, username, current_password, new_password):
-        user = self.users.find_one({"username": username})
-        if user and bcrypt.checkpw(current_password.encode('utf-8'), user['password']):
-            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
-            self.users.update_one({"username": username}, {"$set": {"password": hashed_password}})
-            return True
-        return False
-
-    def reset_password(self, username, email):
-        user = self.users.find_one({"username": username, "email": email})
-        if user:
-            new_password = secrets.token_urlsafe(12)
-            hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
-            self.users.update_one({"username": username}, {"$set": {"password": hashed_password}})
-            return new_password
-        return None
-
-    def update_user_details(self, username, field, new_value):
-        if field in ['name', 'email']:
-            self.users.update_one({"username": username}, {"$set": {field: new_value}})
-            return True
-        return False

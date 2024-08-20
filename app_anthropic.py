@@ -105,12 +105,14 @@ specialist_data = {
   "Neurological": {
     "assistant_id": "asst_caM9P1caoAjFRvSAmT6Y6mIz",
     "caption": "🧠Neurology, Neurosurgery, Psychiatry",
-    "avatar": "https://cdn.pixabay.com/photo/2018/11/21/02/04/graphic-3828723_1280.png"
+    "avatar": "https://cdn.pixabay.com/photo/2018/11/21/02/04/graphic-3828723_1280.png",
+    "system_instructions": neurological_system
   },
   "Sensory Systems (Eyes, Ears, Nose, Throat)": {
     "assistant_id": "asst_UB1VTD6NyYbb1xTrUueb3xlI",
     "caption": "👁️Ophthalmology, ENT",
-    "avatar": "https://cdn.imgbin.com/17/1/11/imgbin-mr-potato-head-toy-child-infant-computer-icons-toy-GdJDP1cicFXdWJHbgSanRhnFQ.jpg"
+    "avatar": "https://cdn.imgbin.com/17/1/11/imgbin-mr-potato-head-toy-child-infant-computer-icons-toy-GdJDP1cicFXdWJHbgSanRhnFQ.jpg",
+    "system_instructions": sensory_system
   },
   "Cardiovascular and Respiratory": {
     "assistant_id": "asst_bH6wKFfCMVBiH3yUkM0DWdFk",
@@ -147,17 +149,20 @@ specialist_data = {
   "Pediatrics": {
     "assistant_id": "asst_cVQwzy87fwOvTnb66zsvVB5L",
     "caption": "👶Pediatrics, Neonatology, Pediatric Surgery",
-    "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/15/man-148077_1280.png"
+    "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/15/man-148077_1280.png",
+    "system_instructions": pediatric_system
   },
   "Infectious Disease": {
     "assistant_id": "asst_40hUiBxEhoylT6dCEqhssCiI",
     "caption": "🦠Infectious Disease, Epidemiology",
-    "avatar": "https://cdn.pixabay.com/photo/2020/04/18/08/33/coronavirus-5058247_1280.png"
+    "avatar": "https://cdn.pixabay.com/photo/2020/04/18/08/33/coronavirus-5058247_1280.png",
+    "system_instructions": infectious_disease_system
   }, 
   "Medical Legal": {
     "assistant_id": "asst_ZI3rML4v8eG1vhQ3Fis5ikOd",
     "caption": "⚖️Legal Consultant",
-    "avatar": "https://cdn.pixabay.com/photo/2017/01/31/17/34/comic-characters-2025788_1280.png"
+    "avatar": "https://cdn.pixabay.com/photo/2017/01/31/17/34/comic-characters-2025788_1280.png",
+    "system_instructions": legal_system
   },
   "Note Writer": {
     "assistant_id": "asst_Ua6cmp6dpTc33cSpuZxutGsX",
@@ -168,7 +173,8 @@ specialist_data = {
   "Note Summarizer": {
     "assistant_id": "asst_c2lPEtkLRILNyl5K7aJ0R38o",
     "caption": "Medical Note Summarizer",
-    "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png"
+    "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png",
+    "system_instructions": note_summarizer_system
   },
   "Patient Educator": {
     "assistant_id": "asst_twf42nzGoYLtrHAZeENLcI5d",
@@ -179,7 +185,8 @@ specialist_data = {
   "Dr. Longevity": {
     "assistant_id": "asst_sRjFUQFCD0dNOl7513qb4gGv",
     "caption": "Cutting edge on Longevity and Healthspan Focused",
-    "avatar": "https://cdn.pixabay.com/photo/2019/07/02/05/54/tool-4311573_1280.png"
+    "avatar": "https://cdn.pixabay.com/photo/2019/07/02/05/54/tool-4311573_1280.png",
+    "system_instructions": longevity_system
   },
   "Bayesian Reasoner": {
     "assistant_id": "asst_Ffad1oXsVwaa6R3sp012H9bx",
@@ -207,7 +214,8 @@ specialist_data = {
   "Cardiology Clinic": {
     "assistant_id": "asst_m4Yispc9GIdwGFsyz2KNT8c5",
     "caption": "Cardiologis in Clinic - Beta testing",
-    "avatar": "https://cdn.pixabay.com/photo/2017/02/15/20/58/ekg-2069872_1280.png"
+    "avatar": "https://cdn.pixabay.com/photo/2017/02/15/20/58/ekg-2069872_1280.png",
+    "system_instructions": cardiology_clinic_system
   }
   
 }
@@ -368,6 +376,10 @@ def create_new_session():
                 db.create_collection(collection_name)
                 db[collection_name].create_index([("timestamp", ASCENDING), ("test_name", ASCENDING)], unique=True)
                 initialize_text_indexes(collection_name)
+    
+    # Increment the chat session count
+    authenticator.create_new_session(st.session_state.user_id)
+
     return collection_name
 
 def initialize_text_indexes(collection_name):
@@ -658,33 +670,52 @@ def delete_session_data(collection_name):
 
 def load_chat_history(collection_name):
     try:
+        # Clear existing data (unchanged)
         st.session_state.chat_history = []
         st.session_state.differential_diagnosis = []
-        st.session_state.critical_actions = {}
+        st.session_state.critical_actions = []
 
-        chat_documents = db[collection_name].find({"type": {"$in": ["user_input", "ai_input"]}}).sort("timestamp", ASCENDING)
+        # Fetch chat documents, sorted oldest to newest
+        chat_documents = db[collection_name].find({"type": {"$in": ["user_input", "ai_input"]}}).sort("timestamp", 1)
         
+        # Group messages into pairs
+        message_pairs = []
+        current_pair = []
         for doc in chat_documents:
-            content = doc.get('message', '')
-            if doc['type'] == 'user_input':
-                message = HumanMessage(content=content, avatar=st.session_state.user_photo_url)
-            else:
-                specialist = doc.get('specialist', 'Emergency Medicine')
-                avatar = specialist_data[specialist]["avatar"]
-                message = AIMessage(content=content, avatar=avatar)
-            
-            st.session_state.chat_history.append(message)
+            current_pair.append(doc)
+            if len(current_pair) == 2:
+                message_pairs.append(current_pair)
+                current_pair = []
+        
+        # If there's an odd message left, add it as a single-message pair
+        if current_pair:
+            message_pairs.append(current_pair)
+        
+        # Reverse the order of pairs
+        message_pairs.reverse()
+        
+        # Create message objects and add to chat history
+        for pair in message_pairs:
+            for doc in pair:
+                content = doc.get('message', '')
+                if doc['type'] == 'user_input':
+                    message = HumanMessage(content=content, avatar=st.session_state.user_photo_url)
+                else:
+                    specialist = doc.get('specialist', 'Emergency Medicine')
+                    avatar = specialist_data[specialist]["avatar"]
+                    message = AIMessage(content=content, avatar=avatar)
+                
+                st.session_state.chat_history.append(message)
 
-        # Load the most recent differential diagnosis
+        # Load most recent differential diagnosis (unchanged)
         ddx_doc = db[collection_name].find_one({"type": "ddx"}, sort=[("timestamp", -1)])
         if ddx_doc:
             st.session_state.differential_diagnosis = ddx_doc.get('ddx', [])
             st.session_state.critical_actions = ddx_doc.get('critical_actions', [])
 
-        # Load other necessary session state variables
+        # Set other session state variables (unchanged)
         st.session_state.patient_cc = ddx_doc.get('patient_cc', '') if ddx_doc else ''
-        st.session_state.specialist = 'Emergency Medicine'  # Set default specialist or load from the last AI message
-
+        st.session_state.specialist = 'Emergency Medicine'
 
         print(f"Loaded {len(st.session_state.chat_history)} messages and {len(st.session_state.differential_diagnosis)} diagnoses")
     except Exception as e:
@@ -1233,26 +1264,14 @@ def display_variables_tab():
     if st.button("Update Indexes"):
         initialize_text_indexes(st.session_state.collection_name)
 
-def display_chat_history():    
-    messages_per_page = 20
-    page = st.session_state.get('chat_page', 0)
-    
-    total_messages = len(st.session_state.chat_history)
-    start_idx = page * messages_per_page
-    end_idx = min(start_idx + messages_per_page, total_messages)
-    
-    for message in st.session_state.chat_history[start_idx:end_idx]:
+def display_chat_history():
+    for message in st.session_state.chat_history:
         if isinstance(message, HumanMessage):
             with st.chat_message("user", avatar=st.session_state.user_photo_url):                
                 st.markdown(message.content, unsafe_allow_html=True)
         else:
             with st.chat_message("AI", avatar=message.avatar):
                 st.markdown(message.content, unsafe_allow_html=True)
-    
-    if end_idx < total_messages:
-        if st.button("Load More"):
-            st.session_state.chat_page = page + 1
-            st.rerun()
 
 def display_sessions_tab():
     user_id = st.session_state.user_id  # Use Google ID instead of username
@@ -1299,7 +1318,7 @@ def display_sessions_tab():
                 
                 # Display success message outside of columns
                 if st.session_state.get('show_load_success', False):
-                    st.success(f"Session '{session_name}' selected. Click 'Refresh' to load the chat history.")
+                    st.success(f"Session '{session_name}' selected.")
                     st.session_state.show_load_success = False  # Reset the flag
                     time.sleep(1)  # Give user time to see the message
                     st.rerun()
@@ -1478,7 +1497,6 @@ def process_user_question(user_question, specialist):
 
         # Ensure the most recent messages are visible
         total_messages = len(st.session_state.chat_history)
-        st.session_state.chat_page = max(0, (total_messages - 1) // 20)  # 20 is messages_per_page
         
         save_ai_message(st.session_state.username, "ai", assistant_response, specialist)
 
@@ -1530,12 +1548,16 @@ def get_response(user_question: str) -> str:
 
 
 def authenticated_user():
+    
     try:
+        logging.info("Entering authenticated_user function")
+
         if 'load_session' in st.session_state:
             collection_name = st.session_state.load_session
             load_chat_history(collection_name)
             st.session_state.collection_name = collection_name
             del st.session_state.load_session  # Clear the flag after loading
+
 
         if st.session_state.differential_diagnosis:
             col1, col2 = st.columns([2, 1])
