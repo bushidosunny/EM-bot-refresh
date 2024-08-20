@@ -229,16 +229,16 @@ class MongoAuthenticator:
             # New buttons for forgot username and change password
             col1, col2, col3 = st.columns(3)
             with col1:
-                if st.button("Register Here"):
+                if st.button("Register Here", key="register_btn"):
                     st.session_state.show_registration = True
                     st.rerun()
                 
             with col2:
-                if st.button("Change Password"):
+                if st.button("Change Password", key="change_password_btn"):
                     st.session_state.show_change_password = True
                     st.rerun()
             with col3:
-                if st.button("Forgot Username"):
+                if st.button("Forgot Username", key="forgot_username_btn"):
                     st.session_state.show_forgot_username = True
                     st.rerun()
 
@@ -251,29 +251,68 @@ class MongoAuthenticator:
                 self.change_password_page()
 
     def register_page(self):
-        st.header("Register")
-        with st.form("register_form"):
-            username = st.text_input("Username")
-            name = st.text_input("Name")
-            email = st.text_input("Email")
-            password = st.text_input("Password", type="password")
-            submit = st.form_submit_button("Register")
+        c1, c2, c3 = st.columns([1,1,1])
+        with c2:
+            st.header("Register")
+            with st.form("register_form"):
+                username = st.text_input("Username")
+                name = st.text_input("Name")
+                email = st.text_input("Email")
+                password = st.text_input("Password", type="password")
+                submit = st.form_submit_button("Register", type='primary')
 
-        if submit:
-            try:
-                if self.register_user(username, name, password, email):
-                    st.success("Registration successful. Please login.")
-                    st.session_state.show_registration = False
+            if submit:
+                try:
+                    if self.register_user(username, name, password, email):
+                        st.success("Registration successful. Please login.")
+                        st.session_state.show_registration = False
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error("Username or email already exists")
+                except Exception as e:
+                    st.error(f"An error occurred during registration: {str(e)}")
+
+            if st.button("Already have an account? Login here"):
+                st.session_state.show_registration = False
+                st.rerun()
+
+    def forgot_username_page(self):
+        c1, c2, c3 = st.columns([1,1,1])
+        with c2:
+            st.subheader("Forgot Username")
+            email = st.text_input("Enter your email address", key="forgot_username_email")
+            if st.button("Retrieve Username", key="retrieve_username_btn", type='primary'):
+                user = self.users.find_one({"email": email})
+                if user:
+                    st.success(f"Your username is: {user['username']}")
+                else:
+                    st.error("No account found with this email address")
+            if st.button("Back to Login", key="forgot_username_back"):
+                st.session_state.show_forgot_username = False
+                st.rerun()
+
+    def change_password_page(self):
+        c1, c2, c3 = st.columns([1,1,1])
+        with c2:
+            st.subheader("Change Password")
+            username = st.text_input("Username", key="change_pw_username")
+            current_password = st.text_input("Current Password", type="password", key="change_pw_current")
+            new_password = st.text_input("New Password", type="password", key="change_pw_new")
+            confirm_password = st.text_input("Confirm New Password", type="password", key="change_pw_confirm")
+            if st.button("Change Password", key="change_pw_button", type='primary'):
+                if new_password != confirm_password:
+                    st.error("New passwords do not match")
+                elif self.change_password(username, current_password, new_password):
+                    st.success("Password changed successfully")
+                    st.session_state.show_change_password = False
                     time.sleep(1)
                     st.rerun()
                 else:
-                    st.error("Username or email already exists")
-            except Exception as e:
-                st.error(f"An error occurred during registration: {str(e)}")
-
-        if st.button("Already have an account? Login here"):
-            st.session_state.show_registration = False
-            st.rerun()
+                    st.error("Invalid username or current password")
+            if st.button("Back to Login", key="change_pw_back"):
+                st.session_state.show_change_password = False
+                st.rerun()
 
     def authenticate(self):
         if st.session_state.get('authentication_status'):

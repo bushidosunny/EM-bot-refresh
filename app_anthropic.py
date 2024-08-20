@@ -225,6 +225,8 @@ def initialize_session_state():
         session_state.user_id = None
         session_state.authentication_status = None
         session_state.show_registration = False
+        session_state.show_forgot_username = False
+        session_state.show_change_password = False
         session_state.username = ""
         session_state.user_photo_url = "https://cdn.pixabay.com/photo/2016/12/21/07/36/profession-1922360_1280.png"
         session_state.collection_name = ""
@@ -1605,6 +1607,10 @@ def main():
     else:
         if st.session_state.show_registration:
             authenticator.register_page()
+        elif st.session_state.show_forgot_username:
+            authenticator.forgot_username_page()
+        elif st.session_state.show_change_password:
+            authenticator.change_password_page()
         else:
             authenticator.login_page()
 
