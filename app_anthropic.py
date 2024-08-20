@@ -1123,14 +1123,17 @@ def display_sidebar():
             #st.divider()
             display_functions_tab()
             container = st.container()
-            container.float(float_css_helper(bottom="10px", border="1px solid #a3a8b4", border_radius= "10px", padding= "10px"))
+            container.float(float_css_helper(bottom="10px", padding= "10px"))
             with container:
-                st.markdown(f'Welcome {st.session_state.name}!')
-                if st.button("Logout", key="logout_button"):
-                    authenticator.logout()
-                    st.success("You have been logged out successfully.")
-                    time.sleep(1)  # Give user time to see the message
-                    st.rerun()
+                c1, c2 = st.columns([2,1])
+                with c1:
+                    st.markdown(f'Welcome {st.session_state.name}!')
+                with c2:
+                    if st.button("Logout", key="logout_button"):
+                        authenticator.logout()
+                        st.success("You have been logged out successfully.")
+                        time.sleep(1)  # Give user time to see the message
+                        st.rerun()
         with tab2:
             display_specialist_tab()
         
