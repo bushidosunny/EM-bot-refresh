@@ -31,7 +31,7 @@ from pymongo import MongoClient, ASCENDING, TEXT, DESCENDING, UpdateOne
 from pymongo.errors import BulkWriteError, ServerSelectionTimeoutError, OperationFailure, ConfigurationError
 from bson import ObjectId
 # from streamlit_mic_recorder import mic_recorder
-from util.recorder import record_audio, safe_mic_recorder
+from util.recorder import record_audio
 from deepgram import DeepgramClient, PrerecordedOptions
 from streamlit.components.v1 import html
 from typing import List, Dict, Any, Optional
@@ -609,47 +609,81 @@ def load_session_data(collection_name):
 def delete_session_data(collection_name):
     db.drop_collection(collection_name)
 
+# def load_chat_history(collection_name):
+#     try:
+#         # Check if we've already loaded the chat history
+#         st.session_state.chat_history = []
+#         st.session_state.differential_diagnosis = []
+
+#         result = db[collection_name].find_one({"type": "chat_history"})
+#         if result and 'session_state_chat_history' in result:
+#             serialized_history = result['session_state_chat_history']
+            
+#             # Check if serialized_history is already a list
+#             if isinstance(serialized_history, list):
+#                 print("Chat history is already a list, no need to parse JSON")
+#             else:
+#                 try:
+#                     # If it's a string, try to parse it as JSON
+#                     serialized_history = json.loads(serialized_history)
+#                 except json.JSONDecodeError:
+#                     print("Error decoding JSON from database. Chat history might be in old format.")
+#                     # Optionally, add fallback code here to handle old format
+#                     return
+
+#             for message_data in serialized_history:
+#                 if isinstance(message_data, dict):
+#                     # If it's a dict, assume it's in the new format
+#                     if message_data['type'] == 'HumanMessage':
+#                         message = HumanMessage(content=message_data['content'], avatar=message_data['avatar'])
+#                     elif message_data['type'] == 'AIMessage':
+#                         message = AIMessage(content=message_data['content'], avatar=message_data['avatar'])
+#                     else:
+#                         continue  # Skip unknown message types
+#                 elif isinstance(message_data, (HumanMessage, AIMessage)):
+#                     # If it's already a message object, use it directly
+#                     message = message_data
+#                 else:
+#                     print(f"Unknown message format: {type(message_data)}")
+#                     continue
+
+#                 st.session_state.chat_history.append(message)
+        
+#         # print(f'DEBUG LOAD CHAT HISTORY ----collection name: {collection_name}-- SESSION STATE CHAT HISTORY: {st.session_state.chat_history}')
+#     except Exception as e:
+#         print(f"Error loading chat history: {e}")
+
 def load_chat_history(collection_name):
     try:
-        # Check if we've already loaded the chat history
         st.session_state.chat_history = []
         st.session_state.differential_diagnosis = []
+        st.session_state.critical_actions = {}
 
-        result = db[collection_name].find_one({"type": "chat_history"})
-        if result and 'session_state_chat_history' in result:
-            serialized_history = result['session_state_chat_history']
-            
-            # Check if serialized_history is already a list
-            if isinstance(serialized_history, list):
-                print("Chat history is already a list, no need to parse JSON")
-            else:
-                try:
-                    # If it's a string, try to parse it as JSON
-                    serialized_history = json.loads(serialized_history)
-                except json.JSONDecodeError:
-                    print("Error decoding JSON from database. Chat history might be in old format.")
-                    # Optionally, add fallback code here to handle old format
-                    return
-
-            for message_data in serialized_history:
-                if isinstance(message_data, dict):
-                    # If it's a dict, assume it's in the new format
-                    if message_data['type'] == 'HumanMessage':
-                        message = HumanMessage(content=message_data['content'], avatar=message_data['avatar'])
-                    elif message_data['type'] == 'AIMessage':
-                        message = AIMessage(content=message_data['content'], avatar=message_data['avatar'])
-                    else:
-                        continue  # Skip unknown message types
-                elif isinstance(message_data, (HumanMessage, AIMessage)):
-                    # If it's already a message object, use it directly
-                    message = message_data
-                else:
-                    print(f"Unknown message format: {type(message_data)}")
-                    continue
-
-                st.session_state.chat_history.append(message)
+        chat_documents = db[collection_name].find({"type": {"$in": ["user_input", "ai_input"]}}).sort("timestamp", ASCENDING)
         
-        # print(f'DEBUG LOAD CHAT HISTORY ----collection name: {collection_name}-- SESSION STATE CHAT HISTORY: {st.session_state.chat_history}')
+        for doc in chat_documents:
+            content = doc.get('message', '')
+            if doc['type'] == 'user_input':
+                message = HumanMessage(content=content, avatar=st.session_state.user_photo_url)
+            else:
+                specialist = doc.get('specialist', 'Emergency Medicine')
+                avatar = specialist_data[specialist]["avatar"]
+                message = AIMessage(content=content, avatar=avatar)
+            
+            st.session_state.chat_history.append(message)
+
+        # Load the most recent differential diagnosis
+        ddx_doc = db[collection_name].find_one({"type": "ddx"}, sort=[("timestamp", -1)])
+        if ddx_doc:
+            st.session_state.differential_diagnosis = ddx_doc.get('ddx', [])
+            st.session_state.critical_actions = ddx_doc.get('critical_actions', {})
+
+        # Load other necessary session state variables
+        st.session_state.patient_cc = ddx_doc.get('patient_cc', '') if ddx_doc else ''
+        st.session_state.specialist = 'Emergency Medicine'  # Set default specialist or load from the last AI message
+
+
+        print(f"Loaded {len(st.session_state.chat_history)} messages and {len(st.session_state.differential_diagnosis)} diagnoses")
     except Exception as e:
         print(f"Error loading chat history: {e}")
 
@@ -778,36 +812,7 @@ def archive_old_sessions(user_id, days_threshold=30):
                     db[archive_collection_name].insert_many(db[collection_name].find())
                     db[collection_name].drop()
             st.info(f"Archived old session: {collection_name}")
-
-def get_response(user_question: str) -> str:
-    with st.spinner("Waiting for EMMA's response..."):
-        response_placeholder = st.empty()
-        
-        chat_history = st.session_state.clean_chat_history
-        system_instructions = st.session_state.system_instructions
-
-        if isinstance(system_instructions, list):
-            system_instructions = "\n".join(system_instructions)
-
-        system_prompt = system_instructions.format(
-            REQUESTED_SECTIONS='ALL',
-            FILL_IN_EXPECTED_FINDINGS='fill in the normal healthy findings and include them in the note accordingly'
-        )
-        system_message = SystemMessage(content=system_prompt)
-        
-        user_content = f"Chat History:\n{chat_history} \n\n User:{user_question}"
-        user_message = HumanMessage(content=user_content)
-        
-        messages = [system_message, user_message]
-
-        # LLM Model Response
-        response = model.invoke(messages)
-        response_text = response.content
-
-        response_placeholder.markdown(response_text)
-        
-        return response_text
-   
+  
 def update_completed_tasks():
     completed_tasks = [task for task, status in st.session_state.items() if task.startswith("critical_") and status]
     st.session_state.completed_tasks_str = "Tasks Completed: " + '. '.join(completed_tasks) if completed_tasks else ""
@@ -1218,17 +1223,18 @@ def display_chat_history():
     page = st.session_state.get('chat_page', 0)
     
     total_messages = len(st.session_state.chat_history)
-    start_idx = max(0, total_messages - (page + 1) * messages_per_page)
-    end_idx = total_messages - page * messages_per_page
+    start_idx = page * messages_per_page
+    end_idx = min(start_idx + messages_per_page, total_messages)
     
-    for message in st.session_state.chat_history[start_idx:end_idx][::1]:
+    for message in st.session_state.chat_history[start_idx:end_idx]:
         if isinstance(message, HumanMessage):
             with st.chat_message("user", avatar=st.session_state.user_photo_url):                
                 st.markdown(message.content, unsafe_allow_html=True)
         else:
             with st.chat_message("AI", avatar=message.avatar):
                 st.markdown(message.content, unsafe_allow_html=True)
-    if start_idx > 0:
+    
+    if end_idx < total_messages:
         if st.button("Load More"):
             st.session_state.chat_page = page + 1
             st.rerun()
@@ -1261,13 +1267,44 @@ def display_sessions_tab():
         
         if session_name != "Select a session...":
             if session_name in session_options:
-                st.success(f"Session Loaded")
-                st.write(f'**{session_name}**')
-                display_session_data(session_options[session_name])                    
+                collection_name = session_options[session_name]
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("Load Selected Session"):
+                        st.session_state.load_session = collection_name
+                        st.success(f"Session '{session_name}' selected. Click 'Refresh' to load the chat history.")
+                with col2:
+                    if st.button("Delete Selected Session"):
+                        if 'delete_confirmation' not in st.session_state:
+                            st.session_state.delete_confirmation = False
+                        st.session_state.delete_confirmation = True
+                        st.session_state.delete_session_name = session_name
+                        st.session_state.delete_collection_name = collection_name
+
+                if st.session_state.get('delete_confirmation', False):
+                    st.warning(f"Are you sure you want to delete the session '{st.session_state.delete_session_name}'? This action cannot be undone.")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("Yes, delete"):
+                            delete_session_data(st.session_state.delete_collection_name)
+                            st.success(f"Session '{st.session_state.delete_session_name}' deleted successfully.")
+                            del st.session_state.delete_confirmation
+                            del st.session_state.delete_session_name
+                            del st.session_state.delete_collection_name
+                            st.rerun()
+                    with col2:
+                        if st.button("No, cancel"):
+                            del st.session_state.delete_confirmation
+                            del st.session_state.delete_session_name
+                            del st.session_state.delete_collection_name
+                            st.rerun()
             else:
                 st.error(f"Session '{session_name}' not found in options.")
     else:
         st.write("No sessions found for this user.")
+
+    if st.button("Refresh"):
+        st.rerun()
 
 def display_session_data(collection_name):
     st.session_state.session_id = collection_name
@@ -1338,7 +1375,7 @@ def display_delete_session_button(collection_name):
                 st.session_state.delete_confirmation = False
                 st.rerun()
 
-##########################################################################################
+############################################# User input processing #############################################
 def handle_user_input_container():
     input_container = st.container()
     input_container.float(float_css_helper(
@@ -1373,6 +1410,7 @@ def handle_user_input_container():
             user_question = st.chat_input("How may I help you?") 
         with col2:
             user_chat = record_audio()
+
             
     if user_question:
         process_user_question(user_question, specialist)
@@ -1392,7 +1430,7 @@ def process_user_question(user_question, specialist):
         timezone = pytz.timezone("America/Los_Angeles")
         current_datetime = datetime.datetime.now(timezone).strftime("%H:%M:%S")
         
-        # Include the completed tasks in the user l
+        # Include the completed tasks in the user question
         full_user_question = f"""{current_datetime}
             \n{user_question}
             \n{completed_tasks}
@@ -1404,7 +1442,7 @@ def process_user_question(user_question, specialist):
         specialist_avatar = specialist_data[specialist]["avatar"]
         st.session_state.specialist_avatar = specialist_avatar
         
-        st.session_state.messages.append({"role": "user", "content": full_user_question})
+        # Update chat history before getting response
         st.session_state.chat_history.append(HumanMessage(full_user_question, avatar=st.session_state.user_photo_url))
         
         with st.chat_message("user", avatar=st.session_state.user_photo_url):
@@ -1414,8 +1452,11 @@ def process_user_question(user_question, specialist):
             assistant_response = get_response(full_user_question)
             st.session_state.assistant_response = assistant_response
         
-        st.session_state.messages.append({"role": "assistant", "content": assistant_response})
         st.session_state.chat_history.append(AIMessage(st.session_state.assistant_response, avatar=specialist_avatar))
+
+        # Ensure the most recent messages are visible
+        total_messages = len(st.session_state.chat_history)
+        st.session_state.chat_page = max(0, (total_messages - 1) // 20)  # 20 is messages_per_page
         
         save_ai_message(st.session_state.username, "ai", assistant_response, specialist)
 
@@ -1427,9 +1468,53 @@ def process_user_question(user_question, specialist):
         
         # Debug output
         print("DEBUG: Session State after processing user question")
- 
+
+
+def get_response(user_question: str) -> str:
+    with st.spinner("Waiting for EMMA's response..."):
+        response_placeholder = st.empty()
+        
+        # Prepare chat history for context
+        chat_context = ""
+        for message in st.session_state.chat_history[-5:]:  # Include last 5 messages for context
+            if isinstance(message, HumanMessage):
+                chat_context += f"Human: {message.content}\n"
+            else:
+                chat_context += f"AI: {message.content}\n"
+        
+        system_instructions = st.session_state.system_instructions
+
+        if isinstance(system_instructions, list):
+            system_instructions = "\n".join(system_instructions)
+
+        system_prompt = system_instructions.format(
+            REQUESTED_SECTIONS='ALL',
+            FILL_IN_EXPECTED_FINDINGS='fill in the normal healthy findings and include them in the note accordingly'
+        )
+        system_message = SystemMessage(content=system_prompt)
+        
+        user_content = f"Chat History:\n{chat_context}\n\nUser: {user_question}"
+        user_message = HumanMessage(content=user_content)
+        
+        messages = [system_message, user_message]
+
+        # LLM Model Response
+        response = model.invoke(messages)
+        response_text = response.content
+
+        response_placeholder.markdown(response_text)
+        
+        return response_text
+
+
 def authenticated_user():
     try:
+        if 'load_session' in st.session_state:
+            collection_name = st.session_state.load_session
+            load_chat_history(collection_name)
+            st.session_state.collection_name = collection_name
+            del st.session_state.load_session  # Clear the flag after loading
+
         if st.session_state.differential_diagnosis:
             col1, col2 = st.columns([2, 1])
             with col1:
@@ -1461,6 +1546,18 @@ def authenticated_user():
             # display_header()
             display_chat_history()
             handle_user_input_container() 
+            
+            st.markdown(
+                """
+                <script>
+                setTimeout(function(){
+                    var mic = document.querySelector('div[data-testid="stAudioRecorder"]');
+                    if(mic) mic.remove();
+                }, 1000);
+                </script>
+                """,
+                unsafe_allow_html=True
+            )
 
         process_other_queries() 
         display_sidebar()
@@ -1487,6 +1584,7 @@ def main():
     if authenticator.authenticate():
         
         authenticated_user()
+        
     else:
         if st.session_state.show_registration:
             authenticator.register_page()

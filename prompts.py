@@ -54,8 +54,8 @@ DISPOSITION:
 
 Begin writing the emergency medicine medical note based on these instructions and the provided patient information."""
 create_full_note_except_results = """Write a full note except: 'VITALS', 'LABORATORY RESULTS', 'IMAGING'. put one triple asterisk (***) where the 'LABORATORY RESULTS' would have been."""
-create_hpi = """Write just the CHIEF COMPLAINT, HISTORY OF PRESENT ILLNESS,REVIEW OF SYSTEM, SPAST MEDICAL HISTORY, PAST SOCIAL HISTORY, MEDICATIONS and PHYSICAL EXAMINATION"""
-create_ap = """Write just the assesment, ddx, plan and disposition"""
+create_hpi = """Write only the CHIEF COMPLAINT, HISTORY OF PRESENT ILLNESS,REVIEW OF SYSTEM, SPAST MEDICAL HISTORY, PAST SOCIAL HISTORY, MEDICATIONS and PHYSICAL EXAMINATION"""
+create_ap = """Write only the assesment, ddx, plan and disposition"""
 challenge_ddx = "Consider the patient's case, the patient's timeline of events. Doubt the current differential diagnosis. How does one diagnose the disease considered and does this patient fit? Consider alternative explanations. Recreate the DDX"
 pt_education = """You are an emergency medicine specialist tasked with providing patient education materials. Based on the clinical details provided, generate an easy-to-understand patient education note in the specified language. follow the template separated by triple backticks:
     ```
