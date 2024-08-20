@@ -200,33 +200,55 @@ class MongoAuthenticator:
         return None, None, None
 
     def login_page(self):
-        st.header("Login")
-        with st.form("login_form"):
-            username = st.text_input("Username")
-            password = st.text_input("Password", type="password")
-            submit = st.form_submit_button("Login")
+        c1, c2, c3 = st.columns([1,1,1])
+        with c2:
+            st.header("Login")
+            with st.form("login_form"):
+                username = st.text_input("Username")
+                password = st.text_input("Password", type="password")
+                submit = st.form_submit_button("Login", type='primary')
 
-        if submit:
-            name, authentication_status, username = self.login(username, password)
-            if authentication_status:
-                st.success(f"Welcome {name}!")
-                time.sleep(1)
-                st.rerun()
-                # user_data = self.users.find_one({"username": username})
-                # if user_data:
-                #     st.session_state.user = User.from_dict(user_data)
-                #     st.session_state.authentication_status = True
-                #     st.session_state.name = name
-                #     st.session_state.username = username
-                #     st.success(f"Welcome {name}!")
-                #     time.sleep(1)
-                #     st.rerun()
-            else:
-                st.error("Incorrect username or password")
+            if submit:
+                name, authentication_status, username = self.login(username, password)
+                if authentication_status:
+                    st.success(f"Welcome {name}!")
+                    time.sleep(1)
+                    st.rerun()
+                    # user_data = self.users.find_one({"username": username})
+                    # if user_data:
+                    #     st.session_state.user = User.from_dict(user_data)
+                    #     st.session_state.authentication_status = True
+                    #     st.session_state.name = name
+                    #     st.session_state.username = username
+                    #     st.success(f"Welcome {name}!")
+                    #     time.sleep(1)
+                    #     st.rerun()
+                else:
+                    st.error("Incorrect username or password")
 
-        if st.button("Don't have an account? Register here"):
-            st.session_state.show_registration = True
-            st.rerun()
+            # New buttons for forgot username and change password
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("Register Here"):
+                    st.session_state.show_registration = True
+                    st.rerun()
+                
+            with col2:
+                if st.button("Change Password"):
+                    st.session_state.show_change_password = True
+                    st.rerun()
+            with col3:
+                if st.button("Forgot Username"):
+                    st.session_state.show_forgot_username = True
+                    st.rerun()
+
+            # Handle forgot username
+            if st.session_state.get('show_forgot_username', False):
+                self.forgot_username_page()
+
+            # Handle change password
+            if st.session_state.get('show_change_password', False):
+                self.change_password_page()
 
     def register_page(self):
         st.header("Register")
