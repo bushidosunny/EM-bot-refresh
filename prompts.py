@@ -1,4 +1,5 @@
-
+import datetime
+now = datetime.datetime.now().strftime("%B %d, %Y")
 create_med_note ="""You are tasked with writing an emergency medicine medical note based on the chat history provided. Follow these instructions carefully:
 
 1. Chat History:
@@ -844,7 +845,56 @@ By using this application, you confirm that you are a licensed medical professio
 
 """
 
+EULA = f"""
+    **USER AGREEMENT CONTRACT FOR EMERGENCY MEDICINE MEDICAL ASSISTANT (EMMA)**
 
+    This User Agreement Contract ("Agreement") is entered into on {now} ("Effective Date") by and between Emmahealth ("Developer") and the user ("User") of the Emergency Medicine Medical Assistant (EMMA) application ("App").
+
+    **1. DEFINITIONS**
+
+    * "App" means the Emergency Medicine Medical Assistant (EMMA) application, including all software, data, and documentation provided therewith.
+    * "User" means the licensed medical professional using the App.
+    * "Patient Data" means any personal health information or other data related to patients that is processed by the App, including but not limited to medical history, diagnoses, and treatment plans.
+    * "Clinical Judgment" means the User's professional judgment and expertise in making medical decisions.
+
+    **2. USE OF THE APP**
+
+    * The User agrees to use the App only for professional purposes and in accordance with the terms of this Agreement.
+    * The User acknowledges that the App is currently in alpha testing phase and may contain errors or inconsistencies.
+    * The User agrees to use the App in conjunction with their clinical judgment and established medical practices.
+
+    **3. DATA AND PRIVACY**
+
+    * The User acknowledges that the App processes Patient Data and agrees to obtain necessary patient consents for data processing.
+    * The User agrees to comply with all applicable data protection and privacy laws, including but not limited to HIPAA.
+    * The Developer will implement reasonable data security measures to protect Patient Data, including but not limited to encryption and secure storage.
+
+    **4. LIABILITY AND INDEMNIFICATION**
+
+    * The User agrees to indemnify and hold harmless the Developer from any claims arising from the User's negligence or misuse of the App.
+    * The Developer will not be liable for any damages or losses resulting from the User's use of the App, except to the extent caused by the Developer's gross negligence or willful misconduct.
+
+    **5. REGULATORY COMPLIANCE**
+
+    * The User acknowledges that the App has not yet received regulatory approval (e.g., FDA clearance).
+    * The User agrees not to use the App as the sole basis for medical decisions until such approvals are obtained.
+
+    **6. TERM AND TERMINATION**
+
+    * This Agreement will commence on the Effective Date and will continue until terminated by either party with written notice.
+    * Upon termination, the User agrees to cease using the App and to destroy all copies of the App in their possession.
+
+    **7. GOVERNING LAW**
+
+    * This Agreement will be governed by and construed in accordance with the laws of California, USA.
+
+    **8. ENTIRE AGREEMENT**
+
+    * This Agreement constitutes the entire agreement between the parties and supersedes all prior or contemporaneous agreements or understandings.
+
+    By using the App, the User acknowledges that they have read, understand, and agree to be bound by the terms of this Agreement.
+
+    """
 
 
 

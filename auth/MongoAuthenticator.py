@@ -11,7 +11,14 @@ from typing import List, Dict, Any, Optional
 import secrets
 import logging
 import time
+import os
+from prompts import EULA
+from dotenv import load_dotenv
 
+load_dotenv
+
+SUPPORT_EMAIL = "bushidosunny@gmail.com"
+PREAUTHORIZED_EMAILS = os.getenv("EMAIL_LIST")
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -223,6 +230,7 @@ class MongoAuthenticator:
         self.cookie_name = cookie_name
         self.cookie_expiry_days = cookie_expiry_days
         self.cookie_manager = cookie_manager
+        self.preauthorized_emails = PREAUTHORIZED_EMAILS.split(',') if isinstance(PREAUTHORIZED_EMAILS, str) else PREAUTHORIZED_EMAILS
 
     def login(self, username: str, password: str) -> Tuple[Optional[str], bool, Optional[str]]:
         user = self.users.find_one({"username": username})
@@ -299,7 +307,14 @@ class MongoAuthenticator:
         except Exception as e:
             logging.error(f"Error creating new chat session for user {user_id}: {str(e)}")
             st.error("An error occurred while creating a new chat session. Please try again.")
-
+    def check_password_strength(self, password):
+        if len(password) < 8:
+            return "Weak"
+        elif len(password) < 12:
+            return "Medium"
+        else:
+            return "Strong"
+        
     def create_cookie(self, user_id):
         expiry = datetime.datetime.now() + datetime.timedelta(days=self.cookie_expiry_days)
         self.cookie_manager.set(self.cookie_name, user_id, expires_at=expiry)
@@ -420,6 +435,7 @@ class MongoAuthenticator:
 
 ######################################### UI ##########################################################
 
+
     def login_page(self):
         c1, c2, c3 = st.columns([1,1,1])
         with c2:
@@ -472,30 +488,84 @@ class MongoAuthenticator:
                 self.change_password_page()
 
     def register_page(self):
-        c1, c2, c3 = st.columns([1,1,1])
-        with c2:
-            st.header("Register")
+        
+        if 'eula_agreed' not in st.session_state:
+            st.session_state.eula_agreed = False
+
+        if not st.session_state.eula_agreed:
+            st.title("End User License Agreement")
+            
+            st.markdown("""
+            <style>
+            .big-font {
+                font-size:16px !important;
+                font-family: Arial, sans-serif;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            
+            st.markdown(EULA)
+            
+            agree = st.checkbox("I agree to the terms and conditions")
+            
+            if agree:
+                if st.button("Proceed to Registration", type="primary"):
+                    st.session_state.eula_agreed = True
+                    st.rerun()
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Sign In"):
+                    st.session_state.show_login = True
+                    st.rerun()
+            with col2:
+                if st.button("Help"):
+                    st.info(f"If you need assistance, please contact {SUPPORT_EMAIL}")
+        
+        else:
+            st.title("Register Your Account")
+            
+            st.markdown("""
+            <style>
+            @media (max-width: 600px) {
+                .stTextInput > div > div > input {
+                    font-size: 16px;
+                }
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            
             with st.form("register_form"):
-                username = st.text_input("Username")
-                name = st.text_input("Name")
-                email = st.text_input("Email")
-                password = st.text_input("Password", type="password")
+                st.markdown('<p style="color: red;">* Required field</p>', unsafe_allow_html=True)
+                username = st.text_input("Username *")
+                name = st.text_input("Name *")
+                email = st.text_input("Email *")
+                password = st.text_input("Password *", type="password")
+                # st.text(f"Password strength: {self.check_password_strength(password)}")
+                confirm_password = st.text_input("Confirm Password *", type="password")
                 submit = st.form_submit_button("Register", type='primary')
 
             if submit:
-                try:
-                    if self.register_user(username, name, password, email):
-                        st.success("Registration successful. Please login.")
-                        st.session_state.show_registration = False
-                        time.sleep(1)
-                        st.rerun()
-                    else:
-                        st.error("Username or email already exists")
-                except Exception as e:
-                    st.error(f"An error occurred during registration: {str(e)}")
+                if not all([username, name, email, password, confirm_password]):
+                    st.error("All fields are required.")
+                elif password != confirm_password:
+                    st.error("Passwords do not match.")
+                elif email not in self.preauthorized_emails:
+                    st.error("Sorry, you are not authorized to register. Please contact the administrator.")
+                else:
+                    try:
+                        if self.register_user(username, name, password, email):
+                            st.success(f"Registration successful! Welcome {name}!")
+                            st.session_state.show_registration = False
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error("Username or email already exists. Choose a different username or email.")
+                    except Exception as e:
+                        st.error(f"An error occurred during registration: {str(e)}")
 
-            if st.button("Already have an account? Login here"):
-                st.session_state.show_registration = False
+            if st.button("Back to EULA"):
+                st.session_state.eula_agreed = False
                 st.rerun()
 
     def forgot_username_page(self):
