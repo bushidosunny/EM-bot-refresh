@@ -1381,7 +1381,7 @@ def handle_user_input_container():
                     height=None,  # Adjust the height as needed
                     overflow_y=None,  # Enable vertical scrolling
                     padding="20px",  # Add some padding for better appearance))
-                    background="white"  
+                    background="inherit"  
         ))
     with input_container:
 
