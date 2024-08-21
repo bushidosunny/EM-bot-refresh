@@ -1,19 +1,22 @@
 import streamlit as st
+st.set_page_config(page_title="Admin Dashboard", layout="wide")
 import os
 from pymongo import MongoClient
 from dotenv import load_dotenv
-import bcrypt
+# import bcrypt
 from bson import ObjectId, json_util
 import json
-import re
+# import re
 import time
 import logging
+import pandas as pd
+from datetime import datetime
 import extra_streamlit_components as stx
 from auth.MongoAuthenticator import MongoAuthenticator, User
 # # Set up logging
-# logging.basicConfig(level=logging.INFO)
-# logger = logging.getLogger(__name__)
-st.set_page_config(page_title="Admin Dashboard", layout="wide")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Load environment variables
 load_dotenv()
 
@@ -30,13 +33,13 @@ ADMIN_USERNAME = os.getenv('ADMIN_USERNAME')
 ADMIN_PASSWORD_HASH = os.getenv('ADMIN_PASSWORD_HASH')
 
 def get_cookie_manager():
-    return stx.CookieManager(key="mongo_auth_cookie_manager")
+    return stx.CookieManager(key="admin_mongo_auth_cookie_manager")
 
 cookie_manager = get_cookie_manager()
 
 authenticator = MongoAuthenticator(
     users_collection=users_collection,
-    cookie_name='EMMA_auth_cookie',
+    cookie_name='EMMA_admin_auth_cookie',  # Changed this to be unique for admin
     cookie_expiry_days=30,
     cookie_manager=cookie_manager 
 )
@@ -102,31 +105,68 @@ def create_user():
             else:
                 st.error("Username or email already exists")
 
+
 def list_users():
     st.subheader("User List")
-    users = users_collection.find({}, {"username": 1, "email": 1, "name": 1})
     
+    # Fetch all users with the required fields
+    users = list(users_collection.find({}, {
+        "username": 1, 
+        "email": 1, 
+        "name": 1, 
+        "login_count": 1, 
+        "sessions_count": 1, 
+        "last_active": 1
+    }))
+    
+    # Prepare data for the table
+    user_data = []
     for user in users:
-        with st.expander(f"{user['name']} ({user['username']})"):
-            col1, col2 = st.columns(2)
-            with col1:
-                st.write(f"**Email:** {user['email']}")
-            with col2:
-                st.write(f"**Username:** {user['username']}")
-            
-            action_col1, action_col2, action_col3 = st.columns(3)
-            
-            with action_col1:
-                if st.button("Change Password", key=f"change_pwd_{user['_id']}"):
-                    change_password(user['username'])
-            
-            with action_col2:
-                if st.button("Reset Password", key=f"reset_pwd_{user['_id']}"):
-                    reset_password(user['username'], user['email'])
-            
-            with action_col3:
-                if st.button("Delete User", key=f"delete_{user['_id']}"):
-                    delete_user(user['_id'])
+        last_active = user.get('last_active', 'Never')
+        if isinstance(last_active, datetime):
+            last_active = last_active.strftime('%Y-%m-%d %H:%M:%S')
+        
+        user_data.append({
+            "Name": user['name'],
+            "Username": user['username'],
+            "Email": user['email'],
+            "Logins": user.get('login_count', 0),
+            "Sessions": user.get('sessions_count', 0),
+            "Last Active": last_active,
+            "Change Password": user['_id'],
+            "Reset Password": user['_id'],
+            "Delete User": user['_id']
+        })
+    
+    # Create a DataFrame
+    df = pd.DataFrame(user_data)
+
+    row_spacing = [1.5, 1.5, 2, 1, 1, 1.5, 1, 1, 1]
+    # Add a header row
+    header_cols = st.columns(row_spacing)
+    headers = ["Name", "Username", "Email", "Logins", "Sessions", "Last Active", "Change", "Reset", "Delete"]
+    for i, header in enumerate(headers):
+        header_cols[i].write(f"**{header}**")
+    # Display the table with action buttons
+    for index, row in df.iterrows():
+        cols = st.columns(row_spacing)
+        cols[0].write(row['Name'])
+        cols[1].write(row['Username'])
+        cols[2].write(row['Email'])
+        cols[3].write(row['Logins'])
+        cols[4].write(row['Sessions'])
+        cols[5].write(row['Last Active'])
+        if cols[6].button("Change", key=f"change_{row['Change Password']}"):
+            change_password(row['Username'])
+        if cols[7].button("Reset", key=f"reset_{row['Reset Password']}"):
+            reset_password(row['Username'], row['Email'])
+        if cols[8].button("Delete", key=f"delete_{row['Delete User']}"):
+            if delete_user(row['Delete User']):
+                st.session_state.user_deleted = True
+                st.rerun()
+
+    
+    
 
 def change_password(username):
     st.subheader(f"Change Password for {username}")
@@ -149,11 +189,17 @@ def reset_password(username, email):
             st.error("Failed to reset password")
 
 def delete_user(user_id):
-    if st.button(f"Confirm Delete User"):
-        users_collection.delete_one({"_id": user_id})
-        st.success("User deleted successfully")
-        st.rerun()
-
+    try:
+        result = users_collection.delete_one({"_id": ObjectId(user_id)})
+        if result.deleted_count == 1:
+            st.success(f"User with ID {user_id} deleted successfully")
+            return True
+        else:
+            st.error(f"No user found with ID {user_id}")
+            return False
+    except Exception as e:
+        st.error(f"An error occurred while deleting the user: {str(e)}")
+        return False
 def list_sessions():
     st.subheader("Session Management")
     
@@ -173,7 +219,7 @@ def list_sessions():
         filtered_sessions = [session for session in sessions if session.split('_')[1] == selected_user]
     
     # Select all checkbox
-    select_all = st.checkbox("Select All")
+    select_all = st.checkbox("Select All", key="select_all_checkbox")
     
     # Create a dictionary to store the state of each session checkbox
     if 'session_checkboxes' not in st.session_state:
@@ -184,21 +230,55 @@ def list_sessions():
         for session in filtered_sessions:
             st.session_state.session_checkboxes[session] = True
     
-    # Display sessions with checkboxes
+    # Display sessions with patient CC, checkboxes, and toggle for viewing
     selected_sessions = []
-    for session in filtered_sessions:
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            checkbox = st.checkbox(session, value=st.session_state.session_checkboxes[session], key=f"checkbox_{session}")
-            st.session_state.session_checkboxes[session] = checkbox
-            if checkbox:
-                selected_sessions.append(session)
-        with col2:
-            if st.button("View", key=f"view_{session}"):
+    
+    # Create a container for the session list
+    session_container = st.container()
+
+    # Create a container for the session list
+    session_container = st.container()
+    
+    with session_container:
+        for session in filtered_sessions:
+            col1, col2, col3, col4, col5 = st.columns([0.5, 2, 2, .5,.5])
+            
+            with col1:
+                checkbox = st.checkbox(
+                    label=f"Select {session}",
+                    value=st.session_state.session_checkboxes[session],
+                    key=f"checkbox_{session}",
+                    label_visibility="collapsed"
+                )
+                st.session_state.session_checkboxes[session] = checkbox
+                if checkbox:
+                    selected_sessions.append(session)
+            
+            with col2:
+                st.write(session)
+            
+            with col3:
+                # Fetch and display patient CC
+                patient_cc = get_patient_cc(session)
+                st.write(patient_cc)
+            
+            with col4:
+                view_toggle = st.toggle(
+                    label=f"View {session}",
+                    key=f"toggle_{session}",
+                    label_visibility="collapsed"
+                )
+            
+            with col5:
+                if st.button("Delete", key=f"delete_{session}"):
+                    delete_session(session)
+            
+            # View session details when toggled
+            if view_toggle:
                 view_session(session)
     
     # Delete selected sessions
-    if st.button("Delete Selected Sessions"):
+    if selected_sessions and st.button("Delete Selected Sessions"):
         st.session_state.confirm_delete = True
         st.session_state.sessions_to_delete = selected_sessions
 
@@ -211,6 +291,39 @@ def list_sessions():
                 delete_sessions(st.session_state.sessions_to_delete)
         with col2:
             if st.button("Cancel"):
+                st.session_state.confirm_delete = False
+                st.session_state.sessions_to_delete = []
+        with col3:
+            # Fetch and display patient CC
+            patient_cc = get_patient_cc(session)
+            st.write(patient_cc)
+        
+        with col4:
+            if f"view_{session}" not in st.session_state:
+                st.session_state[f"view_{session}"] = False
+            st.session_state[f"view_{session}"] = st.toggle("View", key=f"toggle_{session}")
+        
+        with col5:
+            if st.button("Delete", key=f"delete_{session}"):
+                delete_session(session)
+        # View session details when toggled
+        if st.session_state[f"view_{session}"]:
+            view_session(session)
+
+    # Delete selected sessions
+    if st.button("Delete Selected Sessions", key="delete_selected_sessions_button"):
+        st.session_state.confirm_delete = True
+        st.session_state.sessions_to_delete = selected_sessions
+
+    # Confirm deletion
+    if 'confirm_delete' in st.session_state and st.session_state.confirm_delete:
+        st.warning(f"Are you sure you want to delete the following sessions?\n{', '.join(st.session_state.sessions_to_delete)}")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Confirm Delete", key="confirm_delete_button"):
+                delete_sessions(st.session_state.sessions_to_delete)
+        with col2:
+            if st.button("Cancel", key="cancel_delete_button"):
                 st.session_state.confirm_delete = False
                 st.session_state.sessions_to_delete = []
 
@@ -249,16 +362,26 @@ def delete_sessions(session_names):
 def view_session(session_name):
     st.subheader(f"Session Details: {session_name}")
     collection = db[session_name]
+    
+    # Find the most recent chat_history document
+    chat_history = collection.find_one({"type": "chat_history"}, sort=[("timestamp", -1)])
+    
+    if chat_history:
+        patient_cc = chat_history.get("patient_cc", "No chief complaint found")
+        st.write(f"Patient's Chief Complaint: {patient_cc}")
+    
+    # Display other session details
     documents = collection.find()
     for doc in documents:
         st.json(doc)
      
 def delete_session(session_name):
-    if st.button("Confirm Delete Session"):
+    try:
         db.drop_collection(session_name)
-        st.success(f"Session {session_name} deleted successfully")
-        time.sleep(1)
-        st.rerun()
+        return True
+    except Exception as e:
+        st.error(f"Error deleting session {session_name}: {str(e)}")
+        return False
 
 def query_documents():
     st.subheader("Query Documents")
@@ -367,6 +490,14 @@ def database_operations():
     else:
         update_document()
 
+def get_patient_cc(session_name):
+    collection = db[session_name]
+    chat_history = collection.find_one({"type": "chat_history"}, sort=[("timestamp", -1)])
+    
+    if chat_history:
+        return chat_history.get("patient_cc", "No CC found")
+    return "No chat history"
+
 def main():
 
     
@@ -398,10 +529,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-    if st.button(f"Confirm Delete User"):
-        users_collection.delete_one({"_id": user_id})
-        st.success("User deleted successfully")
-        st.rerun()

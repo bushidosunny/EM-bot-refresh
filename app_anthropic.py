@@ -359,9 +359,6 @@ def update_user_session_time(user: User, duration: datetime.timedelta) -> None:
         {"$set": {"total_session_time": user.total_session_time}}
     )
 
-
-############################### Logic ###############################################################
-
 def create_new_session():
     username = st.session_state.username 
     session_id = ObjectId()
@@ -531,20 +528,6 @@ def conditional_upsert_test_result(user_id, test_name, result, sequence_number):
     except Exception as e:
         print(f"An error occurred while processing {test_name}: {str(e)}")
 
-# def get_user_from_session(session_token: str) -> Optional[User]:
-#     session = sessions_collection.find_one({
-#         "token": session_token,
-#         "expires": {"$gt": datetime.datetime.utcnow()}
-#     })
-#     if session:
-#         user_data = users_collection.find_one({"_id": ObjectId(session["user_id"])})
-#         if user_data:
-#             return User.from_dict(user_data)
-#     return None
-
-def clear_session(session_token: str) -> None:
-    sessions_collection.delete_one({"token": session_token})
-
 @st.cache_data(ttl=60)
 def list_user_sessions(username: str):
     collections = db.list_collection_names()
@@ -624,49 +607,8 @@ def load_session_data(collection_name):
 def delete_session_data(collection_name):
     db.drop_collection(collection_name)
 
-# def load_chat_history(collection_name):
-#     try:
-#         # Check if we've already loaded the chat history
-#         st.session_state.chat_history = []
-#         st.session_state.differential_diagnosis = []
+############################### Logic ###############################################################
 
-#         result = db[collection_name].find_one({"type": "chat_history"})
-#         if result and 'session_state_chat_history' in result:
-#             serialized_history = result['session_state_chat_history']
-            
-#             # Check if serialized_history is already a list
-#             if isinstance(serialized_history, list):
-#                 print("Chat history is already a list, no need to parse JSON")
-#             else:
-#                 try:
-#                     # If it's a string, try to parse it as JSON
-#                     serialized_history = json.loads(serialized_history)
-#                 except json.JSONDecodeError:
-#                     print("Error decoding JSON from database. Chat history might be in old format.")
-#                     # Optionally, add fallback code here to handle old format
-#                     return
-
-#             for message_data in serialized_history:
-#                 if isinstance(message_data, dict):
-#                     # If it's a dict, assume it's in the new format
-#                     if message_data['type'] == 'HumanMessage':
-#                         message = HumanMessage(content=message_data['content'], avatar=message_data['avatar'])
-#                     elif message_data['type'] == 'AIMessage':
-#                         message = AIMessage(content=message_data['content'], avatar=message_data['avatar'])
-#                     else:
-#                         continue  # Skip unknown message types
-#                 elif isinstance(message_data, (HumanMessage, AIMessage)):
-#                     # If it's already a message object, use it directly
-#                     message = message_data
-#                 else:
-#                     print(f"Unknown message format: {type(message_data)}")
-#                     continue
-
-#                 st.session_state.chat_history.append(message)
-        
-#         # print(f'DEBUG LOAD CHAT HISTORY ----collection name: {collection_name}-- SESSION STATE CHAT HISTORY: {st.session_state.chat_history}')
-#     except Exception as e:
-#         print(f"Error loading chat history: {e}")
 
 def load_chat_history(collection_name):
     try:
@@ -906,15 +848,15 @@ def process_other_queries():
             st.markdown(user_question)
 
         st.session_state.chat_history.append(HumanMessage(user_question, avatar=st.session_state.user_photo_url))
-        save_user_message(st.session_state.username, "user", user_question)
+        # save_user_message(st.session_state.username, "user", user_question)
 
         with st.chat_message("AI", avatar=specialist_avatar):
             assistant_response = get_response(user_question)
-            if specialist != "Note Writer":
-                save_ai_message(st.session_state.username, specialist, assistant_response, specialist)
+            # if specialist != "Note Writer":
+            #     save_ai_message(st.session_state.username, specialist, assistant_response, specialist)
             if specialist == "Note Writer":
                 save_note_details(st.session_state.username, assistant_response)
-                save_ai_message(st.session_state.username, specialist, assistant_response, specialist)
+                # save_ai_message(st.session_state.username, specialist, assistant_response, specialist)
 
         st.session_state.chat_history.append(AIMessage(assistant_response, avatar=specialist_avatar))
         st.session_state.old_user_question_sidebar = user_question
@@ -973,17 +915,21 @@ def parse_json(chat_history):
     
     pt_json_dirty = create_json(text=chat_history)
     pt_json = pt_json_dirty.replace('```', '')
-    print(f'DEBUG PARSE_JSON PT_JSON_DIRTY: {pt_json_dirty}')
-    print(f'DEBUG PARSE_JSON PT_JSON: {pt_json}')
+
     if not pt_json or pt_json.strip() == '{}':
         print("No data was extracted from the chat history.") 
         return
     try:
         data = json.loads(pt_json)
         patient_data = data.get('patient', {})
-        # print(f'DEBUG PARSE_JSON patient_data: {patient_data}')
+
         # Update session state
         st.session_state.pt_data = patient_data
+
+        # Only update patient_cc if it's not empty
+        new_patient_cc = patient_data.get('chief_complaint_two_word')
+        if new_patient_cc:
+            st.session_state.patient_cc = new_patient_cc
         
         # Ensure differential_diagnosis, critical_actions, and follow_up_steps are not None
         st.session_state.differential_diagnosis = patient_data.get('differential_diagnosis', [])
@@ -1001,6 +947,7 @@ def parse_json(chat_history):
         print(f'DEBUG PARSE_JSON session_state.differential_diagnosis: {st.session_state.differential_diagnosis}')
         print(f'DEBUG PARSE_JSON st.session_state.critical_actionss: {st.session_state.critical_actions}')
         print(f'DEBUG PARSE_JSON st.session_state.follow_up_steps: {st.session_state.follow_up_steps}')
+        print(f'DEBUG PARSE_JSON st.session_state.patient_cc: {st.session_state.patient_cc}')
 
         # Only save case details if there's meaningful data
         if any([st.session_state.differential_diagnosis, 
@@ -1477,7 +1424,7 @@ def process_user_question(user_question, specialist):
             \n{completed_tasks}
             """
         
-        save_user_message(st.session_state.username, "user", full_user_question)
+        # save_user_message(st.session_state.username, "user", full_user_question)
         
         st.session_state.specialist = specialist
         specialist_avatar = specialist_data[specialist]["avatar"]
@@ -1498,7 +1445,7 @@ def process_user_question(user_question, specialist):
         # Ensure the most recent messages are visible
         total_messages = len(st.session_state.chat_history)
         
-        save_ai_message(st.session_state.username, "ai", assistant_response, specialist)
+        # save_ai_message(st.session_state.username, "ai", assistant_response, specialist)
 
         chat_history = chat_history_string()
         parse_json(chat_history)
