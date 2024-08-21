@@ -848,15 +848,15 @@ def process_other_queries():
             st.markdown(user_question)
 
         st.session_state.chat_history.append(HumanMessage(user_question, avatar=st.session_state.user_photo_url))
-        # save_user_message(st.session_state.username, "user", user_question)
+        save_user_message(st.session_state.username, "user", user_question)
 
         with st.chat_message("AI", avatar=specialist_avatar):
             assistant_response = get_response(user_question)
-            # if specialist != "Note Writer":
-            #     save_ai_message(st.session_state.username, specialist, assistant_response, specialist)
+            if specialist != "Note Writer":
+                save_ai_message(st.session_state.username, specialist, assistant_response, specialist)
             if specialist == "Note Writer":
                 save_note_details(st.session_state.username, assistant_response)
-                # save_ai_message(st.session_state.username, specialist, assistant_response, specialist)
+                save_ai_message(st.session_state.username, specialist, assistant_response, specialist)
 
         st.session_state.chat_history.append(AIMessage(assistant_response, avatar=specialist_avatar))
         st.session_state.old_user_question_sidebar = user_question
@@ -1424,7 +1424,7 @@ def process_user_question(user_question, specialist):
             \n{completed_tasks}
             """
         
-        # save_user_message(st.session_state.username, "user", full_user_question)
+        save_user_message(st.session_state.username, "user", full_user_question)
         
         st.session_state.specialist = specialist
         specialist_avatar = specialist_data[specialist]["avatar"]
@@ -1445,7 +1445,7 @@ def process_user_question(user_question, specialist):
         # Ensure the most recent messages are visible
         total_messages = len(st.session_state.chat_history)
         
-        # save_ai_message(st.session_state.username, "ai", assistant_response, specialist)
+        save_ai_message(st.session_state.username, "ai", assistant_response, specialist)
 
         chat_history = chat_history_string()
         parse_json(chat_history)
