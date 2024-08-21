@@ -872,19 +872,19 @@ def process_other_queries():
 def new_thread():
     for key in list(st.session_state.keys()):
         del st.session_state[key]
-    
+    initialize_session_state()
     html("""
         <script>
             window.parent.location.reload();
         </script>
     """)
-    st.rerun()
+    # st.rerun()
 
 def start_new_session():
     if 'new_session_clicked' not in st.session_state:
         st.session_state.new_session_clicked = False
 
-    if st.button('New Session Encounter', type="secondary", use_container_width=True):
+    if st.button('New Session Encounter', type="secondary", use_container_width=True, help="Keyboard Shortcut: F5"):
         st.session_state.new_session_clicked = True
 
     if st.session_state.new_session_clicked:
@@ -1100,18 +1100,7 @@ def display_sidebar():
             #display_follow_up_tasks()
             #st.divider()
             display_functions_tab()
-            container = st.container()
-            container.float(float_css_helper(bottom="10px", padding= "10px"))
-            with container:
-                c1, c2 = st.columns([2,1])
-                with c1:
-                    st.markdown(f'Welcome {st.session_state.name}!')
-                with c2:
-                    if st.button("Logout", key="logout_button"):
-                        authenticator.logout()
-                        st.success("You have been logged out successfully.")
-                        time.sleep(1)  # Give user time to see the message
-                        st.rerun()
+            
         with tab2:
             display_specialist_tab()
         
@@ -1120,7 +1109,21 @@ def display_sidebar():
 
         with tab5:
             display_sessions_tab()
-            
+
+        container = st.container()
+        container.float(float_css_helper(bottom="10px", padding= "10px"))
+        with container:
+            start_new_session()
+            c1, c2 = st.columns([2,1])
+            with c1:
+                st.markdown(f'Welcome {st.session_state.name}!')
+            with c2:
+                if st.button("Logout", key="logout_button"):
+                    authenticator.logout()
+                    st.success("You have been logged out successfully.")
+                    time.sleep(1)  # Give user time to see the message
+                    st.rerun()
+
 def display_functions_tab():
     # st.subheader('Process Management')
     # col1, col2 = st.columns(2)
@@ -1187,7 +1190,7 @@ def display_functions_tab():
             st.session_state.specialist = "Emergency Medicine"
     st.divider()
     
-    start_new_session()
+    
 
 def display_specialist_tab():
     if st.session_state.differential_diagnosis:
@@ -1208,8 +1211,7 @@ def display_specialist_tab():
 
 def display_variables_tab():
     update_patient_language()
-    if st.button("Update Indexes"):
-        initialize_text_indexes(st.session_state.collection_name)
+
 
 def display_chat_history():
     for message in st.session_state.chat_history:

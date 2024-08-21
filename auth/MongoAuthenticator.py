@@ -313,10 +313,14 @@ class MongoAuthenticator:
 
     def authenticate(self):
         logging.info("Authenticating user...")
+        
         if st.session_state.get('authentication_status'):
             logging.info("User already authenticated in session state")
             return True
         else:
+            logging.info(f"Checking for user_id in cookie: {self.cookie_name}")
+            logging.info(f"Cookie value: {self.cookie_manager.get(self.cookie_name)}")
+            # time.sleep(1)
             user_id = self.cookie_manager.get(self.cookie_name)
             logging.info(f"Retrieved user_id from cookie: {user_id}")
             if user_id and user_id != "":
