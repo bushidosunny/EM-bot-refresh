@@ -11,7 +11,7 @@ if "page_config_set" not in st.session_state:
         'About': disclaimer})
     st.session_state.page_config_set = True
     print("Page config set")
-
+import admin
 from streamlit_float import float_css_helper
 from anthropic import Anthropic
 from langchain_anthropic import ChatAnthropic
@@ -44,8 +44,8 @@ import secrets
 from auth.MongoAuthenticator import MongoAuthenticator, User
 import extra_streamlit_components as stx
 
-# temp
-from streamlit_mic_recorder import mic_recorder
+# # temp
+# from streamlit_mic_recorder import mic_recorder
 
 # Configure logging
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -303,6 +303,11 @@ def logout_user():
             authenticator.logout()
             st.success("You have been logged out successfully.")
             time.sleep(1)  # Give user time to see the message
+            # html("""
+            #     <script>
+            #         window.parent.location.reload();
+            #     </script>
+            # """)
             st.rerun()
 
 ############################## Mongo DB ##################################################
@@ -1495,12 +1500,20 @@ def get_response(user_question: str) -> str:
         
         return response_text
 
+def admin_mode():
+    # New power-up check for admins
+    if st.session_state.username == "sunny":
+        if st.sidebar.button("Enter Admin Mode"):
+            admin.admin_dashboard()
+            return  # Exit the function if admin dashboard is accessed
 
 def authenticated_user():
     
     try:
         logging.info("Entering authenticated_user function")
 
+        
+            
         if 'load_session' in st.session_state:
             collection_name = st.session_state.load_session
             load_chat_history(collection_name)
@@ -1554,7 +1567,7 @@ def authenticated_user():
 
         process_other_queries() 
         display_sidebar()
-        
+        admin_mode()
         # Periodically archive old sessions
         archive_old_sessions(st.session_state.username)
 

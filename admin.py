@@ -1,5 +1,5 @@
 import streamlit as st
-st.set_page_config(page_title="Admin Dashboard", layout="wide")
+# st.set_page_config(page_title="Admin Dashboard", layout="wide")
 import os
 from pymongo import MongoClient
 from dotenv import load_dotenv
@@ -51,6 +51,21 @@ if 'admin_authenticated' not in st.session_state:
 if 'edit_user' not in st.session_state:
     st.session_state.edit_user = None
 
+def admin_dashboard():
+    st.title("Admin Dashboard")
+    
+    # Remove the login check since we're now controlling access from the main app
+    
+
+    page = st.sidebar.radio("Go to", ["User Management", "Session Management", "Database Operations"])
+    
+    if page == "User Management":
+        user_management()
+    elif page == "Session Management":
+        list_sessions()
+    elif page == "Database Operations":
+        database_operations()
+
 def admin_login():
     st.title("Admin Login")
     username = st.text_input("Username")
@@ -80,7 +95,6 @@ def edit_user(user_id):
             st.session_state.edit_user = None
             st.rerun()
 
-
 def user_management():
     st.header("User Management")
     
@@ -105,7 +119,6 @@ def create_user():
             else:
                 st.error("Username or email already exists")
 
-
 def list_users():
     st.subheader("User List")
     
@@ -115,7 +128,7 @@ def list_users():
         "email": 1, 
         "name": 1, 
         "login_count": 1, 
-        "sessions_count": 1, 
+        "sessions_created": 1, 
         "last_active": 1
     }))
     
@@ -131,7 +144,7 @@ def list_users():
             "Username": user['username'],
             "Email": user['email'],
             "Logins": user.get('login_count', 0),
-            "Sessions": user.get('sessions_count', 0),
+            "Sessions": user.get('sessions_created', 0),
             "Last Active": last_active,
             "Change Password": user['_id'],
             "Reset Password": user['_id'],
@@ -165,9 +178,6 @@ def list_users():
                 st.session_state.user_deleted = True
                 st.rerun()
 
-    
-    
-
 def change_password(username):
     st.subheader(f"Change Password for {username}")
     with st.form(f"change_password_form_{username}"):
@@ -200,6 +210,7 @@ def delete_user(user_id):
     except Exception as e:
         st.error(f"An error occurred while deleting the user: {str(e)}")
         return False
+
 def list_sessions():
     st.subheader("Session Management")
     
@@ -278,7 +289,7 @@ def list_sessions():
                 view_session(session)
     
     # Delete selected sessions
-    if selected_sessions and st.button("Delete Selected Sessions"):
+    if selected_sessions and st.button("Delete Selected Sessions", key="delete_selected_sessions_button1"):
         st.session_state.confirm_delete = True
         st.session_state.sessions_to_delete = selected_sessions
 
@@ -310,22 +321,22 @@ def list_sessions():
         if st.session_state[f"view_{session}"]:
             view_session(session)
 
-    # Delete selected sessions
-    if st.button("Delete Selected Sessions", key="delete_selected_sessions_button"):
-        st.session_state.confirm_delete = True
-        st.session_state.sessions_to_delete = selected_sessions
+    # # Delete selected sessions
+    # if st.button("Delete Selected Sessions", key="delete_selected_sessions_button"):
+    #     st.session_state.confirm_delete = True
+    #     st.session_state.sessions_to_delete = selected_sessions
 
-    # Confirm deletion
-    if 'confirm_delete' in st.session_state and st.session_state.confirm_delete:
-        st.warning(f"Are you sure you want to delete the following sessions?\n{', '.join(st.session_state.sessions_to_delete)}")
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Confirm Delete", key="confirm_delete_button"):
-                delete_sessions(st.session_state.sessions_to_delete)
-        with col2:
-            if st.button("Cancel", key="cancel_delete_button"):
-                st.session_state.confirm_delete = False
-                st.session_state.sessions_to_delete = []
+    # # Confirm deletion
+    # if 'confirm_delete' in st.session_state and st.session_state.confirm_delete:
+    #     st.warning(f"Are you sure you want to delete the following sessions?\n{', '.join(st.session_state.sessions_to_delete)}")
+    #     col1, col2 = st.columns(2)
+    #     with col1:
+    #         if st.button("Confirm Delete", key="confirm_delete_button"):
+    #             delete_sessions(st.session_state.sessions_to_delete)
+    #     with col2:
+    #         if st.button("Cancel", key="cancel_delete_button"):
+    #             st.session_state.confirm_delete = False
+    #             st.session_state.sessions_to_delete = []
 
 def delete_sessions(session_names):
     deleted_sessions = []
@@ -528,4 +539,7 @@ def main():
             database_operations()
 
 if __name__ == "__main__":
-    main()
+    # This allows the admin.py to be run standalone for testing
+    if st.sidebar.button("Exit Admin Mode"):
+        st.rerun()  # This will refresh the page and exit admin mode
+    admin_dashboard()

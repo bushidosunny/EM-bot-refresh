@@ -34,7 +34,7 @@ class User:
     created_at: datetime = field(default_factory=datetime.datetime.now)
     last_login: datetime = field(default_factory=datetime.datetime.now)
     login_count: int = 0
-    sessions_count: int = 0
+    sessions_created: int = 0
     last_active: datetime = field(default_factory=datetime.datetime.now)
     total_session_time: int = 0
     preferences: Dict[str, List] = field(default_factory=lambda: {"note_templates": []})
@@ -51,7 +51,7 @@ class User:
             "last_login": self.last_login,
             "login_count": self.login_count,
             "last_active": self.last_active,
-            "sessions_count": self.sessions_count, 
+            "sessions_created": self.sessions_created, 
             "total_session_time": self.total_session_time,
             "preferences": self.preferences,
             "recordings_count": self.recordings_count,
@@ -73,7 +73,7 @@ class User:
         user.created_at = data.get("created_at", user.created_at)
         user.last_login = data.get("last_login", user.last_login)
         user.login_count = data.get("login_count", 0)
-        user.sessions_count = data.get("sessions_count", 0)
+        user.sessions_created = data.get("sessions_created", 0)
         user.last_active = data.get("last_active", user.last_active)
         user.total_session_time = data.get("total_session_time", 0)
         user.preferences = data.get("preferences", {"note_templates": []})
@@ -107,7 +107,7 @@ class User:
     #             result = self.users.update_one(
     #                 {"_id": ObjectId(user_id)},
     #                 {
-    #                     "$inc": {"sessions_count": 1},
+    #                     "$inc": {"sessions_created": 1},
     #                     "$set": {"last_login": datetime.datetime.now()}
     #                 }
     #             )
@@ -124,23 +124,58 @@ class User:
     #         st.error("An error occurred while updating your session. Please try again.")
 
     def update_user_metrics(self, user_id: str) -> None:
-        user_obj = User.from_dict(self.users.find_one({"_id": ObjectId(user_id)}))
-        user_obj.update_login()
-        user_obj.update_activity()
+        logging.info(f"Updating user metrics for user_id: {user_id}")
+        try:
+            user_data = self.users.find_one({"_id": ObjectId(user_id)})
+            if user_data is None:
+                logging.error(f"No user found with id: {user_id}")
+                return
 
-        self.users.update_one(
-            {"_id": ObjectId(user_id)},
-            {
-                "$set": {
-                    "last_login": user_obj.last_login,
-                    "login_count": user_obj.login_count,
-                    "last_active": user_obj.last_active,
-                }
+            today = datetime.datetime.now().date()
+            last_login = user_data.get('last_login')
+
+            update_fields = {
+                "last_active": datetime.datetime.now()
             }
-        )
 
-    def increment_sessions_count(self) -> None:
-            self.sessions_count += 1
+            if last_login is None or last_login.date() < today:
+                # It's a new day, update last_login and increment login_count
+                update_fields.update({
+                    "last_login": datetime.datetime.now(),
+                    "login_count": user_data.get('login_count', 0) + 1
+                })
+
+            result = self.users.update_one(
+                {"_id": ObjectId(user_id)},
+                {"$set": update_fields}
+            )
+
+            if result.modified_count == 1:
+                logging.info(f"Updated user metrics for user: {user_data['username']}")
+            else:
+                logging.warning(f"Failed to update user metrics for user: {user_data['username']}")
+
+        except Exception as e:
+            logging.error(f"Error updating user metrics for user {user_id}: {str(e)}")
+        
+
+        # user_obj = User.from_dict(self.users.find_one({"_id": ObjectId(user_id)}))
+        # user_obj.update_login()
+        # user_obj.update_activity()
+
+        # self.users.update_one(
+        #     {"_id": ObjectId(user_id)},
+        #     {
+        #         "$set": {
+        #             "last_login": user_obj.last_login,
+        #             "login_count": user_obj.login_count,
+        #             "last_active": user_obj.last_active,
+        #         }
+        #     }
+        # )
+
+    def increment_sessions_created(self) -> None:
+            self.sessions_created += 1
 
     def add_session_time(self, duration: int) -> None:
         self.total_session_time += duration
@@ -198,8 +233,17 @@ class MongoAuthenticator:
             st.session_state.name = user['name']
             st.session_state.username = username
 
-            # Update user metrics
-            self.update_user_metrics(user_id)
+            # Always increment login_count on manual login
+            self.users.update_one(
+                {"_id": ObjectId(user_id)},
+                {
+                    "$set": {
+                        "last_login": datetime.datetime.now(),
+                        "last_active": datetime.datetime.now()
+                    },
+                    "$inc": {"login_count": 1}
+                }
+            )
 
             return user['name'], True, username
         return None, False, None
@@ -244,7 +288,7 @@ class MongoAuthenticator:
         try:
             result = self.users.update_one(
                 {"_id": ObjectId(user_id)},
-                {"$inc": {"sessions_count": 1}}
+                {"$inc": {"sessions_created": 1}}
             )
 
             if result.modified_count == 1:
