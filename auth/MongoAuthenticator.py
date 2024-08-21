@@ -554,8 +554,9 @@ class MongoAuthenticator:
                     st.error("All fields are required.")
                 elif password != confirm_password:
                     st.error("Passwords do not match.")
-                elif email not in self.preauthorized_emails:
-                    st.error("Sorry, you are not authorized to register. Please contact the administrator.")
+                # elif email not in self.preauthorized_emails:
+                #     print(f'Email: {email} not in preauthorized list {self.preauthorized_emails}')
+                #     st.error("Sorry, you are not authorized to register. Please contact the administrator.")
                 else:
                     try:
                         if self.register_user(username, name, password, email):
