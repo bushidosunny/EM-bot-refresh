@@ -179,7 +179,6 @@ class User:
     def delete_note_template(self, template_id: str) -> None:
         self.preferences["note_templates"] = [t for t in self.preferences["note_templates"] if t["id"] != template_id]
   
-  ################################### MongoAuthenticator Class ##########################################################
 
 #################################### MongoAuthenticator Class ########################################
 class MongoAuthenticator:
@@ -373,6 +372,7 @@ class MongoAuthenticator:
 ######################################### UI ##########################################################
 
     def login_page(self):
+        display_header()
         c1, c2, c3 = st.columns([1,1,1])
         with c2:
             st.header("Login")
@@ -424,6 +424,7 @@ class MongoAuthenticator:
                 self.change_password_page()
 
     def register_page(self):
+        display_header()
         c1, c2, c3 = st.columns([1,1,1])
         with c2:
             st.header("Register")
@@ -451,6 +452,7 @@ class MongoAuthenticator:
                 st.rerun()
 
     def forgot_username_page(self):
+        display_header()
         c1, c2, c3 = st.columns([1,1,1])
         with c2:
             st.subheader("Forgot Username")
@@ -466,6 +468,7 @@ class MongoAuthenticator:
                 st.rerun()
 
     def change_password_page(self):
+        display_header()
         c1, c2, c3 = st.columns([1,1,1])
         with c2:
             st.subheader("Change Password")
@@ -487,3 +490,17 @@ class MongoAuthenticator:
                 st.session_state.show_change_password = False
                 st.rerun()
 
+def display_header():
+
+
+    st.markdown(
+        f"""
+        <div style="text-align: center;">
+            <h2>
+                <span style="color: #04B6EA;">Emergency Medicine </span>                    
+                <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:80px;height:80px;border-radius:20%;">
+                Main Assistant
+            </h2>
+        </div>
+        """, 
+        unsafe_allow_html=True)

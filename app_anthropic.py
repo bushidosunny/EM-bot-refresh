@@ -830,7 +830,6 @@ def button_input(specialist, prompt):
 
         st.session_state.completed_tasks_str = ''
         st.session_state.critical_actions = []
-        print(f'DEBUG SESSION_STATE CRITCAL ACTIONS SHOULD BE NOTHING AFTER THIS:')
         st.rerun()
 
 def update_patient_language():
@@ -868,23 +867,28 @@ def process_other_queries():
         st.session_state.completed_tasks_str = ""
         st.session_state.specialist = "Emergency Medicine"
         st.rerun()
-        
+
+
 def new_thread():
+    # Clear all session state variables
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     
+    # Reinitialize essential session state variables
+    initialize_session_state()
+
     html("""
         <script>
             window.parent.location.reload();
         </script>
     """)
-    st.rerun()
+    # st.rerun()
 
 def start_new_session():
     if 'new_session_clicked' not in st.session_state:
         st.session_state.new_session_clicked = False
 
-    if st.button('New Session Encounter', type="secondary", use_container_width=True):
+    if st.button('Create a New Session Encounter', type="secondary", use_container_width=True, help="keyboard shortct: F5"):
         st.session_state.new_session_clicked = True
 
     if st.session_state.new_session_clicked:
@@ -927,9 +931,9 @@ def parse_json(chat_history):
         st.session_state.pt_data = patient_data
 
         # Only update patient_cc if it's not empty
-        new_patient_cc = patient_data.get('chief_complaint_two_word')
-        if new_patient_cc:
-            st.session_state.patient_cc = new_patient_cc
+        # new_patient_cc = patient_data.get('chief_complaint_two_word')
+        # if new_patient_cc:
+        #     st.session_state.patient_cc = new_patient_cc
         
         # Ensure differential_diagnosis, critical_actions, and follow_up_steps are not None
         st.session_state.differential_diagnosis = patient_data.get('differential_diagnosis', [])
@@ -944,9 +948,9 @@ def parse_json(chat_history):
         if st.session_state.follow_up_steps is None:
             st.session_state.follow_up_steps = []
 
-        print(f'DEBUG PARSE_JSON session_state.differential_diagnosis: {st.session_state.differential_diagnosis}')
-        print(f'DEBUG PARSE_JSON st.session_state.critical_actionss: {st.session_state.critical_actions}')
-        print(f'DEBUG PARSE_JSON st.session_state.follow_up_steps: {st.session_state.follow_up_steps}')
+        # print(f'DEBUG PARSE_JSON session_state.differential_diagnosis: {st.session_state.differential_diagnosis}')
+        # print(f'DEBUG PARSE_JSON st.session_state.critical_actionss: {st.session_state.critical_actions}')
+        # print(f'DEBUG PARSE_JSON st.session_state.follow_up_steps: {st.session_state.follow_up_steps}')
         print(f'DEBUG PARSE_JSON st.session_state.patient_cc: {st.session_state.patient_cc}')
 
         # Only save case details if there's meaningful data
@@ -1037,15 +1041,21 @@ def display_pt_headline():
     if st.session_state.pt_data != {}:
         try:
             #print(f'DEBUG DISPLAY HEADER ST.SESSION TATE.PT DATA: {st.session_state.pt_data}')
-            cc = st.session_state.pt_data["chief_complaint_two_word"]
-            age = st.session_state.pt_data["age"]
-            age_units = st.session_state.pt_data["age_unit"]
-            if st.session_state.pt_data["sex"] == "Unknown":
-                sex = ""
-            else:
-                sex = st.session_state.pt_data["sex"]
-            st.session_state.patient_cc = f"{age}{age_units} {sex} with {cc}"
+            cc = st.session_state.pt_data.get("chief_complaint_two_word", "")
+            age = st.session_state.pt_data.get("age", "")
+            age_units = st.session_state.pt_data.get("age_unit", "")
+            sex = st.session_state.pt_data.get("sex", "")
             
+
+            # Only update patient_cc if all required fields are non-empty
+            if cc and age and age_units:
+                sex_info = f" {sex}" if sex and sex != "Unknown" else ""
+                new_patient_cc = f"{age}{age_units}{sex_info} with {cc}"
+                
+                # Update patient_cc only if the new value is different and non-empty
+                if new_patient_cc != st.session_state.patient_cc:
+                    st.session_state.patient_cc = new_patient_cc
+            print(f'DEBUG display_pt_headline st.session_state.patient_cc: {st.session_state.patient_cc}')
             st.markdown("""
             <style>
             .patient-cc {
@@ -1100,18 +1110,7 @@ def display_sidebar():
             #display_follow_up_tasks()
             #st.divider()
             display_functions_tab()
-            container = st.container()
-            container.float(float_css_helper(bottom="10px", padding= "10px"))
-            with container:
-                c1, c2 = st.columns([2,1])
-                with c1:
-                    st.markdown(f'Welcome {st.session_state.name}!')
-                with c2:
-                    if st.button("Logout", key="logout_button"):
-                        authenticator.logout()
-                        st.success("You have been logged out successfully.")
-                        time.sleep(1)  # Give user time to see the message
-                        st.rerun()
+            
         with tab2:
             display_specialist_tab()
         
@@ -1120,7 +1119,19 @@ def display_sidebar():
 
         with tab5:
             display_sessions_tab()
-            
+        container = st.container()
+        container.float(float_css_helper(bottom="10px", padding= "10px"))
+        with container:
+            start_new_session()
+            c1, c2 = st.columns([2,1])
+            with c1:
+                st.markdown(f'Welcome {st.session_state.name}!')
+            with c2:
+                if st.button("Logout", key="logout_button"):
+                    authenticator.logout()
+                    st.success("You have been logged out successfully.")
+                    time.sleep(1)  # Give user time to see the message
+                    st.rerun()
 def display_functions_tab():
     # st.subheader('Process Management')
     # col1, col2 = st.columns(2)
@@ -1187,7 +1198,7 @@ def display_functions_tab():
             st.session_state.specialist = "Emergency Medicine"
     st.divider()
     
-    start_new_session()
+    
 
 def display_specialist_tab():
     if st.session_state.differential_diagnosis:
@@ -1205,7 +1216,14 @@ def display_specialist_tab():
         consult_specialist_and_update_ddx("Treatment consult", consult_treatment)
     if st.button("Disposition Plan"):
         consult_specialist_and_update_ddx("Disposition consult", consult_disposition)
-
+    st.markdown("---")
+    st.text("")
+    st.text("")
+    st.text("")
+    st.text("")
+    st.text("")
+    st.text("")
+    st.markdown("---")
 def display_variables_tab():
     update_patient_language()
     if st.button("Update Indexes"):
@@ -1280,7 +1298,11 @@ def display_sessions_tab():
                             del st.session_state.delete_confirmation
                             del st.session_state.delete_session_name
                             del st.session_state.delete_collection_name
-                            st.rerun()
+                            html("""
+                                <script>
+                                    window.parent.location.reload();
+                                </script>
+                            """)
                     with col2:
                         if st.button("No, cancel"):
                             del st.session_state.delete_confirmation
@@ -1534,7 +1556,7 @@ def authenticated_user():
                     st.divider()
                     display_follow_up_tasks()
         else:
-            # display_header()
+            display_header()
             display_chat_history()
             handle_user_input_container() 
             
@@ -1565,7 +1587,7 @@ def main():
     
     initialize_session_state()
     
-    display_header()
+    
     
 
     # Add a small delay to allow cookie to be read
