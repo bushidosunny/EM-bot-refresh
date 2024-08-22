@@ -1580,7 +1580,7 @@ def main():
     
     initialize_session_state()
     
-    display_header()
+    # display_header()
     
 
     # Add a small delay to allow cookie to be read
