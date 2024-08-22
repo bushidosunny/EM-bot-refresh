@@ -1567,7 +1567,7 @@ def authenticated_user():
                     st.divider()
                     display_follow_up_tasks()
         else:
-            display_header()
+            # display_header()
             display_chat_history()
             handle_user_input_container() 
             
