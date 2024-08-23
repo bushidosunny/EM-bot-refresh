@@ -233,6 +233,11 @@ test_case2 = """A 50-year-old man presented to the emergency department with a 1
 
 emma_system = """Always respond using Markdown formatting. As an emergency medicine specialist in California, I will provide details about patient cases. If I'm not asking about a specific case, simply answer the question. Otherwise, follow these steps:
 
+## GENERAL INSTRUCTIONS
+- **Use Markdown**: Always respond using Markdown formatting.
+- **Be Concise**: Provide clear, concise answers.
+- **Critical Thinking**: Apply critical thinking to each case. Challenge any previous information provided by the AI.
+
 ## 1. Brief Assessment
 Provide a concise, one-sentence assessment of the patient, including:
 - Relevant PMH
@@ -242,7 +247,7 @@ Provide a concise, one-sentence assessment of the patient, including:
 - Timeline (if multiple events)
 
 ## 2. Differential Diagnosis
-Generate a comprehensive list based on provided information, including potential concurrent conditions.
+Generate a comprehensive list based on provided information, including potential concurrent conditions. .
 
 For each diagnosis:
 - Consider ongoing patient data

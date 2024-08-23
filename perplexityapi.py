@@ -3,63 +3,84 @@ from openai import OpenAI
 from rich.console import Console
 from rich.markdown import Markdown
 import time
+import json
+from prompts import *
+from colorama import Fore, Style, init
+
+init()
 
 # Set your API key
-api_key = "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"
+PERPLEXITY_API_KEY = "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"
 
-prompt = input("Enter your prompt: ")
+system_instructions = ddx_emma_v2
 
-messages = [
-    {
-        "role": "system",
-        "content": (
-            "You are an artificial intelligence assistant and you need to "
-            "engage in a helpful, detailed, polite conversation with a user."
-        ),
-    },
-    {
-        "role": "user",
-        "content": (
-            prompt
-        ),
-    },
-]
+import requests
+import requests
+import json
 
-client = OpenAI(api_key=api_key, base_url="https://api.perplexity.ai")
+PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions"
 
-# # chat completion without streaming
-# response = client.chat.completions.create(
-#     model="llama-3.1-sonar-huge-128k-online",
-#     messages=messages,
-# )
-# response_content = response.choices[0].message.content
 
-# Use rich to render the Markdown content
-console = Console()
+# system_instructions = ddx_emma_v2
+system_instructions = emma_system
+chat_history = ""
 
-# chat completion with streaming
-response_stream = client.chat.completions.create(
-    model="llama-3.1-sonar-huge-128k-online",
-    messages=messages,
-    max_tokens=4000,
-    stream=True,
-)
+PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions"
 
-# Initialize an empty string to accumulate the response content
-response_content = ""
+headers = {
+    "accept": "application/json",
+    "content-type": "application/json",
+    "authorization": f"Bearer {PERPLEXITY_API_KEY}"
+}
 
-# Process each chunk of the response as it arrives
-for response in response_stream:
-    chunk = response.choices[0].delta.content  # Directly access the content attribute
-    response_content += chunk
+while True:
+    user_prompt = input("Enter your prompt: ")
+    # user_input = user_prompt
+    user_input = f'<CHAT HISTORY>wha\n{chat_history}\n<CHAT HISTORY>' + '\n' + user_prompt + '\n'
+
+
+    if user_prompt == "exit":
+        break
     
-    # Clear the console and print the accumulated content
-    console.clear()
-    markdown = Markdown(response_content)
-    console.print(markdown)
-    
-    # Sleep for a short duration to avoid spamming the terminal
-    time.sleep(0.1)
+    if user_prompt:
+        payload = {
+            "model": "llama-3.1-sonar-large-128k-online",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": system_instructions,
+                },
+                {
+                    "role": "user",
+                    "content": user_input
+                }
+            ],
+            "max_tokens": 0,
+            "temperature": 0.2,
+            "top_p": 0.9,
+            "return_citations": True,
+            "return_images": False,
+            "return_related_questions": True,
+            "top_k": 0,
+            "stream": False,
+            "presence_penalty": 0,
+            "frequency_penalty": 1
+        }
 
-# Print a newline at the end for better formatting
-console.print("\n")
+        response = requests.post(PERPLEXITY_URL, json=payload, headers=headers)
+
+        # Load JSON
+        data = response.json()
+
+        # Extract assistant content
+        assistant_content = data['choices'][0]['message']['content']
+
+        
+
+        chat_history += f'User: {user_prompt}\nAssistant: {assistant_content}'
+
+        # Display the extracted assistant content
+        print(Fore.GREEN + assistant_content + Style.RESET_ALL)
+
+        print("\n\n")
+        print(Fore.BLUE + f"CHAT HISTORY: \n{chat_history}\n" + Style.RESET_ALL)
