@@ -43,7 +43,7 @@ import secrets
 # from yaml.loader import SafeLoader
 from auth.MongoAuthenticator import MongoAuthenticator, User
 import extra_streamlit_components as stx
-
+import requests
 # # temp
 # from streamlit_mic_recorder import mic_recorder
 
@@ -62,6 +62,7 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
 MONGODB_URI = os.getenv('MONGODB_ATLAS_URI')
 ENVIRONMENT = os.getenv('ENVIRONMENT')
+PERPLEXITY_API_KEY = os.getenv('PERPLEXITY_API_KEY')
 
 # Initialize Anthropic client
 anthropic = Anthropic(api_key=ANTHROPIC_API_KEY)
@@ -101,6 +102,12 @@ specialist_data = {
     "caption": "👨‍⚕️EM, Peds EM, ☠️Toxicology, Wilderness",
     "avatar": "https://i.ibb.co/LnrQp8p/Designer-17.jpg",
     "system_instructions": emma_system
+  },
+  "Perplexity": {
+    "assistant_id": "perplexity_api",
+    "caption": "Perplexity AI",
+    "avatar": "https://play-lh.googleusercontent.com/6STp0lYx2ctvQ-JZpXA1LeAAZIlq6qN9gpy7swLPlRhmp-hfvZePcBxqwVkqN2BH1g",
+    "system_instructions": perplixity_system
   },
   "Neurological": {
     "assistant_id": "asst_caM9P1caoAjFRvSAmT6Y6mIz",
@@ -261,6 +268,7 @@ def initialize_session_state():
         session_state.system_instructions = emma_system
         session_state.pt_title = ""
         session_state.patient_cc = ""
+        session_state.chief_complaint_two_word = ""
         session_state.clean_chat_history = ""
         session_state.specialist = list(specialist_data.keys())[0]
         session_state.assistant_id = specialist_data[session_state.specialist]["assistant_id"]
@@ -1043,7 +1051,7 @@ def display_pt_headline():
     if st.session_state.pt_data != {}:
         try:
             #print(f'DEBUG DISPLAY HEADER ST.SESSION TATE.PT DATA: {st.session_state.pt_data}')
-            cc = st.session_state.pt_data.get("chief_complaint_two_word", "")
+            cc = st.session_state.pt_data.get("patient_cc", "")
             age = st.session_state.pt_data.get("age", "")
             age_units = st.session_state.pt_data.get("age_unit", "")
             sex = st.session_state.pt_data.get("sex", "")
@@ -1272,7 +1280,7 @@ def display_sessions_tab():
                 collection_name = session_options[session_name]
                 col1, col2 = st.columns(2)
                 with col1:
-                    if st.button("Load Selected Session"):
+                    if st.button("Load Selected Session", type='primary'):
                         st.session_state.load_session = collection_name
                         st.session_state.show_load_success = True
                         # st.success(f"Click 'Refresh' to load the chat history.")
@@ -1486,33 +1494,36 @@ def get_response(user_question: str) -> str:
     with st.spinner("Waiting for EMMA's response..."):
         response_placeholder = st.empty()
         
-        # Prepare chat history for context
-        chat_context = ""
-        for message in st.session_state.chat_history[-5:]:  # Include last 5 messages for context
-            if isinstance(message, HumanMessage):
-                chat_context += f"Human: {message.content}\n"
-            else:
-                chat_context += f"AI: {message.content}\n"
-        
-        system_instructions = st.session_state.system_instructions
+        if st.session_state.specialist == "Perplexity":
+            response_text = get_perplexity_response(user_question)
+        else:
+            # Prepare chat history for context
+            chat_context = ""
+            for message in st.session_state.chat_history[-5:]:  # Include last 5 messages for context
+                if isinstance(message, HumanMessage):
+                    chat_context += f"Human: {message.content}\n"
+                else:
+                    chat_context += f"AI: {message.content}\n"
+            
+            system_instructions = st.session_state.system_instructions
 
-        if isinstance(system_instructions, list):
-            system_instructions = "\n".join(system_instructions)
+            if isinstance(system_instructions, list):
+                system_instructions = "\n".join(system_instructions)
 
-        system_prompt = system_instructions.format(
-            REQUESTED_SECTIONS='ALL',
-            FILL_IN_EXPECTED_FINDINGS='fill in the normal healthy findings and include them in the note accordingly'
-        )
-        system_message = SystemMessage(content=system_prompt)
-        
-        user_content = f"Chat History:\n{chat_context}\n\nUser: {user_question}"
-        user_message = HumanMessage(content=user_content)
-        
-        messages = [system_message, user_message]
+            system_prompt = system_instructions.format(
+                REQUESTED_SECTIONS='ALL',
+                FILL_IN_EXPECTED_FINDINGS='fill in the normal healthy findings and include them in the note accordingly'
+            )
+            system_message = SystemMessage(content=system_prompt)
+            
+            user_content = f"Chat History:\n{chat_context}\n\nUser: {user_question}"
+            user_message = HumanMessage(content=user_content)
+            
+            messages = [system_message, user_message]
 
-        # LLM Model Response
-        response = model.invoke(messages)
-        response_text = response.content
+            # LLM Model Response
+            response = model.invoke(messages)
+            response_text = response.content
 
         response_placeholder.markdown(response_text)
         
@@ -1593,6 +1604,55 @@ def authenticated_user():
         st.error(f"An error occurred: {str(e)}")
         logging.error(f"Unhandled exception in authenticated_user: {str(e)}", exc_info=True)
 
+############################################# Perplexity Model #############################################
+
+def get_perplexity_response(user_question: str) -> str:
+    PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions"
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "authorization": f"Bearer {PERPLEXITY_API_KEY}"
+    }
+
+    # Prepare chat history for context
+    chat_context = ""
+    for message in st.session_state.chat_history[-5:]:  # Include last 5 messages for context
+        if isinstance(message, HumanMessage):
+            chat_context += f"Human: {message.content}\n"
+        else:
+            chat_context += f"AI: {message.content}\n"
+
+    user_input = f'<CHAT HISTORY>\n{chat_context}\n</CHAT HISTORY>\n{user_question}'
+
+    payload = {
+        "model": "llama-3.1-sonar-large-128k-online",
+        "messages": [
+            {
+                "role": "system",
+                "content": st.session_state.system_instructions,
+            },
+            {
+                "role": "user",
+                "content": user_input
+            }
+        ],
+        "max_tokens": 0,
+        "temperature": 0.5,
+        "top_p": 0.9,
+        "return_citations": True,
+        "return_images": False,
+        "return_related_questions": True,
+        "top_k": 0,
+        "stream": False,
+        "presence_penalty": 0,
+        "frequency_penalty": 1
+    }
+
+    response = requests.post(PERPLEXITY_URL, json=payload, headers=headers)
+    data = response.json()
+    return data['choices'][0]['message']['content']
+
+############################################# Main Function #############################################
 
 def main():
     
