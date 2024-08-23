@@ -107,7 +107,7 @@ specialist_data = {
     "assistant_id": "perplexity_api",
     "caption": "Perplexity AI",
     "avatar": "https://play-lh.googleusercontent.com/6STp0lYx2ctvQ-JZpXA1LeAAZIlq6qN9gpy7swLPlRhmp-hfvZePcBxqwVkqN2BH1g",
-    "system_instructions": emma_system
+    "system_instructions": perplixity_system
   },
   "Neurological": {
     "assistant_id": "asst_caM9P1caoAjFRvSAmT6Y6mIz",
@@ -268,6 +268,7 @@ def initialize_session_state():
         session_state.system_instructions = emma_system
         session_state.pt_title = ""
         session_state.patient_cc = ""
+        session_state.chief_complaint_two_word = ""
         session_state.clean_chat_history = ""
         session_state.specialist = list(specialist_data.keys())[0]
         session_state.assistant_id = specialist_data[session_state.specialist]["assistant_id"]
@@ -1050,7 +1051,7 @@ def display_pt_headline():
     if st.session_state.pt_data != {}:
         try:
             #print(f'DEBUG DISPLAY HEADER ST.SESSION TATE.PT DATA: {st.session_state.pt_data}')
-            cc = st.session_state.pt_data.get("chief_complaint_two_word", "")
+            cc = st.session_state.pt_data.get("patient_cc", "")
             age = st.session_state.pt_data.get("age", "")
             age_units = st.session_state.pt_data.get("age_unit", "")
             sex = st.session_state.pt_data.get("sex", "")
@@ -1279,7 +1280,7 @@ def display_sessions_tab():
                 collection_name = session_options[session_name]
                 col1, col2 = st.columns(2)
                 with col1:
-                    if st.button("Load Selected Session"):
+                    if st.button("Load Selected Session", type='primary'):
                         st.session_state.load_session = collection_name
                         st.session_state.show_load_success = True
                         # st.success(f"Click 'Refresh' to load the chat history.")
@@ -1636,7 +1637,7 @@ def get_perplexity_response(user_question: str) -> str:
             }
         ],
         "max_tokens": 0,
-        "temperature": 0.2,
+        "temperature": 0.5,
         "top_p": 0.9,
         "return_citations": True,
         "return_images": False,
@@ -1650,6 +1651,8 @@ def get_perplexity_response(user_question: str) -> str:
     response = requests.post(PERPLEXITY_URL, json=payload, headers=headers)
     data = response.json()
     return data['choices'][0]['message']['content']
+
+############################################# Main Function #############################################
 
 def main():
     
