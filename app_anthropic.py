@@ -46,7 +46,7 @@ import extra_streamlit_components as stx
 import requests
 # # temp
 # from streamlit_mic_recorder import mic_recorder
-
+from colorama import Fore, Style, init
 # Configure logging
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -623,52 +623,93 @@ def delete_session_data(collection_name):
 ############################### Logic ###############################################################
 
 
+# def load_chat_history(collection_name):
+#     try:
+#         # Clear existing data (unchanged)
+#         st.session_state.chat_history = []
+#         st.session_state.differential_diagnosis = []
+#         st.session_state.critical_actions = []
+
+#         # Fetch chat documents, sorted oldest to newest
+#         chat_documents = db[collection_name].find({"type": {"$in": ["user_input", "ai_input"]}}).sort("timestamp", 1)
+        
+#         # Group messages into pairs
+#         message_pairs = []
+#         current_pair = []
+#         for doc in chat_documents:
+#             current_pair.append(doc)
+#             if len(current_pair) == 2:
+#                 message_pairs.append(current_pair)
+#                 current_pair = []
+        
+#         # If there's an odd message left, add it as a single-message pair
+#         if current_pair:
+#             message_pairs.append(current_pair)
+        
+#         # Reverse the order of pairs
+#         message_pairs.reverse()
+        
+#         # Create message objects and add to chat history
+#         for pair in message_pairs:
+#             for doc in pair:
+#                 content = doc.get('message', '')
+#                 if doc['type'] == 'user_input':
+#                     message = HumanMessage(content=content, avatar=st.session_state.user_photo_url)
+#                 else:
+#                     specialist = doc.get('specialist', 'Emergency Medicine')
+#                     avatar = specialist_data[specialist]["avatar"]
+#                     message = AIMessage(content=content, avatar=avatar)
+                
+#                 st.session_state.chat_history.append(message)
+
+#         print(Fore.BLUE + f'st.session_state.chat_history:{st.session_state.chat_history}' + Style.RESET_ALL)
+
+#         # Load most recent differential diagnosis (unchanged)
+#         ddx_doc = db[collection_name].find_one({"type": "ddx"}, sort=[("timestamp", -1)])
+#         if ddx_doc:
+#             st.session_state.differential_diagnosis = ddx_doc.get('ddx', [])
+#             st.session_state.critical_actions = ddx_doc.get('critical_actions', [])
+
+#         # Set other session state variables (unchanged)
+#         st.session_state.patient_cc = ddx_doc.get('patient_cc', '') if ddx_doc else ''
+#         st.session_state.specialist = 'Emergency Medicine'
+
+#         # print(f"Loaded {len(st.session_state.chat_history)} messages and {len(st.session_state.differential_diagnosis)} diagnoses")
+#     except Exception as e:
+#         print(f"Error loading chat history: {e}")
+
 def load_chat_history(collection_name):
     try:
-        # Clear existing data (unchanged)
+        # Clear existing data
         st.session_state.chat_history = []
         st.session_state.differential_diagnosis = []
         st.session_state.critical_actions = []
+        st.session_state.pt_data = {}
 
         # Fetch chat documents, sorted oldest to newest
         chat_documents = db[collection_name].find({"type": {"$in": ["user_input", "ai_input"]}}).sort("timestamp", 1)
         
-        # Group messages into pairs
-        message_pairs = []
-        current_pair = []
-        for doc in chat_documents:
-            current_pair.append(doc)
-            if len(current_pair) == 2:
-                message_pairs.append(current_pair)
-                current_pair = []
-        
-        # If there's an odd message left, add it as a single-message pair
-        if current_pair:
-            message_pairs.append(current_pair)
-        
-        # Reverse the order of pairs
-        message_pairs.reverse()
-        
         # Create message objects and add to chat history
-        for pair in message_pairs:
-            for doc in pair:
-                content = doc.get('message', '')
-                if doc['type'] == 'user_input':
-                    message = HumanMessage(content=content, avatar=st.session_state.user_photo_url)
-                else:
-                    specialist = doc.get('specialist', 'Emergency Medicine')
-                    avatar = specialist_data[specialist]["avatar"]
-                    message = AIMessage(content=content, avatar=avatar)
-                
-                st.session_state.chat_history.append(message)
+        for doc in chat_documents:
+            content = doc.get('message', '')
+            if doc['type'] == 'user_input':
+                message = HumanMessage(content=content, avatar=st.session_state.user_photo_url)
+            else:
+                specialist = doc.get('specialist', 'Emergency Medicine')
+                avatar = specialist_data[specialist]["avatar"]
+                message = AIMessage(content=content, avatar=avatar)
+            
+            st.session_state.chat_history.append(message)
 
-        # Load most recent differential diagnosis (unchanged)
+        print(Fore.CYAN + f'st.session_state.chat_history:{st.session_state.chat_history}' + Style.RESET_ALL)
+
+        # Load most recent differential diagnosis
         ddx_doc = db[collection_name].find_one({"type": "ddx"}, sort=[("timestamp", -1)])
         if ddx_doc:
             st.session_state.differential_diagnosis = ddx_doc.get('ddx', [])
             st.session_state.critical_actions = ddx_doc.get('critical_actions', [])
 
-        # Set other session state variables (unchanged)
+        # Set other session state variables
         st.session_state.patient_cc = ddx_doc.get('patient_cc', '') if ddx_doc else ''
         st.session_state.specialist = 'Emergency Medicine'
 
@@ -1051,7 +1092,7 @@ def display_pt_headline():
     if st.session_state.pt_data != {}:
         try:
             #print(f'DEBUG DISPLAY HEADER ST.SESSION TATE.PT DATA: {st.session_state.pt_data}')
-            cc = st.session_state.pt_data.get("patient_cc", "")
+            cc = st.session_state.pt_data.get("chief_complaint_two_word", "")
             age = st.session_state.pt_data.get("age", "")
             age_units = st.session_state.pt_data.get("age_unit", "")
             sex = st.session_state.pt_data.get("sex", "")
@@ -1085,17 +1126,48 @@ def display_pt_headline():
                 word-spacing: 5px;
                 text-transform: none;
                 text-decoration: none;
-            }
-            </style>
-            """, unsafe_allow_html=True)
+                }
+                </style>
+                """, unsafe_allow_html=True)
 
             st.markdown(f"<h5 class='patient-cc'>{st.session_state.patient_cc}</h5>", unsafe_allow_html=True)
-
-
 
         except KeyError as e:
             st.error(f"Missing key in patient data: {e}")
             st.title("EMMA")
+
+    elif st.session_state.pt_data == {} and st.session_state.patient_cc != "":
+        try:
+            st.markdown("""
+            <style>
+            .patient-cc {
+                text-align: center;
+                font-size: 25px;
+                font-weight: none;
+                font-style: normal;
+                color: #048DEA;
+                background-color: none;
+                border-radius: 10px;
+                padding: 0px;
+                border: none;
+                box-shadow: none;
+                text-shadow: none;
+                letter-spacing: none;
+                line-height: 1.5;
+                word-spacing: 5px;
+                text-transform: none;
+                text-decoration: none;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+            st.markdown(f"<h5 class='patient-cc'>{st.session_state.patient_cc}</h5>", unsafe_allow_html=True)
+
+        except KeyError as e:
+            st.error(f"Missing key in patient data: {e}")
+            st.title("EMMA")
+
+
+        
 
 def display_sidebar():
     with st.sidebar:
@@ -1505,6 +1577,7 @@ def get_response(user_question: str) -> str:
                 else:
                     chat_context += f"AI: {message.content}\n"
             
+            print(Fore.GREEN + f'DEBUG CHAT CONTEXT: {chat_context}' + Style.RESET_ALL)
             system_instructions = st.session_state.system_instructions
 
             if isinstance(system_instructions, list):
@@ -1621,6 +1694,7 @@ def get_perplexity_response(user_question: str) -> str:
             chat_context += f"Human: {message.content}\n"
         else:
             chat_context += f"AI: {message.content}\n"
+    print(Fore.YELLOW + f'DEBUG CHAT CONTEXT: {chat_context}' + Style.RESET_ALL)
 
     user_input = f'<CHAT HISTORY>\n{chat_context}\n</CHAT HISTORY>\n{user_question}'
 

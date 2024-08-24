@@ -491,86 +491,86 @@ class MongoAuthenticator:
         display_header()
         c1, c2, c3 = st.columns([1,1,1])
         with c2:
-            st.header("Register")
+            st.title("Register")
         
-        if 'eula_agreed' not in st.session_state:
-            st.session_state.eula_agreed = False
-
-        if not st.session_state.eula_agreed:
-            st.title("End User License Agreement")
-            
-            st.markdown("""
-            <style>
-            .big-font {
-                font-size:16px !important;
-                font-family: Arial, sans-serif;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-            
-            st.markdown(EULA)
-            
-            agree = st.checkbox("I agree to the terms and conditions")
-            
-            if agree:
-                if st.button("Proceed to Registration", type="primary"):
-                    st.session_state.eula_agreed = True
-                    st.rerun()
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("Sign In"):
-                    st.session_state.show_login = True
-                    st.rerun()
-            with col2:
-                if st.button("Help"):
-                    st.info(f"If you need assistance, please contact {SUPPORT_EMAIL}")
-        
-        else:
-            st.title("Register Your Account")
-            
-            st.markdown("""
-            <style>
-            @media (max-width: 600px) {
-                .stTextInput > div > div > input {
-                    font-size: 16px;
-                }
-            }
-            </style>
-            """, unsafe_allow_html=True)
-            
-            with st.form("register_form"):
-                st.markdown('<p style="color: red;">* Required field</p>', unsafe_allow_html=True)
-                username = st.text_input("Username *")
-                name = st.text_input("Name *")
-                email = st.text_input("Email *")
-                password = st.text_input("Password *", type="password")
-                # st.text(f"Password strength: {self.check_password_strength(password)}")
-                confirm_password = st.text_input("Confirm Password *", type="password")
-                submit = st.form_submit_button("Register", type='primary')
-
-            if submit:
-                if not all([username, name, email, password, confirm_password]):
-                    st.error("All fields are required.")
-                elif password != confirm_password:
-                    st.error("Passwords do not match.")
-                elif email not in self.preauthorized_emails:
-                    st.error("Sorry, you are not authorized to register. Please contact the administrator.")
-                else:
-                    try:
-                        if self.register_user(username, name, password, email):
-                            st.success(f"Registration successful! Welcome {name}!")
-                            st.session_state.show_registration = False
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            st.error("Username or email already exists. Choose a different username or email.")
-                    except Exception as e:
-                        st.error(f"An error occurred during registration: {str(e)}")
-
-            if st.button("Back to EULA"):
+            if 'eula_agreed' not in st.session_state:
                 st.session_state.eula_agreed = False
-                st.rerun()
+
+            if not st.session_state.eula_agreed:
+                st.header("End User License Agreement")
+                
+                st.markdown("""
+                <style>
+                .big-font {
+                    font-size:16px !important;
+                    font-family: Arial, sans-serif;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                st.markdown(EULA)
+                
+                agree = st.checkbox("I agree to the terms and conditions")
+                
+                if agree:
+                    if st.button("Proceed to Registration", type="primary"):
+                        st.session_state.eula_agreed = True
+                        st.rerun()
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("Sign In"):
+                        st.session_state.show_login = True
+                        st.rerun()
+                with col2:
+                    if st.button("Help"):
+                        st.info(f"If you need assistance, please contact {SUPPORT_EMAIL}")
+            
+            else:
+                st.title("Register Your Account")
+                
+                st.markdown("""
+                <style>
+                @media (max-width: 600px) {
+                    .stTextInput > div > div > input {
+                        font-size: 16px;
+                    }
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                with st.form("register_form"):
+                    st.markdown('<p style="color: red;">* Required field</p>', unsafe_allow_html=True)
+                    username = st.text_input("Username *")
+                    name = st.text_input("Name *")
+                    email = st.text_input("Email *")
+                    password = st.text_input("Password *", type="password")
+                    # st.text(f"Password strength: {self.check_password_strength(password)}")
+                    confirm_password = st.text_input("Confirm Password *", type="password")
+                    submit = st.form_submit_button("Register", type='primary')
+
+                if submit:
+                    if not all([username, name, email, password, confirm_password]):
+                        st.error("All fields are required.")
+                    elif password != confirm_password:
+                        st.error("Passwords do not match.")
+                    elif email not in self.preauthorized_emails:
+                        st.error("Sorry, you are not authorized to register. Please contact the administrator.")
+                    else:
+                        try:
+                            if self.register_user(username, name, password, email):
+                                st.success(f"Registration successful! Welcome {name}!")
+                                st.session_state.show_registration = False
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.error("Username or email already exists. Choose a different username or email.")
+                        except Exception as e:
+                            st.error(f"An error occurred during registration: {str(e)}")
+
+                if st.button("Back to EULA"):
+                    st.session_state.eula_agreed = False
+                    st.rerun()
 
     def forgot_username_page(self):
         display_header()
