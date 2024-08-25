@@ -366,7 +366,7 @@ def delete_note_template(user: User, template_id: str) -> None:
     user.delete_note_template(template_id)
     save_user_preferences(user)
 
-def create_session(user_id: str) -> tuple[str, datetime]:
+def create_session(user_id: str) -> tuple[str, datetime.datetime]:
     session_token = secrets.token_urlsafe(32)
     expiration = datetime.datetime.utcnow() + datetime.timedelta(days=1)
     sessions_collection.insert_one({
