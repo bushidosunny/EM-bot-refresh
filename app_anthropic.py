@@ -277,6 +277,7 @@ def initialize_session_state():
         session_state.should_rerun = False
         session_state.user_question_sidebar = ""
         session_state.old_user_question_sidebar = ""
+        session_state.new_session_clicked = False
         session_state.messages = []
         session_state.system_instructions = emma_system
         session_state.pt_title = ""
@@ -905,23 +906,7 @@ def new_thread():
     """)
     # st.rerun()
 
-def start_new_session():
-    if 'new_session_clicked' not in st.session_state:
-        st.session_state.new_session_clicked = False
 
-    if st.button('🔃New Session', type="secondary", use_container_width=True, help=new_session_prompt
-):
-        st.session_state.new_session_clicked = True
-
-    if st.session_state.new_session_clicked:
-        st.write("Are you sure you want to start a new encounter? This will reset all current data.")
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Yes, start new encounter", type="primary", use_container_width=True):
-                new_thread()
-        with col2:
-            if st.button("No, cancel", type="secondary", use_container_width=True):
-                st.session_state.new_session_clicked = False
 
 def chat_history_string():
     output = io.StringIO()
@@ -1174,21 +1159,36 @@ def display_sidebar():
         container = st.container()
         container.float(float_css_helper(bottom="10px", padding= "10px"))
         with container:
-            
-            
+             
             
             c1, c2 = st.columns([1,1])
             feedback_container = st.container()
             with c1:
                 handle_feedback(container=feedback_container)
-                st.markdown(f'Welcome {st.session_state.name}!')
+                
             with c2:
-                start_new_session()
+                if st.button('🔃New Session', type="secondary", use_container_width=True, help=new_session_prompt):
+                    st.session_state.new_session_clicked = True
+                    
+            if st.session_state.new_session_clicked:
+                st.write("Are you sure you want to start a new encounter? This will reset all current data.")
+                if st.button("Yes, start new encounter", type="primary", use_container_width=True):
+                    new_thread()
+                if st.button("No, cancel", type="secondary", use_container_width=True):
+                    st.session_state.new_session_clicked = False
+                
+                
+            c3, c4 = st.columns([1,1])
+            with c3:
+                st.markdown(f'Welcome {st.session_state.name}!')
+            with c4:
                 if st.button("Logout", key="logout_button", use_container_width=True):
                     authenticator.logout()
                     st.success("You have been logged out successfully.")
                     time.sleep(1)  # Give user time to see the message
                     st.rerun()
+
+
 
 def display_functions_tab():
     # st.subheader('Process Management')
