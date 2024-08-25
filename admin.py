@@ -365,7 +365,7 @@ def delete_user(user_id):
 #     #             st.session_state.confirm_delete = False
 #     #             st.session_state.sessions_to_delete = []
 
-def list_sessions():
+# def list_sessions():
     st.subheader("Session Management")
     
     # Get all unique usernames from session collections
@@ -383,7 +383,7 @@ def list_sessions():
     with col1:
         min_docs = st.number_input("Minimum Documents", min_value=0, value=0)
     with col2:
-        max_docs = st.number_input("Maximum Documents", min_value=0, value=1000000)
+        max_docs = st.number_input("Maximum Documents", min_value=0, value=1000)
     
     # Filter sessions based on selected user and document count
     filtered_sessions = []
@@ -463,6 +463,111 @@ def list_sessions():
                 st.session_state.sessions_to_delete = []
                 st.rerun()
 
+def list_sessions():
+    st.subheader("Session Management")
+    
+    # Get all unique usernames from session collections
+    collections = db.list_collection_names()
+    sessions = [col for col in collections if col.startswith('user_')]
+    usernames = list(set([session.split('_')[1] for session in sessions]))
+    usernames.sort()
+    
+    # Filter by user
+    selected_user = st.selectbox("Filter by User", ["All Users"] + usernames)
+    
+    # Document count filter
+    st.subheader("Filter by Document Count")
+    col1, col2 = st.columns(2)
+    with col1:
+        min_docs = st.number_input("Minimum Documents", min_value=0, value=0)
+    with col2:
+        max_docs = st.number_input("Maximum Documents", min_value=0, value=1000)
+    
+    # Filter sessions based on selected user and document count
+    filtered_sessions = []
+    for session in sessions:
+        if selected_user == "All Users" or session.split('_')[1] == selected_user:
+            doc_count = db[session].count_documents({})
+            if min_docs <= doc_count <= max_docs:
+                latest_doc = db[session].find_one(sort=[("timestamp", -1)])
+                session_date = latest_doc.get("timestamp", "Unknown") if latest_doc else "Unknown"
+                filtered_sessions.append((session, doc_count, session_date))
+    
+    # Sort sessions by date (newest first)
+    filtered_sessions.sort(key=lambda x: x[2], reverse=True)
+    
+    # Initialize session state for checkboxes if not exists
+    if 'session_checkboxes' not in st.session_state:
+        st.session_state.session_checkboxes = {}
+    
+    # Select All checkbox
+    select_all = st.checkbox("Select All", key="select_all_checkbox")
+
+    # Display sessions
+    st.subheader("Sessions")
+    for i, (session, doc_count, session_date) in enumerate(filtered_sessions):
+        col1, col2, col3, col4, col5, col6 = st.columns([0.5, 2, 2, 1, 1, 1])
+        
+        with col1:
+            # Use select_all value if it's checked, otherwise use the existing checkbox state
+            checkbox_value = select_all or st.session_state.session_checkboxes.get(session, False)
+            checkbox = st.checkbox("", key=f"checkbox_{i}", value=checkbox_value)
+            st.session_state.session_checkboxes[session] = checkbox
+        
+        with col2:
+            st.write(session)
+        
+        with col3:
+            st.write(f"Date: {session_date}")
+        
+        with col4:
+            st.write(f"Documents: {doc_count}")
+        
+        with col5:
+            if st.button("View", key=f"view_{i}"):
+                st.session_state.viewing_session = session
+        
+        with col6:
+            if st.button("Delete", key=f"delete_{i}"):
+                if delete_session(session):
+                    st.success(f"Deleted session: {session}")
+                    time.sleep(1)
+                    st.rerun()
+    
+    # View session details
+    if 'viewing_session' in st.session_state:
+        view_session(st.session_state.viewing_session)
+        if st.button("Close View"):
+            del st.session_state.viewing_session
+    
+    # Delete selected sessions
+    selected_sessions = [session for session, checked in st.session_state.session_checkboxes.items() if checked]
+    if selected_sessions:
+        if st.button("Delete Selected Sessions"):
+            st.session_state.confirm_delete = True
+            st.session_state.sessions_to_delete = selected_sessions
+
+    # Confirm deletion
+    if st.session_state.get('confirm_delete', False):
+        st.warning(f"Are you sure you want to delete the following sessions?\n{', '.join(st.session_state.sessions_to_delete)}")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Confirm Delete"):
+                delete_sessions(st.session_state.sessions_to_delete)
+                st.session_state.confirm_delete = False
+                st.session_state.sessions_to_delete = []
+                # Clear checkboxes for deleted sessions
+                for session in selected_sessions:
+                    if session in st.session_state.session_checkboxes:
+                        del st.session_state.session_checkboxes[session]
+                st.success("Selected sessions deleted successfully.")
+                time.sleep(1)
+                st.rerun()
+        with col2:
+            if st.button("Cancel"):
+                st.session_state.confirm_delete = False
+                st.session_state.sessions_to_delete = []
+                st.rerun()
 def delete_sessions(session_names):
     for session_name in session_names:
         try:
@@ -506,6 +611,22 @@ def delete_sessions(session_names):
     time.sleep(1)  # Give user time to see the message
     st.rerun()
 
+# def view_session(session_name):
+#     st.subheader(f"Session Details: {session_name}")
+#     collection = db[session_name]
+    
+#     # Find the most recent chat_history document
+#     chat_history = collection.find_one({"type": "chat_history"}, sort=[("timestamp", -1)])
+    
+#     if chat_history:
+#         patient_cc = chat_history.get("patient_cc", "No chief complaint found")
+#         st.write(f"Patient's Chief Complaint: {patient_cc}")
+    
+#     # Display other session details
+#     documents = collection.find()
+#     for doc in documents:
+#         st.json(doc)
+
 def view_session(session_name):
     st.subheader(f"Session Details: {session_name}")
     collection = db[session_name]
@@ -514,14 +635,28 @@ def view_session(session_name):
     chat_history = collection.find_one({"type": "chat_history"}, sort=[("timestamp", -1)])
     
     if chat_history:
-        patient_cc = chat_history.get("patient_cc", "No chief complaint found")
-        st.write(f"Patient's Chief Complaint: {patient_cc}")
+        st.write("Chat History:")
+        st.json(chat_history)
     
-    # Display other session details
-    documents = collection.find()
-    for doc in documents:
-        st.json(doc)
-     
+    # Find the most recent ddx document
+    ddx = collection.find_one({"type": "ddx"}, sort=[("timestamp", -1)])
+    
+    if ddx:
+        st.write("Differential Diagnosis:")
+        st.json(ddx)
+    
+    # Find notes by the Note Writer
+    notes = list(collection.find({"specialist": "Note Writer"}))
+    
+    if notes:
+        st.write("Notes by Note Writer:")
+        for note in notes:
+            st.json(note)
+    
+    if st.button("Close Session View"):
+        del st.session_state.viewing_session
+        st.rerun()
+
 def delete_session(session_name):
     try:
         db.drop_collection(session_name)

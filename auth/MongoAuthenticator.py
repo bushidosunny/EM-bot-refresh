@@ -83,7 +83,8 @@ class User:
     username: str
     email: str
     name: str
-    specialty: str = "Other"
+    specialty: str = "Emergency Medicine"
+    preferred_note_type: str = "Emergency Medicine Note"
     _id: ObjectId = field(default_factory=ObjectId)
     password: Optional[bytes] = None
     user_id: str = field(default_factory=lambda: secrets.token_hex(16))
@@ -104,6 +105,7 @@ class User:
             "email": self.email,
             "name": self.name,
             "specialty": self.specialty,
+            "preferred_note_type": self.preferred_note_type,
             "created_at": self.created_at,
             "last_login": self.last_login,
             "login_count": self.login_count,
@@ -127,7 +129,8 @@ class User:
             _id=data.get("_id")
         )
         user.password = data.get("password")
-        specialty=data.get("specialty", "Other")
+        user.specialty=data.get("specialty", "Other")
+        user.preferred_note_type = data.get("preferred_note_type", "Emergency Medicine Note")
         user.created_at = data.get("created_at", user.created_at)
         user.last_login = data.get("last_login", user.last_login)
         user.login_count = data.get("login_count", 0)
@@ -444,6 +447,7 @@ class MongoAuthenticator:
                         st.session_state.username = user['username']
                         st.session_state.user_id = str(user['_id'])
                         st.session_state.email = user['email']
+                        st.session_state.preferred_note_type = user.get('preferred_note_type', "Emergency Medicine Note")
                         
                         # Update user metrics and check/update daily login
                         self.update_user_metrics(user_id)
@@ -616,9 +620,9 @@ class MongoAuthenticator:
                 
                 with st.form("register_form"):
                     st.markdown('<p style="color: red;">* Required field</p>', unsafe_allow_html=True)
-                    username = st.text_input("Username *")
-                    name = st.text_input("Name *")
-                    email = st.text_input("Email *")
+                    username = st.text_input("Username *").lower() 
+                    name = st.text_input("Name *").title()
+                    email = st.text_input("Email *").lower()
                     password = st.text_input("Password *", type="password")
                     confirm_password = st.text_input("Confirm Password *", type="password")
                     specialty = st.selectbox("Specialty *", options=SPECIALTIES)
