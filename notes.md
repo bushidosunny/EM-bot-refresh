@@ -1,1 +1,50 @@
-### Information Analysis\n\n**Patient Information:**\n- **Age:** 44 years old\n- **Symptoms:** Right ankle pain after running on trails for multiple days\n- **Pain Characteristics:** Pain around the right ankle, specifically on the posterior side\n- **Pain Duration:** Pain persists the next day and worsens with walking\n- **Examination Findings:** Normal examination\n- **Imaging Results:** Normal X-ray\n\n### Initial Differential Generation\n\n1. **Ankle Tendinitis (Tendonitis)**\n   - **Possible Cause:** Inflammation of the Achilles tendon or peroneal tendons due to repetitive stress from running on trails.\n   - **Symptoms:** Pain on the posterior side of the ankle, which aligns with Achilles tendonitis.\n   - **Supporting Factors:** Pain worsens with activity, particularly walking, which is consistent with tendonitis.\n\n2. **Ankle Strain or Sprain**\n   - **Possible Cause:** Overstretching or tearing of muscles or ligaments around the ankle.\n   - **Symptoms:** Pain and stiffness in the ankle, which could be exacerbated by walking.\n   - **Supporting Factors:** Pain after running on trails, which could indicate a sudden twisting motion.\n\n3. **Stress Fracture**\n   - **Possible Cause:** Tiny cracks in the bone due to repetitive impact and overuse.\n   - **Symptoms:** Pain that worsens with time but improves with rest, which is consistent with stress fractures.\n   - **Supporting Factors:** Pain on the posterior side of the ankle, which could be indicative of a stress fracture.\n\n4. **Poor Running Form or Footwear**\n   - **Possible Cause:** Overpronation or inadequate footwear support leading to increased stress on the ankle.\n   - **Symptoms:** Pain around the ankle, which could be exacerbated by poor running form or inadequate footwear support.\n   - **Supporting Factors:** Pain after running on trails, which might indicate uneven surfaces or poor foot mechanics.\n\n5. **Muscle Weakness**\n   - **Possible Cause:** Weak ankle muscles leading to overpronation and increased stress on the ankle.\n   - **Symptoms:** Pain around the ankle, particularly on the posterior side, which could be indicative of muscle weakness.\n   - **Supporting Factors:** Pain worsens with walking, suggesting muscle fatigue or weakness.\n\n### Critical Evaluation and Elimination\n\n#### Ankle Tendinitis (Tendonitis)\n- **Supporting Factors:**\n  - Pain on the posterior side of the ankle.\n  - Pain worsens with activity, particularly walking.\n  - Normal examination and X-ray do not rule out tendonitis.\n- **Contradicting Factors:**\n  - No clear injury reported, but this does not rule out chronic inflammation.\n- **Probability Assessment:**\n  - High likelihood due to repetitive stress from running on trails.\n\n#### Ankle Strain or Sprain\n- **Supporting Factors:**\n  - Pain after running on trails, which could indicate a sudden twisting motion.\n  - Pain worsens with walking, suggesting possible ligament or muscle strain.\n- **Contradicting Factors:**\n  - Normal examination and X-ray do not support significant ligament damage.\n- **Probability Assessment:**\n  - Moderate likelihood due to potential for overstretching or tearing during running.\n\n#### Stress Fracture\n- **Supporting Factors:**\n  - Pain that worsens with time but improves with rest, which is consistent with stress fractures.\n  - Pain on the posterior side of the ankle, which could be indicative of a stress fracture.\n- **Contradicting Factors:**\n  - Normal X-ray does not support bone fracture.\n- **Probability Assessment:**\n  - Low likelihood due to normal X-ray results.\n\n#### Poor Running Form or Footwear\n- **Supporting Factors:**\n  - Pain around the ankle, which could be exacerbated by poor running form or inadequate footwear support.\n  - Running on trails may increase the risk of uneven surfaces and poor foot mechanics.\n- **Contradicting Factors:**\n  - No specific mention of poor running form or footwear issues.\n- **Probability Assessment:**\n  - Moderate likelihood due to potential for poor foot mechanics and uneven surfaces.\n\n#### Muscle Weakness\n- **Supporting Factors:**\n  - Pain around the ankle, particularly on the posterior side, which could be indicative of muscle weakness.\n  - Pain worsens with walking, suggesting muscle fatigue or weakness.\n- **Contradicting Factors:**\n  - Normal examination does not support significant muscle weakness.\n- **Probability Assessment:**\n  - Low likelihood due to normal examination results.\n\n### Probability Assessment\n\n1. **Ankle Tendinitis (Tendonitis):** 60%\n2. **Ankle Strain or Sprain:** 20%\n3. **Poor Running Form or Footwear:** 10%\n4. **Muscle Weakness:** 5%\n5. **Stress Fracture:** 5%\n\n### Diagnostic Prioritization\n\n1. **Ankle Tendinitis (Tendonitis):** The most likely diagnosis given the repetitive stress from running on trails and pain on the posterior side of the ankle.\n2. **Ankle Strain or Sprain:** A possible diagnosis given the sudden twisting motion during running and pain worsened by walking.\n3. **Poor Running Form or Footwear:** A consideration given the potential for uneven surfaces and poor foot mechanics during trail running.\n4. **Muscle Weakness:** Less likely but still a possibility given the pain around the ankle.\n5. **Stress Fracture:** Least likely due to normal X-ray results.\n\n### Critical Actions\n\n1. **Recommendations:**\n   - **Physical Therapy Evaluation:** To assess for tendonitis and recommend appropriate exercises for strengthening and stretching.\n   - **Orthotics or Footwear Adjustment:** To ensure proper support and alignment of the foot during running.\n   - **Rest and Ice Therapy:** To manage pain and reduce inflammation.\n   - **Follow-Up Imaging:** If symptoms persist, consider further imaging like an MRI to rule out other conditions.\n\n2. **Interventions:**\n   - **Pain Management:** Over-the-counter anti-inflammatory medications can be used to relieve pain during healing.\n   - **Strengthening Exercises:** Ankle circles, calf raises, and resistant band work can help strengthen the ankle muscles.\n\n### Summary\n\nThe most likely diagnosis is **Ankle Tendinitis (Tendonitis)** due to repetitive stress from running on trails and pain on the posterior side of the ankle. The patient should undergo a physical therapy evaluation to assess for tendonitis and recommend appropriate exercises. Rest, ice therapy, and proper footwear adjustment are also recommended to manage pain and prevent further injury.\n\n**Confidence Level:** High\n**Key Factors Supporting This Conclusion:** Pain on the posterior side of the ankle, normal examination and X-ray results, and repetitive stress from running on trails.\n\n**Red Flags:** Persistent pain despite rest, significant swelling, or inability to bear weight on the affected ankle. Immediate medical attention is required if these symptoms occur.
+# Welcome to EMMA: Your AI Assistant for Emergency Medicine
+
+Dear Colleague,
+
+Welcome to being the first users for EMMA, my new AI assistant app for emergency medicine. Your participation is invaluable, and I'm grateful for your involvement in this innovative journey.
+
+## The Mission
+
+This is a big maybe, and it may sound cheesy, but EMMA aims to revolutionize emergency medicine by providing instant, actionable insights to doctors worldwide. We're creating an AI co-pilot that augments human expertise, saves lives, reduces suffering, and optimizes medical resources. Our goal is to empower both doctors and patients, transforming healthcare through AI-assisted decision-making, documentation, and patient education.
+
+## Getting Started
+
+1. Visit [emmahealth.ai](https://emmahealth.ai) to register your account
+2. Log in to explore EMMA's features
+
+## Key Features
+
+### Mobile to Desktop Sync
+Capture vital information on your phone during patient interviews, then continue your work on the desktop.
+
+### Powerful AI Capabilities
+EMMA is a robust tool designed to assist you. Experiment with its features and side buttons to discover its full potential, including:
+
+- **Clinical Notes Generation:** Create strongly reasoned medical notes with a single click
+- **Comprehensive Differential Diagnosis:** Consider a wide range of possible diagnoses
+- **Follow-up Recommendations:** Receive suggestions for appropriate tests and interventions
+
+### Dynamic Updates and Continuous Learning
+EMMA adapts to new information and your input:
+
+- **Real-time Updates:** Add new information (e.g., CT scan results) as it becomes available
+- **Feedback Integration:** If you disagree with a diagnosis or suggestion, tell EMMA and it will adjust
+- **Iterative Process:** Keep inputting and refining until you're satisfied with the results
+
+### Your Feedback Matters
+Share your thoughts:
+- Using the feedback button (bottom-left sidebar)
+- Via email, text, pigeon carrier...
+
+Your input is crucial for EMMA's continuous improvement.
+
+## Important Reminder
+
+**EMMA is an adjunct to your clinical judgment, not a replacement. Always rely on your professional expertise.**
+
+Thank you for being part of this. I look forward to hearing about your experiences with EMMA.
+
+Best regards,
+
+Sunny

@@ -17,7 +17,7 @@ load_dotenv()
 
 DEEPGRAM_API_KEY = os.getenv('DEEPGRAM_API_KEY')
 
-def record_audio():
+def record_audio(key=None, width=False, container_name=None):
     
     print("Recording audio...")
     audio = mic_recorder(
@@ -25,14 +25,17 @@ def record_audio():
         stop_prompt="🔴Stop",
         just_once=True,
         callback=None,
-        key="main_recorder"
+        use_container_width=width if width else False,
+        key=key if key else "main_recorder"
     )
 
     # Handle recording start/stop
     if audio is not None:
-        st.success("🎉 Audio recorded successfully! Please wait")
-
-
+        if container_name:
+            with container_name:
+                st.success("🎉 Audio recorded successfully! Please wait")
+        else:
+            st.success("🎉 Audio recorded successfully! Please wait")
         audio_bytes = io.BytesIO(audio['bytes'])
         audio_bytes.seek(0)
         raw_transcript = transcribe_audio(audio_bytes)
@@ -48,7 +51,7 @@ def record_audio():
             else:
                 prompt = transcript.replace("Speaker 0:", "").strip()
                 return prompt
-           
+    return None  # Return None if no audio was recorded      
 def transcribe_audio(audio_file):
     try:
         deepgram = DeepgramClient(DEEPGRAM_API_KEY)

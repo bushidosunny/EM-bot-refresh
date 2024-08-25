@@ -105,7 +105,7 @@ specialist_data = {
   },
   "Perplexity": {
     "assistant_id": "perplexity_api",
-    "caption": "Perplexity AI",
+    "caption": "Perplexity AI with web search and citations",
     "avatar": "https://play-lh.googleusercontent.com/6STp0lYx2ctvQ-JZpXA1LeAAZIlq6qN9gpy7swLPlRhmp-hfvZePcBxqwVkqN2BH1g",
     "system_instructions": perplixity_system
   },
@@ -620,62 +620,19 @@ def load_session_data(collection_name):
 def delete_session_data(collection_name):
     db.drop_collection(collection_name)
 
+def save_feedback(feedback_type, feedback_text):
+    feedback_doc = {
+        "user_id": st.session_state.username,
+        "user_email": st.session_state.email,
+        "session_id": st.session_state.session_id,
+        "timestamp": datetime.datetime.now(),
+        "feedback_type": feedback_type,
+        "feedback_text": feedback_text
+    }
+    db['feedback'].insert_one(feedback_doc)
+
 ############################### Logic ###############################################################
 
-
-# def load_chat_history(collection_name):
-#     try:
-#         # Clear existing data (unchanged)
-#         st.session_state.chat_history = []
-#         st.session_state.differential_diagnosis = []
-#         st.session_state.critical_actions = []
-
-#         # Fetch chat documents, sorted oldest to newest
-#         chat_documents = db[collection_name].find({"type": {"$in": ["user_input", "ai_input"]}}).sort("timestamp", 1)
-        
-#         # Group messages into pairs
-#         message_pairs = []
-#         current_pair = []
-#         for doc in chat_documents:
-#             current_pair.append(doc)
-#             if len(current_pair) == 2:
-#                 message_pairs.append(current_pair)
-#                 current_pair = []
-        
-#         # If there's an odd message left, add it as a single-message pair
-#         if current_pair:
-#             message_pairs.append(current_pair)
-        
-#         # Reverse the order of pairs
-#         message_pairs.reverse()
-        
-#         # Create message objects and add to chat history
-#         for pair in message_pairs:
-#             for doc in pair:
-#                 content = doc.get('message', '')
-#                 if doc['type'] == 'user_input':
-#                     message = HumanMessage(content=content, avatar=st.session_state.user_photo_url)
-#                 else:
-#                     specialist = doc.get('specialist', 'Emergency Medicine')
-#                     avatar = specialist_data[specialist]["avatar"]
-#                     message = AIMessage(content=content, avatar=avatar)
-                
-#                 st.session_state.chat_history.append(message)
-
-#         print(Fore.BLUE + f'st.session_state.chat_history:{st.session_state.chat_history}' + Style.RESET_ALL)
-
-#         # Load most recent differential diagnosis (unchanged)
-#         ddx_doc = db[collection_name].find_one({"type": "ddx"}, sort=[("timestamp", -1)])
-#         if ddx_doc:
-#             st.session_state.differential_diagnosis = ddx_doc.get('ddx', [])
-#             st.session_state.critical_actions = ddx_doc.get('critical_actions', [])
-
-#         # Set other session state variables (unchanged)
-#         st.session_state.patient_cc = ddx_doc.get('patient_cc', '') if ddx_doc else ''
-#         st.session_state.specialist = 'Emergency Medicine'
-
-#         # print(f"Loaded {len(st.session_state.chat_history)} messages and {len(st.session_state.differential_diagnosis)} diagnoses")
-#     except Exception as e:
 #         print(f"Error loading chat history: {e}")
 
 def load_chat_history(collection_name):
@@ -701,7 +658,7 @@ def load_chat_history(collection_name):
             
             st.session_state.chat_history.append(message)
 
-        print(Fore.CYAN + f'st.session_state.chat_history:{st.session_state.chat_history}' + Style.RESET_ALL)
+        
 
         # Load most recent differential diagnosis
         ddx_doc = db[collection_name].find_one({"type": "ddx"}, sort=[("timestamp", -1)])
@@ -713,7 +670,7 @@ def load_chat_history(collection_name):
         st.session_state.patient_cc = ddx_doc.get('patient_cc', '') if ddx_doc else ''
         st.session_state.specialist = 'Emergency Medicine'
 
-        print(f"Loaded {len(st.session_state.chat_history)} messages and {len(st.session_state.differential_diagnosis)} diagnoses")
+        # print(f"Loaded {len(st.session_state.chat_history)} messages and {len(st.session_state.differential_diagnosis)} diagnoses")
     except Exception as e:
         print(f"Error loading chat history: {e}")
 
@@ -939,7 +896,7 @@ def start_new_session():
     if 'new_session_clicked' not in st.session_state:
         st.session_state.new_session_clicked = False
 
-    if st.button('Create a New Session Encounter', type="secondary", use_container_width=True, help="keyboard shortct: F5"):
+    if st.button('New Session', type="secondary", use_container_width=True, help="keyboard shortct: F5"):
         st.session_state.new_session_clicked = True
 
     if st.session_state.new_session_clicked:
@@ -1167,8 +1124,6 @@ def display_pt_headline():
             st.title("EMMA")
 
 
-        
-
 def display_sidebar():
     with st.sidebar:
         st.markdown(
@@ -1205,12 +1160,16 @@ def display_sidebar():
         container = st.container()
         container.float(float_css_helper(bottom="10px", padding= "10px"))
         with container:
-            start_new_session()
-            c1, c2 = st.columns([2,1])
+            
+            
+            
+            c1, c2 = st.columns([1,1])
             with c1:
+                handle_feedback()
                 st.markdown(f'Welcome {st.session_state.name}!')
             with c2:
-                if st.button("Logout", key="logout_button"):
+                start_new_session()
+                if st.button("Logout", key="logout_button", use_container_width=True):
                     authenticator.logout()
                     st.success("You have been logged out successfully.")
                     time.sleep(1)  # Give user time to see the message
@@ -1281,8 +1240,7 @@ def display_functions_tab():
             consult_specialist_and_update_ddx("Critical Thinking w Bayesian Reasoning", apply_bayesian_reasoning)
             st.session_state.specialist = "Emergency Medicine"
     st.divider()
-    
-    
+       
 
 def display_specialist_tab():
     if st.session_state.differential_diagnosis:
@@ -1398,7 +1356,6 @@ def display_sessions_tab():
         st.write("No sessions found for this user.")
 
     
-
 def display_session_data(collection_name):
     st.session_state.session_id = collection_name
     categorized_data = load_session_data(collection_name)
@@ -1468,6 +1425,10 @@ def display_delete_session_button(collection_name):
                 st.session_state.delete_confirmation = False
                 st.rerun()
 
+def display_feedback_button():
+    if st.button("📝 Give Feedback", use_container_width=True):
+        st.session_state.show_feedback = True
+
 ############################################# User input processing #############################################
 def handle_user_input_container():
     input_container = st.container()
@@ -1479,11 +1440,11 @@ def handle_user_input_container():
                     height=None,  # Adjust the height as needed
                     overflow_y=None,  # Enable vertical scrolling
                     padding="20px",  # Add some padding for better appearance))
-                    background="white"  
+                    background="inherit"  
         ))
     with input_container:
 
-        col_specialist, col1, col2= st.columns([1, 6, 1])
+        col_specialist, col1, col2= st.columns([1.5, 6, 1])
         with col_specialist:
             specialist = st.session_state.specialist
             specialist_avatar = specialist_data[specialist]["avatar"]
@@ -1561,7 +1522,6 @@ def process_user_question(user_question, specialist):
         # Debug output
         print("DEBUG: Session State after processing user question")
 
-
 def get_response(user_question: str) -> str:
     with st.spinner("Waiting for EMMA's response..."):
         response_placeholder = st.empty()
@@ -1577,7 +1537,7 @@ def get_response(user_question: str) -> str:
                 else:
                     chat_context += f"AI: {message.content}\n"
             
-            print(Fore.GREEN + f'DEBUG CHAT CONTEXT: {chat_context}' + Style.RESET_ALL)
+
             system_instructions = st.session_state.system_instructions
 
             if isinstance(system_instructions, list):
@@ -1677,6 +1637,211 @@ def authenticated_user():
         st.error(f"An error occurred: {str(e)}")
         logging.error(f"Unhandled exception in authenticated_user: {str(e)}", exc_info=True)
 
+# def handle_feedback():
+#     if 'show_feedback' not in st.session_state:
+#         st.session_state.show_feedback = False
+#     if 'feedback_text' not in st.session_state:
+#         st.session_state.feedback_text = ""
+
+#     if st.sidebar.button("📝 Give Feedback", key="feedback_button") or st.session_state.show_feedback:
+#         st.session_state.show_feedback = True
+#         with st.sidebar.expander("Feedback", expanded=True):
+#             st.write("Your feedback is crucial to making EMMA better. Please share your thoughts freely. AI will process your thoughts into different catagories:")
+            
+#             # Display prompts
+#             prompts = [
+#                 "How easy is it to use EMMA?",
+#                 "What performance issues have you encountered?",
+#                 "Which features of EMMA do you find most valuable?",
+#                 "How has EMMA impacted your efficiency or patient care?",
+#                 "Do you have any suggestions for improvements?"
+#             ]
+#             for prompt in prompts:
+#                 st.write(f"• {prompt}")
+            
+            
+#             # Text input
+#             st.session_state.feedback_text = st.text_area("Type/Record your feedback here...", value=st.session_state.feedback_text, key="feedback_text_area", height=150)
+            
+#             # Voice recording
+#             col1, col2 = st.columns([3, 1])
+#             with col1:
+#                 st.write("Or record your feedback:")
+#             with col2:
+#                 audio_text = record_audio(key="feedback_recorder", width=True)
+#                 if audio_text:
+#                     st.session_state.feedback_text += " " + audio_text
+#                     st.rerun()  # Rerun to update the text area
+            
+#             col3, col4 = st.columns([1, 1])
+#             with col3:
+#                 if st.button("Submit Feedback", key="submit_feedback_button", type="primary"):
+#                     if st.session_state.feedback_text:
+#                         # Process feedback using AI
+#                         processed_feedback = process_feedback(st.session_state.feedback_text)
+                        
+#                         # Save both raw and processed feedback
+#                         if authenticator.save_feedback(st.session_state.user_id, st.session_state.feedback_text, processed_feedback):
+#                             st.success("Thank you for your feedback! It has been processed and saved.")
+#                             st.session_state.show_feedback = False
+#                             st.session_state.feedback_text = ""
+#                             time.sleep(1)  # Give user time to see the message
+#                             st.rerun()
+#                         else:
+#                             st.error("There was an error saving your feedback. Please try again.")
+#                     else:
+#                         st.warning("Please provide some feedback before submitting.")
+            
+#             with col4:
+#                 if st.button("Cancel", key="cancel_feedback_button"):
+#                     st.session_state.show_feedback = False
+#                     st.session_state.feedback_text = ""
+#                     time.sleep(1)  # Give user time to see the message
+#                     st.rerun()
+
+def handle_feedback():
+    if 'show_feedback' not in st.session_state:
+        st.session_state.show_feedback = False
+    if 'feedback_text' not in st.session_state:
+        st.session_state.feedback_text = ""
+    if 'processed_feedback' not in st.session_state:
+        st.session_state.processed_feedback = ""
+    if 'show_processed_feedback' not in st.session_state:
+        st.session_state.show_processed_feedback = False
+
+    if st.button("📝 Give Feedback", key="feedback_button", use_container_width=True) or st.session_state.show_feedback:
+        st.session_state.show_feedback = True
+        with st.expander("Feedback", expanded=True):
+            st.write("Your feedback is crucial to making EMMA better. Please share your thoughts freely. Don't worry about formatting; EMMA will process your feedback into different categories.")
+            
+            # Display prompts
+            prompts = [
+                "How easy is it to use EMMA?",
+                "What performance issues have you encountered?",
+                "Which features of EMMA do you find most valuable?",
+                "How has EMMA impacted your efficiency or patient care?",
+                "Do you have any suggestions for improvements?",
+                "Any cool cases?"
+            ]
+            for prompt in prompts:
+                st.write(f"• {prompt}")
+
+            # Text input
+            st.session_state.feedback_text = st.text_area("Type your feedback here...", value=st.session_state.feedback_text, key="feedback_text_area", height=150)
+            
+            # Voice recording
+            col1, col2 = st.columns([3, 1])
+            feedback_container = st.container()
+            with col1:
+                st.write("Or record your feedback:")
+            with col2:
+                audio_text = record_audio(key="feedback_recorder", width=True, container_name=feedback_container)
+                if audio_text:
+                    st.session_state.feedback_text += " " + audio_text
+                    st.rerun()  # Rerun to update the text area
+            
+            col3, col4, col5 = st.columns([1, 1, 1])
+            container2 = st.container()
+            with col3:
+                if st.button("Preview Processed Feedback", key="preview_feedback_button"):
+                    if st.session_state.feedback_text:
+                        with st.spinner("Processing feedback..."):
+                            st.session_state.processed_feedback = process_feedback(st.session_state.feedback_text)
+                        st.session_state.show_processed_feedback = True
+                        st.rerun()
+                    else:
+                        st.warning("Please provide some feedback before previewing.")
+            
+            with col4:
+                if st.button("Submit Feedback", key="submit_feedback_button", type="primary"):
+                    if st.session_state.feedback_text:
+                        if not st.session_state.processed_feedback:
+                            with st.spinner("Processing feedback..."):
+                                st.session_state.processed_feedback = process_feedback(st.session_state.feedback_text)
+                        
+                        # Save both raw and processed feedback
+                        if authenticator.save_feedback(st.session_state.user_id, st.session_state.feedback_text, st.session_state.processed_feedback):
+                            with container2:
+                                st.image("thankyou_dog.gif", use_column_width=True)
+                                st.success("Thank you for your feedback! It has been processed and saved.")
+                            st.session_state.show_feedback = False
+                            st.session_state.feedback_text = ""
+                            st.session_state.processed_feedback = ""
+                            st.session_state.show_processed_feedback = False
+                            time.sleep(3)  # Give user time to see the message
+                            st.rerun()
+                        else:
+                            st.error("There was an error saving your feedback. Please try again.")
+                    else:
+                        st.warning("Please provide some feedback before submitting.")
+            
+            with col5:
+                if st.button("Cancel", key="cancel_feedback_button"):
+                    st.session_state.show_feedback = False
+                    st.session_state.feedback_text = ""
+                    st.session_state.processed_feedback = ""
+                    st.session_state.show_processed_feedback = False
+                    time.sleep(1)  # Give user time to see the message
+                    st.rerun()
+            
+            # Display processed feedback if available
+            if st.session_state.show_processed_feedback and st.session_state.processed_feedback:
+                st.write("Processed Feedback:")
+                st.write(st.session_state.processed_feedback)
+
+
+
+def process_feedback(text: str) -> str:
+    clean_feedback_prompt = """
+        Analyze the following user feedback for EMMA (Emergency Medicine Management Assistant) and provide a concise report. Only include information directly addressed in the user feedback. Do not infer or add information not explicitly mentioned. Categorize the analysis into three main themes: Good, Bad, and Action Items.
+
+        1. Key Points Summary (1-2 sentences)
+
+        2. Good:
+        - Positive feedback
+        - Praised features or aspects
+        - Performance improvements (if mentioned)
+        - Beneficial user experiences
+
+        3. Bad:
+        - Main issues or concerns
+        - Negative user experiences
+        - Underperforming features
+        - Comparative disadvantages (if mentioned)
+
+        4. Action Items:
+        - Suggestions for improvement
+        - Actionable solutions to reported issues
+        - Feature requests or modifications
+        - Areas needing further investigation or feedback
+
+        Additional Guidelines:
+        - Include sentiment analysis only if clear sentiment is expressed
+        - Mention specific metrics or case studies only if provided in the feedback
+        - Use bullet points for clarity and brevity
+        - Quantify information when numbers are given in the feedback
+        - Omit any sections not directly addressed in the user feedback
+        - Do not speculate or expand beyond what is explicitly stated
+
+        User Feedback:
+        """
+    
+    response = client.chat.completions.create(
+        messages=[
+            {
+                "role": "user",
+                "content": clean_feedback_prompt + "```" + text + "```" ,
+            }
+        ],
+        model="gpt-4o-mini",  
+        temperature=0.0
+    )
+    
+    return response.choices[0].message.content
+
+
+
+ 
 ############################################# Perplexity Model #############################################
 
 def get_perplexity_response(user_question: str) -> str:
@@ -1694,7 +1859,7 @@ def get_perplexity_response(user_question: str) -> str:
             chat_context += f"Human: {message.content}\n"
         else:
             chat_context += f"AI: {message.content}\n"
-    print(Fore.YELLOW + f'DEBUG CHAT CONTEXT: {chat_context}' + Style.RESET_ALL)
+
 
     user_input = f'<CHAT HISTORY>\n{chat_context}\n</CHAT HISTORY>\n{user_question}'
 
@@ -1732,9 +1897,6 @@ def main():
     
     initialize_session_state()
     
-    
-    
-
     # Add a small delay to allow cookie to be read
     time.sleep(.3)
 
