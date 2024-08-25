@@ -4,6 +4,7 @@ import extra_streamlit_components as stx
 # from pymongo import MongoClient
 import bcrypt
 import datetime
+from help import *
 from typing import Tuple, Optional 
 from bson import ObjectId
 from dataclasses import dataclass, field
@@ -29,12 +30,62 @@ def get_cookie_manager():
 
 cookie_manager = get_cookie_manager()
 
+SPECIALTIES = [
+    "Emergency Medicine",
+    "Internal Medicine",
+    "Pediatrics",
+    "Surgery",
+    "Obstetrics and Gynecology",
+    "Psychiatry",
+    "Family Medicine",
+    "Anesthesiology",
+    "Radiology",
+    "Neurology",
+    "Cardiology",
+    "Dermatology",
+    "Gastroenterology",
+    "Oncology",
+    "Orthopedic Surgery",
+    "Otolaryngology",
+    "Urology",
+    "Nephrology",
+    "Endocrinology",
+    "Rheumatology",
+    "Pulmonology",
+    "Infectious Disease",
+    "Hematology",
+    "Allergy and Immunology",
+    "Physical Medicine and Rehabilitation",
+    "Pathology",
+    "Ophthalmology",
+    "Neurosurgery",
+    "Plastic Surgery",
+    "Vascular Surgery",
+    "Thoracic Surgery",
+    "Critical Care Medicine",
+    "Neonatology",
+    "Geriatrics",
+    "Pain Medicine",
+    "Sports Medicine",
+    "Medical Genetics",
+    "Nuclear Medicine",
+    "Preventive Medicine",
+    "Occupational Medicine",
+    "Aerospace Medicine",
+    "Addiction Medicine",
+    "Hospice and Palliative Medicine",
+    "Sleep Medicine",
+    "Interventional Radiology",
+    "Other"
+]
 #################################### User Class ########################################
 @dataclass
 class User:
     username: str
     email: str
     name: str
+    specialty: str = "Emergency Medicine"
+    preferred_note_type: str = "Emergency Medicine Note"
     _id: ObjectId = field(default_factory=ObjectId)
     password: Optional[bytes] = None
     user_id: str = field(default_factory=lambda: secrets.token_hex(16))
@@ -54,6 +105,8 @@ class User:
             "username": self.username,
             "email": self.email,
             "name": self.name,
+            "specialty": self.specialty,
+            "preferred_note_type": self.preferred_note_type,
             "created_at": self.created_at,
             "last_login": self.last_login,
             "login_count": self.login_count,
@@ -77,6 +130,8 @@ class User:
             _id=data.get("_id")
         )
         user.password = data.get("password")
+        user.specialty=data.get("specialty", "Other")
+        user.preferred_note_type = data.get("preferred_note_type", "Emergency Medicine Note")
         user.created_at = data.get("created_at", user.created_at)
         user.last_login = data.get("last_login", user.last_login)
         user.login_count = data.get("login_count", 0)
@@ -239,6 +294,7 @@ class MongoAuthenticator:
             st.session_state.authentication_status = True
             st.session_state.name = user['name']
             st.session_state.username = username
+            st.session_state.email = user['email']
 
             # Always increment login_count on manual login
             self.users.update_one(
@@ -345,7 +401,7 @@ class MongoAuthenticator:
     def is_authenticated(self):
         return self.cookie_manager.get(self.cookie_name) is not None
 
-    def register_user(self, username, name, password, email):
+    def register_user(self, username, name, password, email, specialty):
         if self.users.find_one({"$or": [{"username": username}, {"email": email}]}):
             return False
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
@@ -354,6 +410,7 @@ class MongoAuthenticator:
             name=name,
             email=email,
             password=hashed_password,
+            specialty=specialty,
             _id=ObjectId()  # Explicitly create a new ObjectId
         )
         self.users.insert_one(user.to_dict())
@@ -390,6 +447,8 @@ class MongoAuthenticator:
                         st.session_state.name = user['name']
                         st.session_state.username = user['username']
                         st.session_state.user_id = str(user['_id'])
+                        st.session_state.email = user['email']
+                        st.session_state.preferred_note_type = user.get('preferred_note_type', "Emergency Medicine Note")
                         
                         # Update user metrics and check/update daily login
                         self.update_user_metrics(user_id)
@@ -431,6 +490,35 @@ class MongoAuthenticator:
             self.users.update_one({"username": username}, {"$set": {field: new_value}})
             return True
         return False
+
+    def save_feedback(self, user_id: str, raw_feedback: str, processed_feedback: str):   
+        try:
+            feedback_doc = {
+            "user_id": st.session_state.username,
+            "user_email": st.session_state.email,
+            "session_id": st.session_state.session_id,
+            "timestamp": datetime.datetime.now(),
+            "raw_feedback": raw_feedback,
+            "processed_feedback": processed_feedback
+        }
+            result = self.users.database['feedback'].insert_one(feedback_doc)
+            if result.inserted_id:
+                logging.info(f"Feedback saved successfully for user {user_id}")
+                return True
+            else:
+                logging.error(f"Failed to save feedback for user {user_id}")
+                return False
+        except Exception as e:
+            logging.error(f"Error saving feedback for user {user_id}: {str(e)}")
+            return False
+     
+    def get_help_content(self, topic):
+        help_topics = {
+            "Using EMMA": emmma_general_help
+            }
+        
+        return help_topics.get(topic, "Help content not found.")
+
 
 ######################################### UI ##########################################################
 
@@ -491,87 +579,86 @@ class MongoAuthenticator:
         display_header()
         c1, c2, c3 = st.columns([1,1,1])
         with c2:
-            st.header("Register")
+            st.title("Register")
         
-        if 'eula_agreed' not in st.session_state:
-            st.session_state.eula_agreed = False
-
-        if not st.session_state.eula_agreed:
-            st.title("End User License Agreement")
-            
-            st.markdown("""
-            <style>
-            .big-font {
-                font-size:16px !important;
-                font-family: Arial, sans-serif;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-            
-            st.markdown(EULA)
-            
-            agree = st.checkbox("I agree to the terms and conditions")
-            
-            if agree:
-                if st.button("Proceed to Registration", type="primary"):
-                    st.session_state.eula_agreed = True
-                    st.rerun()
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("Sign In"):
-                    st.session_state.show_login = True
-                    st.rerun()
-            with col2:
-                if st.button("Help"):
-                    st.info(f"If you need assistance, please contact {SUPPORT_EMAIL}")
-        
-        else:
-            st.title("Register Your Account")
-            
-            st.markdown("""
-            <style>
-            @media (max-width: 600px) {
-                .stTextInput > div > div > input {
-                    font-size: 16px;
-                }
-            }
-            </style>
-            """, unsafe_allow_html=True)
-            
-            with st.form("register_form"):
-                st.markdown('<p style="color: red;">* Required field</p>', unsafe_allow_html=True)
-                username = st.text_input("Username *")
-                name = st.text_input("Name *")
-                email = st.text_input("Email *")
-                password = st.text_input("Password *", type="password")
-                # st.text(f"Password strength: {self.check_password_strength(password)}")
-                confirm_password = st.text_input("Confirm Password *", type="password")
-                submit = st.form_submit_button("Register", type='primary')
-
-            if submit:
-                if not all([username, name, email, password, confirm_password]):
-                    st.error("All fields are required.")
-                elif password != confirm_password:
-                    st.error("Passwords do not match.")
-                # elif email not in self.preauthorized_emails:
-                #     print(f'Email: {email} not in preauthorized list {self.preauthorized_emails}')
-                #     st.error("Sorry, you are not authorized to register. Please contact the administrator.")
-                else:
-                    try:
-                        if self.register_user(username, name, password, email):
-                            st.success(f"Registration successful! Welcome {name}!")
-                            st.session_state.show_registration = False
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            st.error("Username or email already exists. Choose a different username or email.")
-                    except Exception as e:
-                        st.error(f"An error occurred during registration: {str(e)}")
-
-            if st.button("Back to EULA"):
+            if 'eula_agreed' not in st.session_state:
                 st.session_state.eula_agreed = False
-                st.rerun()
+
+            if not st.session_state.eula_agreed:
+                st.header("End User License Agreement")
+                
+                st.markdown("""
+                <style>
+                .big-font {
+                    font-size:16px !important;
+                    font-family: Arial, sans-serif;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                st.markdown(EULA)
+                
+                agree = st.checkbox("I agree to the terms and conditions")
+                
+                if agree:
+                    if st.button("Proceed to Registration", type="primary"):
+                        st.session_state.eula_agreed = True
+                        st.rerun()
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("Sign In"):
+                        st.session_state.show_login = True
+                        st.rerun()
+                with col2:
+                    if st.button("Help"):
+                        st.info(f"If you need assistance, please contact {SUPPORT_EMAIL}")
+            
+            else:
+                st.title("Register Your Account")
+                
+                st.markdown("""
+                <style>
+                @media (max-width: 600px) {
+                    .stTextInput > div > div > input {
+                        font-size: 16px;
+                    }
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                with st.form("register_form"):
+                    st.markdown('<p style="color: red;">* Required field</p>', unsafe_allow_html=True)
+                    username = st.text_input("Username *").lower() 
+                    name = st.text_input("Name *").title()
+                    email = st.text_input("Email *").lower()
+                    password = st.text_input("Password *", type="password")
+                    confirm_password = st.text_input("Confirm Password *", type="password")
+                    specialty = st.selectbox("Specialty *", options=SPECIALTIES)
+                    submit = st.form_submit_button("Register", type='primary')
+
+                if submit:
+                    if not all([username, name, email, password, confirm_password, specialty]):
+                        st.error("All fields are required.")
+                    elif password != confirm_password:
+                        st.error("Passwords do not match.")
+                    # elif email not in self.preauthorized_emails:
+                    #     st.error("Sorry, you are not authorized to register. Please contact the administrator.")
+                    else:
+                        try:
+                            if self.register_user(username, name, password, email, specialty):
+                                st.success(f"Registration successful! Welcome {name}!")
+                                st.session_state.show_registration = False
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.error("Username or email already exists. Choose a different username or email.")
+                        except Exception as e:
+                            st.error(f"An error occurred during registration: {str(e)}")
+
+                if st.button("Back to EULA"):
+                    st.session_state.eula_agreed = False
+                    st.rerun()
 
     def forgot_username_page(self):
         display_header()
@@ -611,6 +698,7 @@ class MongoAuthenticator:
             if st.button("Back to Login", key="change_pw_back"):
                 st.session_state.show_change_password = False
                 st.rerun()
+
 
 def display_header():
 

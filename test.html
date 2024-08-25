@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Feedback Form</title>
+</head>
+<body>
+    <h1>Submit Feedback</h1>
+    <form id="feedbackForm">
+        <label>User ID:</label>
+        <input type="text" id="user_id" name="user_id" required><br>
+
+        <label>Rating:</label>
+        <input type="number" id="rating" name="rating" min="1" max="5" required><br>
+
+        <label>Category:</label>
+        <input type="text" id="category" name="category" required><br>
+
+        <label>Comments:</label>
+        <textarea id="comments" name="comments"></textarea><br>
+
+        <label>Anonymity:</label>
+        <input type="checkbox" id="anonymity" name="anonymity"><br>
+
+        <label>Request Follow-Up:</label>
+        <input type="checkbox" id="follow_up_requested" name="follow_up_requested"><br>
+
+        <label>Follow-Up Contact:</label>
+        <input type="email" id="follow_up_contact" name="follow_up_contact"><br>
+
+        <button type="submit">Submit Feedback</button>
+    </form>
+
+    <script>
+        document.getElementById('feedbackForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const feedback = {
+                user_id: document.getElementById('user_id').value,
+                rating: document.getElementById('rating').value,
+                category: document.getElementById('category').value,
+                comments: document.getElementById('comments').value,
+                anonymity: document.getElementById('anonymity').checked,
+                follow_up_requested: document.getElementById('follow_up_requested').checked,
+                follow_up_contact: document.getElementById('follow_up_contact').value
+            };
+
+            try {
+                const response = await fetch('http://localhost:5000/submit_feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(feedback)
+                });
+                const data = await response.json();
+                alert(data.message);
+            } catch (error) {
+                console.error('Error submitting feedback', error);
+            }
+        });
+    </script>
+</body>
+</html>

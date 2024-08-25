@@ -54,10 +54,7 @@ if 'edit_user' not in st.session_state:
 def admin_dashboard():
     st.title("Admin Dashboard")
     
-    # Remove the login check since we're now controlling access from the main app
-    
-
-    page = st.sidebar.radio("Go to", ["User Management", "Session Management", "Database Operations"])
+    page = st.sidebar.radio("Go to", ["User Management", "Session Management", "Database Operations", "Feedback Management"])
     
     if page == "User Management":
         user_management()
@@ -65,6 +62,11 @@ def admin_dashboard():
         list_sessions()
     elif page == "Database Operations":
         database_operations()
+    elif page == "Feedback Management":
+        feedback_management()
+
+    if st.sidebar.button("Exit Admin Mode", key="exit_admin_mode"):
+        st.rerun()  # This will refresh the page and exit admin mode
 
 def admin_login():
     st.title("Admin Login")
@@ -211,6 +213,256 @@ def delete_user(user_id):
         st.error(f"An error occurred while deleting the user: {str(e)}")
         return False
 
+# def list_sessions():
+#     st.subheader("Session Management")
+    
+#     # Get all unique usernames from session collections
+#     collections = db.list_collection_names()
+#     sessions = [col for col in collections if col.startswith('user_')]
+#     usernames = list(set([session.split('_')[1] for session in sessions]))
+#     usernames.sort()
+    
+#     # Filter by user
+#     selected_user = st.selectbox("Filter by User", ["All Users"] + usernames)
+    
+#     # Document count filter
+#     st.subheader("Filter by Document Count")
+#     col1, col2 = st.columns(2)
+#     with col1:
+#         min_docs = st.number_input("Minimum Documents", min_value=0, value=0)
+#     with col2:
+#         max_docs = st.number_input("Maximum Documents", min_value=0, value=1000)
+    
+#     # Filter sessions based on selected user and document count
+#     filtered_sessions = []
+#     for session in sessions:
+#         if selected_user == "All Users" or session.split('_')[1] == selected_user:
+#             doc_count = db[session].count_documents({})
+#             if min_docs <= doc_count <= max_docs:
+#                 filtered_sessions.append((session, doc_count))
+    
+#     # Sort sessions by document count (descending)
+#     filtered_sessions.sort(key=lambda x: x[1], reverse=True)
+    
+#     # Update session_checkboxes state
+#     if 'session_checkboxes' not in st.session_state:
+#         st.session_state.session_checkboxes = {}
+    
+#     # Add new sessions to session_checkboxes
+#     for session, _ in filtered_sessions:
+#         if session not in st.session_state.session_checkboxes:
+#             st.session_state.session_checkboxes[session] = False
+    
+#     # Remove sessions that are no longer in filtered_sessions
+#     for session in list(st.session_state.session_checkboxes.keys()):
+#         if session not in [s for s, _ in filtered_sessions]:
+#             del st.session_state.session_checkboxes[session]
+    
+#     # Select all checkbox
+#     select_all = st.checkbox("Select All", key="select_all_checkbox")
+    
+#     # Update checkbox states if "Select All" is clicked
+#     if select_all:
+#         for session, _ in filtered_sessions:
+#             st.session_state.session_checkboxes[session] = True
+    
+#     # Display sessions with patient CC, checkboxes, and toggle for viewing
+#     selected_sessions = []
+    
+#     # Create a container for the session list
+#     session_container = st.container()
+    
+#     with session_container:
+#         for session, doc_count in filtered_sessions:
+#             col1, col2, col3, col4, col5, col6 = st.columns([0.5, 2, 2, 1, .5, .5])
+            
+#             with col1:
+#                 checkbox = st.checkbox(
+#                     label=f"Select {session}",
+#                     value=st.session_state.session_checkboxes[session],
+#                     key=f"checkbox_{session}",
+#                     label_visibility="collapsed"
+#                 )
+#                 st.session_state.session_checkboxes[session] = checkbox
+#                 if checkbox:
+#                     selected_sessions.append(session)
+
+#             with col2:
+#                 st.write(session)
+            
+#             with col3:
+#                 # Fetch and display patient CC
+#                 patient_cc = get_patient_cc(session)
+#                 st.write(patient_cc)
+            
+#             with col4:
+#                 # Count and display the number of documents
+#                 # doc_count = db[session].count_documents({})
+#                 st.write(f"Documents: {doc_count}")
+            
+#             with col5:
+#                 view_toggle = st.toggle(
+#                     label=f"View {session}",
+#                     key=f"toggle_{session}",
+#                     label_visibility="collapsed"
+#                 )
+            
+#             with col6:
+#                 if st.button("Delete", key=f"delete_button_{session}"):
+#                     delete_session(session)
+            
+#             # View session details when toggled
+#             if view_toggle:
+#                 view_session(session)
+
+#     # Delete selected sessions
+#     if selected_sessions and st.button("Delete Selected Sessions", key="delete_selected_sessions_button1"):
+#         st.session_state.confirm_delete = True
+#         st.session_state.sessions_to_delete = selected_sessions
+
+#     # Confirm deletion
+#     if 'confirm_delete' in st.session_state and st.session_state.confirm_delete:
+#         st.warning(f"Are you sure you want to delete the following sessions?\n{', '.join(st.session_state.sessions_to_delete)}")
+#         col1, col2 = st.columns(2)
+#         with col1:
+#             if st.button("Confirm Delete", key="confirm_delete_button"):
+#                 delete_sessions(st.session_state.sessions_to_delete)
+#         with col2:
+#             if st.button("Cancel", key="cancel_delete_button"):
+#                 st.session_state.confirm_delete = False
+#                 st.session_state.sessions_to_delete = []
+#         with col3:
+#             # Fetch and display patient CC
+#             patient_cc = get_patient_cc(session)
+#             st.write(patient_cc)
+        
+#         with col4:
+#             if f"view_{session}" not in st.session_state:
+#                 st.session_state[f"view_{session}"] = False
+#             st.session_state[f"view_{session}"] = st.toggle("View", key=f"toggle_{session}")
+        
+#         with col5:
+#             if st.button("Delete", key=f"delete_{session}"):
+#                 delete_session(session)
+#         # View session details when toggled
+#         if st.session_state[f"view_{session}"]:
+#             view_session(session)
+
+#     # # Delete selected sessions
+#     # if st.button("Delete Selected Sessions", key="delete_selected_sessions_button"):
+#     #     st.session_state.confirm_delete = True
+#     #     st.session_state.sessions_to_delete = selected_sessions
+
+#     # # Confirm deletion
+#     # if 'confirm_delete' in st.session_state and st.session_state.confirm_delete:
+#     #     st.warning(f"Are you sure you want to delete the following sessions?\n{', '.join(st.session_state.sessions_to_delete)}")
+#     #     col1, col2 = st.columns(2)
+#     #     with col1:
+#     #         if st.button("Confirm Delete", key="confirm_delete_button"):
+#     #             delete_sessions(st.session_state.sessions_to_delete)
+#     #     with col2:
+#     #         if st.button("Cancel", key="cancel_delete_button"):
+#     #             st.session_state.confirm_delete = False
+#     #             st.session_state.sessions_to_delete = []
+
+# def list_sessions():
+    st.subheader("Session Management")
+    
+    # Get all unique usernames from session collections
+    collections = db.list_collection_names()
+    sessions = [col for col in collections if col.startswith('user_')]
+    usernames = list(set([session.split('_')[1] for session in sessions]))
+    usernames.sort()
+    
+    # Filter by user
+    selected_user = st.selectbox("Filter by User", ["All Users"] + usernames)
+    
+    # Document count filter
+    st.subheader("Filter by Document Count")
+    col1, col2 = st.columns(2)
+    with col1:
+        min_docs = st.number_input("Minimum Documents", min_value=0, value=0)
+    with col2:
+        max_docs = st.number_input("Maximum Documents", min_value=0, value=1000)
+    
+    # Filter sessions based on selected user and document count
+    filtered_sessions = []
+    for session in sessions:
+        if selected_user == "All Users" or session.split('_')[1] == selected_user:
+            doc_count = db[session].count_documents({})
+            if min_docs <= doc_count <= max_docs:
+                filtered_sessions.append((session, doc_count))
+    
+    # Sort sessions by document count (descending)
+    filtered_sessions.sort(key=lambda x: x[1], reverse=True)
+    
+    # Initialize session state for checkboxes if not exists
+    if 'session_checkboxes' not in st.session_state:
+        st.session_state.session_checkboxes = {}
+    
+    # Select All checkbox
+    select_all = st.checkbox("Select All", key="select_all_checkbox")
+
+    # Display sessions
+    st.subheader("Sessions")
+    for i, (session, doc_count) in enumerate(filtered_sessions):
+        col1, col2, col3, col4, col5 = st.columns([0.5, 2, 2, 1, 1])
+        
+        with col1:
+            # Use select_all value if it's checked, otherwise use the existing checkbox state
+            checkbox_value = select_all or st.session_state.session_checkboxes.get(session, False)
+            checkbox = st.checkbox("", key=f"checkbox_{i}", value=checkbox_value)
+            st.session_state.session_checkboxes[session] = checkbox
+        
+        with col2:
+            st.write(session)
+        
+        with col3:
+            patient_cc = get_patient_cc(session)
+            st.write(patient_cc)
+        
+        with col4:
+            st.write(f"Documents: {doc_count}")
+        
+        with col5:
+            if st.button("View", key=f"view_{i}"):
+                st.session_state.viewing_session = session
+    
+    # View session details
+    if 'viewing_session' in st.session_state:
+        view_session(st.session_state.viewing_session)
+        if st.button("Close View"):
+            del st.session_state.viewing_session
+    
+    # Delete selected sessions
+    selected_sessions = [session for session, checked in st.session_state.session_checkboxes.items() if checked]
+    if selected_sessions:
+        if st.button("Delete Selected Sessions"):
+            st.session_state.confirm_delete = True
+            st.session_state.sessions_to_delete = selected_sessions
+
+    # Confirm deletion
+    if st.session_state.get('confirm_delete', False):
+        st.warning(f"Are you sure you want to delete the following sessions?\n{', '.join(st.session_state.sessions_to_delete)}")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Confirm Delete"):
+                delete_sessions(st.session_state.sessions_to_delete)
+                st.session_state.confirm_delete = False
+                st.session_state.sessions_to_delete = []
+                # Clear checkboxes for deleted sessions
+                for session in selected_sessions:
+                    if session in st.session_state.session_checkboxes:
+                        del st.session_state.session_checkboxes[session]
+                st.success("Selected sessions deleted successfully.")
+                time.sleep(1)
+                st.rerun()
+        with col2:
+            if st.button("Cancel"):
+                st.session_state.confirm_delete = False
+                st.session_state.sessions_to_delete = []
+                st.rerun()
+
 def list_sessions():
     st.subheader("Session Management")
     
@@ -223,122 +475,108 @@ def list_sessions():
     # Filter by user
     selected_user = st.selectbox("Filter by User", ["All Users"] + usernames)
     
-    # Filter sessions based on selected user
-    if selected_user == "All Users":
-        filtered_sessions = sessions
-    else:
-        filtered_sessions = [session for session in sessions if session.split('_')[1] == selected_user]
+    # Document count filter
+    st.subheader("Filter by Document Count")
+    col1, col2 = st.columns(2)
+    with col1:
+        min_docs = st.number_input("Minimum Documents", min_value=0, value=0)
+    with col2:
+        max_docs = st.number_input("Maximum Documents", min_value=0, value=1000)
     
-    # Select all checkbox
-    select_all = st.checkbox("Select All", key="select_all_checkbox")
+    # Filter sessions based on selected user and document count
+    filtered_sessions = []
+    for session in sessions:
+        if selected_user == "All Users" or session.split('_')[1] == selected_user:
+            doc_count = db[session].count_documents({})
+            if min_docs <= doc_count <= max_docs:
+                latest_doc = db[session].find_one(sort=[("timestamp", -1)])
+                session_date = latest_doc.get("timestamp", "Unknown") if latest_doc else "Unknown"
+                filtered_sessions.append((session, doc_count, session_date))
     
-    # Create a dictionary to store the state of each session checkbox
+    # Sort sessions by date (newest first)
+    filtered_sessions.sort(key=lambda x: x[2], reverse=True)
+    
+    # Initialize session state for checkboxes if not exists
     if 'session_checkboxes' not in st.session_state:
-        st.session_state.session_checkboxes = {session: False for session in filtered_sessions}
+        st.session_state.session_checkboxes = {}
     
-    # Update checkbox states if "Select All" is clicked
-    if select_all:
-        for session in filtered_sessions:
-            st.session_state.session_checkboxes[session] = True
-    
-    # Display sessions with patient CC, checkboxes, and toggle for viewing
-    selected_sessions = []
-    
-    # Create a container for the session list
-    session_container = st.container()
+    # Select All checkbox
+    select_all = st.checkbox("Select All", key="select_all_checkbox")
 
-    # Create a container for the session list
-    session_container = st.container()
+    # Display sessions
+    st.subheader("Sessions")
+    for i, (session, doc_count, session_date) in enumerate(filtered_sessions):
+        col1, col2, col3, col4, col5, col6 = st.columns([0.5, 2, 2, 1, 1, 1])
+        
+        with col1:
+            # Use select_all value if it's checked, otherwise use the existing checkbox state
+            checkbox_value = select_all or st.session_state.session_checkboxes.get(session, False)
+            checkbox = st.checkbox("", key=f"checkbox_{i}", value=checkbox_value)
+            st.session_state.session_checkboxes[session] = checkbox
+        
+        with col2:
+            st.write(session)
+        
+        with col3:
+            st.write(f"Date: {session_date}")
+        
+        with col4:
+            st.write(f"Documents: {doc_count}")
+        
+        with col5:
+            if st.button("View", key=f"view_{i}"):
+                st.session_state.viewing_session = session
+        
+        with col6:
+            if st.button("Delete", key=f"delete_{i}"):
+                if delete_session(session):
+                    st.success(f"Deleted session: {session}")
+                    time.sleep(1)
+                    st.rerun()
     
-    with session_container:
-        for session in filtered_sessions:
-            col1, col2, col3, col4, col5 = st.columns([0.5, 2, 2, .5,.5])
-            
-            with col1:
-                checkbox = st.checkbox(
-                    label=f"Select {session}",
-                    value=st.session_state.session_checkboxes[session],
-                    key=f"checkbox_{session}",
-                    label_visibility="collapsed"
-                )
-                st.session_state.session_checkboxes[session] = checkbox
-                if checkbox:
-                    selected_sessions.append(session)
-            
-            with col2:
-                st.write(session)
-            
-            with col3:
-                # Fetch and display patient CC
-                patient_cc = get_patient_cc(session)
-                st.write(patient_cc)
-            
-            with col4:
-                view_toggle = st.toggle(
-                    label=f"View {session}",
-                    key=f"toggle_{session}",
-                    label_visibility="collapsed"
-                )
-            
-            with col5:
-                if st.button("Delete", key=f"delete_{session}"):
-                    delete_session(session)
-            
-            # View session details when toggled
-            if view_toggle:
-                view_session(session)
+    # View session details
+    if 'viewing_session' in st.session_state:
+        view_session(st.session_state.viewing_session)
+        if st.button("Close View"):
+            del st.session_state.viewing_session
     
     # Delete selected sessions
-    if selected_sessions and st.button("Delete Selected Sessions", key="delete_selected_sessions_button1"):
-        st.session_state.confirm_delete = True
-        st.session_state.sessions_to_delete = selected_sessions
+    selected_sessions = [session for session, checked in st.session_state.session_checkboxes.items() if checked]
+    if selected_sessions:
+        if st.button("Delete Selected Sessions"):
+            st.session_state.confirm_delete = True
+            st.session_state.sessions_to_delete = selected_sessions
 
     # Confirm deletion
-    if 'confirm_delete' in st.session_state and st.session_state.confirm_delete:
+    if st.session_state.get('confirm_delete', False):
         st.warning(f"Are you sure you want to delete the following sessions?\n{', '.join(st.session_state.sessions_to_delete)}")
         col1, col2 = st.columns(2)
         with col1:
             if st.button("Confirm Delete"):
                 delete_sessions(st.session_state.sessions_to_delete)
+                st.session_state.confirm_delete = False
+                st.session_state.sessions_to_delete = []
+                # Clear checkboxes for deleted sessions
+                for session in selected_sessions:
+                    if session in st.session_state.session_checkboxes:
+                        del st.session_state.session_checkboxes[session]
+                st.success("Selected sessions deleted successfully.")
+                time.sleep(1)
+                st.rerun()
         with col2:
             if st.button("Cancel"):
                 st.session_state.confirm_delete = False
                 st.session_state.sessions_to_delete = []
-        with col3:
-            # Fetch and display patient CC
-            patient_cc = get_patient_cc(session)
-            st.write(patient_cc)
-        
-        with col4:
-            if f"view_{session}" not in st.session_state:
-                st.session_state[f"view_{session}"] = False
-            st.session_state[f"view_{session}"] = st.toggle("View", key=f"toggle_{session}")
-        
-        with col5:
-            if st.button("Delete", key=f"delete_{session}"):
-                delete_session(session)
-        # View session details when toggled
-        if st.session_state[f"view_{session}"]:
-            view_session(session)
-
-    # # Delete selected sessions
-    # if st.button("Delete Selected Sessions", key="delete_selected_sessions_button"):
-    #     st.session_state.confirm_delete = True
-    #     st.session_state.sessions_to_delete = selected_sessions
-
-    # # Confirm deletion
-    # if 'confirm_delete' in st.session_state and st.session_state.confirm_delete:
-    #     st.warning(f"Are you sure you want to delete the following sessions?\n{', '.join(st.session_state.sessions_to_delete)}")
-    #     col1, col2 = st.columns(2)
-    #     with col1:
-    #         if st.button("Confirm Delete", key="confirm_delete_button"):
-    #             delete_sessions(st.session_state.sessions_to_delete)
-    #     with col2:
-    #         if st.button("Cancel", key="cancel_delete_button"):
-    #             st.session_state.confirm_delete = False
-    #             st.session_state.sessions_to_delete = []
-
+                st.rerun()
 def delete_sessions(session_names):
+    for session_name in session_names:
+        try:
+            db.drop_collection(session_name)
+            logger.info(f"Deleted session: {session_name}")
+        except Exception as e:
+            logger.error(f"Failed to delete session {session_name}: {str(e)}")
+
+# def delete_sessions(session_names):
     deleted_sessions = []
     failed_deletions = []
     
@@ -346,6 +584,9 @@ def delete_sessions(session_names):
         try:
             db.drop_collection(session_name)
             deleted_sessions.append(session_name)
+            # Remove the deleted session from session_checkboxes
+            if session_name in st.session_state.session_checkboxes:
+                del st.session_state.session_checkboxes[session_name]
             logger.info(f"Deleted session: {session_name}")
         except Exception as e:
             failed_deletions.append(session_name)
@@ -370,6 +611,22 @@ def delete_sessions(session_names):
     time.sleep(1)  # Give user time to see the message
     st.rerun()
 
+# def view_session(session_name):
+#     st.subheader(f"Session Details: {session_name}")
+#     collection = db[session_name]
+    
+#     # Find the most recent chat_history document
+#     chat_history = collection.find_one({"type": "chat_history"}, sort=[("timestamp", -1)])
+    
+#     if chat_history:
+#         patient_cc = chat_history.get("patient_cc", "No chief complaint found")
+#         st.write(f"Patient's Chief Complaint: {patient_cc}")
+    
+#     # Display other session details
+#     documents = collection.find()
+#     for doc in documents:
+#         st.json(doc)
+
 def view_session(session_name):
     st.subheader(f"Session Details: {session_name}")
     collection = db[session_name]
@@ -378,14 +635,28 @@ def view_session(session_name):
     chat_history = collection.find_one({"type": "chat_history"}, sort=[("timestamp", -1)])
     
     if chat_history:
-        patient_cc = chat_history.get("patient_cc", "No chief complaint found")
-        st.write(f"Patient's Chief Complaint: {patient_cc}")
+        st.write("Chat History:")
+        st.json(chat_history)
     
-    # Display other session details
-    documents = collection.find()
-    for doc in documents:
-        st.json(doc)
-     
+    # Find the most recent ddx document
+    ddx = collection.find_one({"type": "ddx"}, sort=[("timestamp", -1)])
+    
+    if ddx:
+        st.write("Differential Diagnosis:")
+        st.json(ddx)
+    
+    # Find notes by the Note Writer
+    notes = list(collection.find({"specialist": "Note Writer"}))
+    
+    if notes:
+        st.write("Notes by Note Writer:")
+        for note in notes:
+            st.json(note)
+    
+    if st.button("Close Session View"):
+        del st.session_state.viewing_session
+        st.rerun()
+
 def delete_session(session_name):
     try:
         db.drop_collection(session_name)
@@ -509,6 +780,106 @@ def get_patient_cc(session_name):
         return chat_history.get("patient_cc", "No CC found")
     return "No chat history"
 
+def feedback_management():
+    st.header("Feedback Management")
+    
+    # Fetch all feedback from the database
+    feedback_collection = db['feedback']
+    all_feedback = list(feedback_collection.find().sort("timestamp", -1))
+    
+    # Filter options
+    st.subheader("Filter Feedback")
+    col1, col2 = st.columns(2)
+    with col1:
+        filter_date = st.date_input("Filter by date", value=None)
+    with col2:
+        filter_type = st.selectbox("Filter by feedback type", ["All", "😃 Great", "😐 Okay", "☹️ Poor"])
+    
+    # Apply filters
+    filtered_feedback = all_feedback
+    if filter_date:
+        filtered_feedback = [f for f in filtered_feedback if f['timestamp'].date() == filter_date]
+    if filter_type != "All":
+        filtered_feedback = [f for f in filtered_feedback if f['feedback_type'] == filter_type]
+    
+    # Display feedback
+    st.subheader("Feedback List")
+    for feedback in filtered_feedback:
+        try:
+            timestamp = feedback.get('timestamp', 'Unknown Date')
+            user_id = feedback.get('user_id', 'Unknown User')
+            
+            if isinstance(timestamp, datetime):
+                timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                timestamp_str = str(timestamp)
+            
+            with st.expander(f"Feedback from {user_id} on {timestamp_str}"):
+                
+                if 'raw_feedback' in feedback:
+                    st.subheader("Raw Feedback:")
+                    st.write(feedback['raw_feedback'])
+                elif 'feedback_text' in feedback:
+                    st.write("Feedback Text:")
+                    st.write(feedback['feedback_text'])
+                else:
+                    st.write("No raw feedback available")
+                st.divider()
+                if 'processed_feedback' in feedback:
+                    st.subheader("Processed Feedback:")
+                    st.write(feedback['processed_feedback'])
+                else:
+                    st.write("No processed feedback available")
+                
+                # Option to delete feedback
+                if st.button("Delete Feedback", key=f"delete_{feedback['_id']}"):
+                    if delete_feedback(feedback['_id']):
+                        st.success("Feedback deleted successfully")
+                        time.sleep(1)
+                        st.rerun()
+        except Exception as e:
+            st.error(f"Error displaying feedback: {str(e)}")
+    
+    # Export feedback
+    if st.button("Export Feedback to CSV"):
+        export_feedback_to_csv(filtered_feedback)
+
+def delete_feedback(feedback_id):
+    try:
+        result = db['feedback'].delete_one({"_id": feedback_id})
+        return result.deleted_count > 0
+    except Exception as e:
+        st.error(f"Error deleting feedback: {str(e)}")
+        return False
+
+def export_feedback_to_csv(feedback_data):
+    df = pd.DataFrame(feedback_data)
+    csv = df.to_csv(index=False)
+    st.download_button(
+        label="Download CSV",
+        data=csv,
+        file_name="feedback_export.csv",
+        mime="text/csv",
+    )
+
+def delete_feedback(feedback_id):
+    try:
+        result = db['feedback'].delete_one({"_id": feedback_id})
+        return result.deleted_count > 0
+    except Exception as e:
+        st.error(f"Error deleting feedback: {str(e)}")
+        return False
+
+def export_feedback_to_csv(feedback_data):
+    df = pd.DataFrame(feedback_data)
+    csv = df.to_csv(index=False)
+    st.download_button(
+        label="Download CSV",
+        data=csv,
+        file_name="feedback_export.csv",
+        mime="text/csv",
+    )
+
 def main():
 
     
@@ -540,6 +911,6 @@ def main():
 
 if __name__ == "__main__":
     # This allows the admin.py to be run standalone for testing
-    if st.sidebar.button("Exit Admin Mode"):
-        st.rerun()  # This will refresh the page and exit admin mode
+    # if st.sidebar.button("Exit Admin Mode"):
+    #     st.rerun()  # This will refresh the page and exit admin mode
     admin_dashboard()

@@ -1,1 +1,92 @@
-### Information Analysis\n\n**Patient Information:**\n- **Age:** 44 years old\n- **Symptoms:** Right ankle pain after running on trails for multiple days\n- **Pain Characteristics:** Pain around the right ankle, specifically on the posterior side\n- **Pain Duration:** Pain persists the next day and worsens with walking\n- **Examination Findings:** Normal examination\n- **Imaging Results:** Normal X-ray\n\n### Initial Differential Generation\n\n1. **Ankle Tendinitis (Tendonitis)**\n   - **Possible Cause:** Inflammation of the Achilles tendon or peroneal tendons due to repetitive stress from running on trails.\n   - **Symptoms:** Pain on the posterior side of the ankle, which aligns with Achilles tendonitis.\n   - **Supporting Factors:** Pain worsens with activity, particularly walking, which is consistent with tendonitis.\n\n2. **Ankle Strain or Sprain**\n   - **Possible Cause:** Overstretching or tearing of muscles or ligaments around the ankle.\n   - **Symptoms:** Pain and stiffness in the ankle, which could be exacerbated by walking.\n   - **Supporting Factors:** Pain after running on trails, which could indicate a sudden twisting motion.\n\n3. **Stress Fracture**\n   - **Possible Cause:** Tiny cracks in the bone due to repetitive impact and overuse.\n   - **Symptoms:** Pain that worsens with time but improves with rest, which is consistent with stress fractures.\n   - **Supporting Factors:** Pain on the posterior side of the ankle, which could be indicative of a stress fracture.\n\n4. **Poor Running Form or Footwear**\n   - **Possible Cause:** Overpronation or inadequate footwear support leading to increased stress on the ankle.\n   - **Symptoms:** Pain around the ankle, which could be exacerbated by poor running form or inadequate footwear support.\n   - **Supporting Factors:** Pain after running on trails, which might indicate uneven surfaces or poor foot mechanics.\n\n5. **Muscle Weakness**\n   - **Possible Cause:** Weak ankle muscles leading to overpronation and increased stress on the ankle.\n   - **Symptoms:** Pain around the ankle, particularly on the posterior side, which could be indicative of muscle weakness.\n   - **Supporting Factors:** Pain worsens with walking, suggesting muscle fatigue or weakness.\n\n### Critical Evaluation and Elimination\n\n#### Ankle Tendinitis (Tendonitis)\n- **Supporting Factors:**\n  - Pain on the posterior side of the ankle.\n  - Pain worsens with activity, particularly walking.\n  - Normal examination and X-ray do not rule out tendonitis.\n- **Contradicting Factors:**\n  - No clear injury reported, but this does not rule out chronic inflammation.\n- **Probability Assessment:**\n  - High likelihood due to repetitive stress from running on trails.\n\n#### Ankle Strain or Sprain\n- **Supporting Factors:**\n  - Pain after running on trails, which could indicate a sudden twisting motion.\n  - Pain worsens with walking, suggesting possible ligament or muscle strain.\n- **Contradicting Factors:**\n  - Normal examination and X-ray do not support significant ligament damage.\n- **Probability Assessment:**\n  - Moderate likelihood due to potential for overstretching or tearing during running.\n\n#### Stress Fracture\n- **Supporting Factors:**\n  - Pain that worsens with time but improves with rest, which is consistent with stress fractures.\n  - Pain on the posterior side of the ankle, which could be indicative of a stress fracture.\n- **Contradicting Factors:**\n  - Normal X-ray does not support bone fracture.\n- **Probability Assessment:**\n  - Low likelihood due to normal X-ray results.\n\n#### Poor Running Form or Footwear\n- **Supporting Factors:**\n  - Pain around the ankle, which could be exacerbated by poor running form or inadequate footwear support.\n  - Running on trails may increase the risk of uneven surfaces and poor foot mechanics.\n- **Contradicting Factors:**\n  - No specific mention of poor running form or footwear issues.\n- **Probability Assessment:**\n  - Moderate likelihood due to potential for poor foot mechanics and uneven surfaces.\n\n#### Muscle Weakness\n- **Supporting Factors:**\n  - Pain around the ankle, particularly on the posterior side, which could be indicative of muscle weakness.\n  - Pain worsens with walking, suggesting muscle fatigue or weakness.\n- **Contradicting Factors:**\n  - Normal examination does not support significant muscle weakness.\n- **Probability Assessment:**\n  - Low likelihood due to normal examination results.\n\n### Probability Assessment\n\n1. **Ankle Tendinitis (Tendonitis):** 60%\n2. **Ankle Strain or Sprain:** 20%\n3. **Poor Running Form or Footwear:** 10%\n4. **Muscle Weakness:** 5%\n5. **Stress Fracture:** 5%\n\n### Diagnostic Prioritization\n\n1. **Ankle Tendinitis (Tendonitis):** The most likely diagnosis given the repetitive stress from running on trails and pain on the posterior side of the ankle.\n2. **Ankle Strain or Sprain:** A possible diagnosis given the sudden twisting motion during running and pain worsened by walking.\n3. **Poor Running Form or Footwear:** A consideration given the potential for uneven surfaces and poor foot mechanics during trail running.\n4. **Muscle Weakness:** Less likely but still a possibility given the pain around the ankle.\n5. **Stress Fracture:** Least likely due to normal X-ray results.\n\n### Critical Actions\n\n1. **Recommendations:**\n   - **Physical Therapy Evaluation:** To assess for tendonitis and recommend appropriate exercises for strengthening and stretching.\n   - **Orthotics or Footwear Adjustment:** To ensure proper support and alignment of the foot during running.\n   - **Rest and Ice Therapy:** To manage pain and reduce inflammation.\n   - **Follow-Up Imaging:** If symptoms persist, consider further imaging like an MRI to rule out other conditions.\n\n2. **Interventions:**\n   - **Pain Management:** Over-the-counter anti-inflammatory medications can be used to relieve pain during healing.\n   - **Strengthening Exercises:** Ankle circles, calf raises, and resistant band work can help strengthen the ankle muscles.\n\n### Summary\n\nThe most likely diagnosis is **Ankle Tendinitis (Tendonitis)** due to repetitive stress from running on trails and pain on the posterior side of the ankle. The patient should undergo a physical therapy evaluation to assess for tendonitis and recommend appropriate exercises. Rest, ice therapy, and proper footwear adjustment are also recommended to manage pain and prevent further injury.\n\n**Confidence Level:** High\n**Key Factors Supporting This Conclusion:** Pain on the posterior side of the ankle, normal examination and X-ray results, and repetitive stress from running on trails.\n\n**Red Flags:** Persistent pain despite rest, significant swelling, or inability to bear weight on the affected ankle. Immediate medical attention is required if these symptoms occur.
+### Refined Instructions for EMMA
+
+---
+
+### Welcome to EMMA
+
+Ready to supercharge your clinical decisions? EMMA is your trusty AI sidekick, here to help you manage patient data like never before. Let’s dive in and unlock its full potential!
+
+#### Getting Started
+
+1. **Launch the App**:
+   - Fire up EMMA on your device—mobile or desktop.
+   - Log in using Google OAuth for secure access. We’ve got your back on security! 🔒
+
+2. **Interface Overview**:
+   - **Chat Interface**: This is your command center—input patient info here. 📝
+   - **Sidebar**: Home to four tabs—Functions, Specialists, Sessions, and Settings.
+
+#### Inputting Patient Data
+
+1. **Entering Information**:
+   - Start chatting with EMMA by typing in patient data. Whether it’s simple, complex, or a bit all over the place, EMMA can handle it.
+   - Share symptoms, medical history, diagnostics—anything relevant!
+
+2. **EMMA’s Responses**:
+   - EMMA processes the data and delivers diagnostic insights, workups, and treatment suggestions.
+   - Keep feeding EMMA more info as you gather it.
+
+3. **Providing Feedback**:
+   - Not happy with something? Want to tweak the responses? Just let EMMA know. EMMA adapts to your needs—no hard feelings, ever.
+
+#### Sidebar Tabs
+
+1. **Functions Tab**:
+   - This is your toolbox 🔧:
+     - **Clinical Notes**: Quickly document notes.
+     - **Patient Notes**: Create educational notes, therapy plans, etc.
+     - **Critical Thinking Tools**: Challenge and refine your diagnoses.
+
+2. **Specialists Tab**:
+   - Access specialist tools and resources tailored to specific medical areas. EMMA is versatile like that! 🩺
+
+3. **Sessions Tab**:
+   - Manage all patient interactions:
+     - **Start New**: Use F5, the "New Session" button, or open a new tab. 🌟
+     - **Load Previous**: Load past sessions—perfect for switching from mobile to desktop.
+
+4. **Settings Tab**:
+   - Customize your EMMA experience:
+     - **Specialty**: Select or change your specialization. EMMA’s ready for anything! 🌐
+     - **Preferred Note Type**: Choose your favorite format for notes.
+
+#### Managing Sessions
+
+1. **Understanding Sessions**:
+   - Each patient interaction is a session. EMMA assumes continuity until you say otherwise.
+
+2. **Session Management**:
+   - **Start Fresh**: Refresh (F5), click "New Session," or open a new tab. 🔄
+   - **Continue the Journey**: Load previous sessions from the Sessions tab and pick up right where you left off.
+
+#### Additional Features
+
+1. **Quick Buttons with Descriptors**:
+   - Quick buttons for rapid actions. Hover to see what each button does—it’s like having tooltips on steroids. ⚡
+
+2. **Provide Data in Chunks**:
+   - Be efficient—input patient data in larger chunks rather than one piece at a time.
+   - Single pieces of information, like a lab result, are still good when specific updates are needed.
+
+3. **Real-time Saving and Syncing**:
+   - EMMA saves your data in real-time. Stay connected to keep everything synchronized. 🌐🔄
+   - Seamlessly switch between devices—phone to desktop and back.
+
+#### Best Practices and Tips
+
+1. **Accuracy Matters**:
+   - Detailed and accurate patient info leads to better outputs from EMMA. 📊
+
+2. **Stay Updated**:
+   - Regularly update patient info for the best insights.
+
+3. **Organized Sessions**:
+   - Regularly review and manage your sessions for easy access and consistency. 📂
+
+4. **Explore and Learn**:
+   - Spend time getting to know EMMA’s interface and features. The more you use it, the more powerful it becomes. 🚀
+
+#### Troubleshooting
+
+1. **Tech Issues? No Problem!**:
+   - Visit the help section or contact support if you hit a snag. 🛠️v
