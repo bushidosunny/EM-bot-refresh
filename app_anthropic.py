@@ -1285,7 +1285,7 @@ def display_specialist_tab():
 
 def display_settings_tab():
     st.header("User Settings")
-
+    st.markdown("[View EMMA Help Guide](https://veil-cry-a60.notion.site/EMMA-Help-Page-e681bf1c061041719b6666376cc88386)", unsafe_allow_html=True)
     # Load current user settings
     user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
 
@@ -1323,6 +1323,8 @@ def display_settings_tab():
         st.success("Settings saved successfully!")
         st.rerun()  # Rerun the app to apply changes
 
+
+    
 
 def display_chat_history():
     for message in st.session_state.chat_history:

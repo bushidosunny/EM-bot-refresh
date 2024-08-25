@@ -4,6 +4,7 @@ import extra_streamlit_components as stx
 # from pymongo import MongoClient
 import bcrypt
 import datetime
+from help import *
 from typing import Tuple, Optional 
 from bson import ObjectId
 from dataclasses import dataclass, field
@@ -510,7 +511,15 @@ class MongoAuthenticator:
         except Exception as e:
             logging.error(f"Error saving feedback for user {user_id}: {str(e)}")
             return False
+     
+    def get_help_content(self, topic):
+        help_topics = {
+            "Using EMMA": emmma_general_help
+            }
         
+        return help_topics.get(topic, "Help content not found.")
+
+
 ######################################### UI ##########################################################
 
 

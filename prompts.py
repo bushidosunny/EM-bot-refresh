@@ -1447,6 +1447,3 @@ new_session_prompt = """New patient session (F5 or refresh)"""
 
 
 
-
-
-
