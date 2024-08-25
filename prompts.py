@@ -402,14 +402,14 @@ note_writer_system_IM_progress = """I may ask general questions. If I do, just a
     - Patient education specific to each problem
 
     Example format:
-    Problem 1: [Problem Name]
+    [Problem Name]
     - Diagnostic plan:
     - Treatment plan:
     - Monitoring:
     - Consultations:
     - Patient education:
 
-    Problem 2: [Problem Name]
+    [Problem Name]
     - Diagnostic plan:
     - Treatment plan:
     - Monitoring:
@@ -474,14 +474,14 @@ note_writer_system_progress = """I may ask general questions. If I do, just answ
     - Patient education specific to each problem
 
     Example format:
-    Problem 1: [Problem Name]
+    [Problem Name]
     - Diagnostic plan:
     - Treatment plan:
     - Monitoring:
     - Consultations:
     - Patient education:
 
-    Problem 2: [Problem Name]
+    [Problem Name]
     - Diagnostic plan:
     - Treatment plan:
     - Monitoring:

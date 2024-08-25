@@ -1204,9 +1204,9 @@ def display_functions_tab():
     st.subheader('📝Clinical Notes')
     col1, col2 = st.columns(2)
     with col1:
-        if st.button('Full Medical Note', use_container_width=True, help="Writes a full medical note on this patient"):
+        if st.button('Write a Complete Note', use_container_width=True, help="Writes a full medical note on this patient"):
             st.session_state.specialist = "Note Writer"
-            consult_specialist_and_update_ddx("Full Medical Note", "Write a full medical note on this patient")
+            consult_specialist_and_update_ddx("Full Medical Note", "Write a note on this patient")
             st.session_state.specialist = "Emergency Medicine"
         if st.button('Full Note except EMR results', use_container_width=True, help="a full not except for EMR results for you to paste in"):
             st.session_state.specialist = "Note Writer"
