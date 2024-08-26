@@ -599,9 +599,18 @@ note_writer_system_discharge = """
 
     4. Include only significant test results that influenced clinical decision-making or require follow-up.
 
-    5. In the Medications section, clearly indicate admission medications, discharge medications, and reasons for any changes.
+    5. In the Medications section:
+    a. Clearly indicate admission medications, discharge medications, and reasons for any changes.
+    b. Perform a medication reconciliation following these steps:
+        - Develop a list of current medications
+        - Develop a list of medications to be prescribed
+        - Compare the medications on the two lists
+        - Make clinical decisions based on the comparison
+        - Communicate the new list to appropriate caregivers and to the patient
 
-    6. Provide detailed follow-up instructions, including specific appointments, tests, or procedures to be done as an outpatient.
+    6. In the Follow-up Instructions section:
+    a. Check for any follow-ups that were scheduled or need to be scheduled.
+    b. Provide detailed follow-up instructions, including specific appointments, tests, or procedures to be done as an outpatient.
 
     7. Clearly state any pending test results and the plan for following up on these results.
 
@@ -624,6 +633,7 @@ note_writer_system_discharge = """
     MEDICATIONS:
     Admission Medications:
     Discharge Medications:
+    Medication Reconciliation:
     Medication Changes and Reasons:
     FOLLOW-UP INSTRUCTIONS:
     Appointments:
@@ -633,6 +643,9 @@ note_writer_system_discharge = """
     FUNCTIONAL STATUS AT DISCHARGE:
     CODE STATUS:
     DISCHARGE DISPOSITION:
+    ```
+
+    After completing the discharge note, create a brief PCP follow-up note surrounded by triple backticks. This note should summarize key points from the discharge, highlight any critical follow-up needs, and outline the recommended management plan for the PCP.
     ```
     """
 

@@ -1,92 +1,71 @@
-### Refined Instructions for EMMA
+PATIENT INFORMATION:
+Name: Clayton Brown
+Age: 47
+Sex: Male
 
----
+ADMISSION DIAGNOSIS:
+1. Suspected genitourinary infection (urethritis vs. prostatitis)
+2. Acute kidney injury
 
-### Welcome to EMMA
+DISCHARGE DIAGNOSIS:
+1. Acute bacterial prostatitis
+2. Acute kidney injury, improving
 
-Ready to supercharge your clinical decisions? EMMA is your trusty AI sidekick, here to help you manage patient data like never before. Let’s dive in and unlock its full potential!
+HOSPITAL COURSE:
+Mr. Brown was admitted for evaluation and treatment of fever, urinary symptoms, and penile discharge. Initial workup revealed elevated WBC count, positive urinalysis, and elevated creatinine. CT scan showed no evidence of pyelonephritis. Chlamydia/Gonorrhea PCR was negative. 
 
-#### Getting Started
+The patient was started on IV ceftriaxone for broad-spectrum coverage. A digital rectal exam confirmed prostate tenderness, supporting the diagnosis of acute bacterial prostatitis. Blood cultures were negative. Creatinine improved with IV hydration.
 
-1. **Launch the App**:
-   - Fire up EMMA on your device—mobile or desktop.
-   - Log in using Google OAuth for secure access. We’ve got your back on security! 🔒
+The patient's symptoms gradually improved over the course of hospitalization. Fever resolved, and urinary symptoms decreased. Penile discharge cleared. Renal function returned to baseline.
 
-2. **Interface Overview**:
-   - **Chat Interface**: This is your command center—input patient info here. 📝
-   - **Sidebar**: Home to four tabs—Functions, Specialists, Sessions, and Settings.
+CONSULTATIONS:
+1. Urology: Confirmed diagnosis of acute bacterial prostatitis. Recommended continuing antibiotics and follow-up in 2 weeks.
 
-#### Inputting Patient Data
+SIGNIFICANT TEST RESULTS:
+- WBC: 15.11 x10e3/mcL (elevated) on admission, improved to 9.2 x10e3/mcL at discharge
+- Creatinine: 1.61 mg/dL on admission, improved to 1.1 mg/dL at discharge
+- Urinalysis: Initially positive for leukocyte esterase, numerous WBCs, 1+ bacteria. Repeat at discharge showed improvement.
+- Blood cultures: No growth
+- Urine culture: ***
 
-1. **Entering Information**:
-   - Start chatting with EMMA by typing in patient data. Whether it’s simple, complex, or a bit all over the place, EMMA can handle it.
-   - Share symptoms, medical history, diagnostics—anything relevant!
+PROCEDURES:
+None
 
-2. **EMMA’s Responses**:
-   - EMMA processes the data and delivers diagnostic insights, workups, and treatment suggestions.
-   - Keep feeding EMMA more info as you gather it.
+MEDICATIONS:
+Admission Medications:
+- No home medications
 
-3. **Providing Feedback**:
-   - Not happy with something? Want to tweak the responses? Just let EMMA know. EMMA adapts to your needs—no hard feelings, ever.
+Discharge Medications:
+1. Ciprofloxacin 500 mg PO BID for 14 days
+2. Acetaminophen 650 mg PO q6h PRN for pain or fever
 
-#### Sidebar Tabs
+Medication Changes and Reasons:
+- Started on ciprofloxacin for continued treatment of prostatitis
+- Discontinued ceftriaxone as IV antibiotics no longer needed
 
-1. **Functions Tab**:
-   - This is your toolbox 🔧:
-     - **Clinical Notes**: Quickly document notes.
-     - **Patient Notes**: Create educational notes, therapy plans, etc.
-     - **Critical Thinking Tools**: Challenge and refine your diagnoses.
+FOLLOW-UP INSTRUCTIONS:
+Appointments:
+1. Urology follow-up in 2 weeks
+2. Primary care follow-up in 1 week for repeat renal function testing
 
-2. **Specialists Tab**:
-   - Access specialist tools and resources tailored to specific medical areas. EMMA is versatile like that! 🩺
+Outpatient Tests/Procedures:
+1. Repeat serum creatinine in 1 week
 
-3. **Sessions Tab**:
-   - Manage all patient interactions:
-     - **Start New**: Use F5, the "New Session" button, or open a new tab. 🌟
-     - **Load Previous**: Load past sessions—perfect for switching from mobile to desktop.
+PENDING RESULTS:
+1. Final urine culture results
 
-4. **Settings Tab**:
-   - Customize your EMMA experience:
-     - **Specialty**: Select or change your specialization. EMMA’s ready for anything! 🌐
-     - **Preferred Note Type**: Choose your favorite format for notes.
+PATIENT EDUCATION:
+Patient educated on:
+1. Signs and symptoms of worsening infection or urinary retention
+2. Importance of completing full course of antibiotics
+3. Adequate hydration to support kidney function
+4. When to seek immediate medical attention (high fever, severe pain, inability to urinate)
 
-#### Managing Sessions
+FUNCTIONAL STATUS AT DISCHARGE:
+Patient is ambulatory and independent in activities of daily living.
 
-1. **Understanding Sessions**:
-   - Each patient interaction is a session. EMMA assumes continuity until you say otherwise.
+CODE STATUS:
+Full code
 
-2. **Session Management**:
-   - **Start Fresh**: Refresh (F5), click "New Session," or open a new tab. 🔄
-   - **Continue the Journey**: Load previous sessions from the Sessions tab and pick up right where you left off.
-
-#### Additional Features
-
-1. **Quick Buttons with Descriptors**:
-   - Quick buttons for rapid actions. Hover to see what each button does—it’s like having tooltips on steroids. ⚡
-
-2. **Provide Data in Chunks**:
-   - Be efficient—input patient data in larger chunks rather than one piece at a time.
-   - Single pieces of information, like a lab result, are still good when specific updates are needed.
-
-3. **Real-time Saving and Syncing**:
-   - EMMA saves your data in real-time. Stay connected to keep everything synchronized. 🌐🔄
-   - Seamlessly switch between devices—phone to desktop and back.
-
-#### Best Practices and Tips
-
-1. **Accuracy Matters**:
-   - Detailed and accurate patient info leads to better outputs from EMMA. 📊
-
-2. **Stay Updated**:
-   - Regularly update patient info for the best insights.
-
-3. **Organized Sessions**:
-   - Regularly review and manage your sessions for easy access and consistency. 📂
-
-4. **Explore and Learn**:
-   - Spend time getting to know EMMA’s interface and features. The more you use it, the more powerful it becomes. 🚀
-
-#### Troubleshooting
-
-1. **Tech Issues? No Problem!**:
-   - Visit the help section or contact support if you hit a snag. 🛠️v
+DISCHARGE DISPOSITION:
+Home with outpatient follow-up
