@@ -1500,9 +1500,32 @@ EULA = f"""
 
 new_session_prompt = """New patient session (F5 or refresh)"""
 
+treatment_plan = """
+    Identify and apply relevant Clinical Decision Tools (CDTs) and guidelines to optimize treatment for the patient's condition. For each applicable tool or guideline:
 
+    1. Name the tool/guideline and its primary treatment focus
+    2. List key patient factors influencing treatment decisions
+    3. Apply the tool/guideline using available patient data
+    4. Interpret the recommendations in the context of the patient's specific situation
+    5. Outline the suggested treatment plan based on the tool/guideline
+    6. Discuss any contraindications, alternatives, or modifications needed for this patient
+    7. Highlight important monitoring parameters or follow-up considerations
 
+    Prioritize evidence-based tools and guidelines that are most likely to improve treatment outcomes for this patient's condition.
+    """
 
+search_CDTs = """
+    Identify and apply relevant Clinical Decision Tools (CDTs) to enhance diagnostic accuracy for the patient's condition. For each applicable CDT:
+
+    1. Name the tool and its primary diagnostic purpose
+    2. List required input parameters
+    3. Calculate the score/result using available patient data
+    4. Interpret the output in context of the patient's presentation
+    5. Explain how this impacts the diagnostic process
+    6. Highlight any limitations or caveats for this specific case
+
+    Prioritize CDTs that are widely validated and most likely to influence the diagnostic approach for this patient.
+    """
 
 
 

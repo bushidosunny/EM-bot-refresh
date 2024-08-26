@@ -113,7 +113,7 @@ specialist_data = {
   },
   "Perplexity": {
     "assistant_id": "perplexity_api",
-    "caption": "Perplexity AI with web search and citations",
+    "caption": "🔍Perplexity AI with web search and citations",
     "avatar": "https://play-lh.googleusercontent.com/6STp0lYx2ctvQ-JZpXA1LeAAZIlq6qN9gpy7swLPlRhmp-hfvZePcBxqwVkqN2BH1g",
     "system_instructions": perplixity_system
   },
@@ -136,7 +136,7 @@ specialist_data = {
   },
   "Gastrointestinal Systems": {
     "assistant_id": "asst_Z6bVfy6eOZBVdiwoS75eGdG9",
-    "caption": "Gastroenterology, Hepatology, Colorectal Surgery, General Surgery",
+    "caption": "💩Gastroenterology, Hepatology, Colorectal Surgery, General Surgery",
     "avatar": "https://cdn.pixabay.com/photo/2017/03/27/03/08/stomach-2177194_1280.png"
   },
   "Renal and GU Systems": {
@@ -1204,27 +1204,38 @@ def display_sidebar():
 
         # with tab4:
         #     display_sessions_tab()
-
+        # if st.button('🔃New Patient Encounter', type="secondary", use_container_width=True, help=new_session_prompt):
+        #     st.session_state.new_session_clicked = True
+                    
+        # if st.session_state.new_session_clicked:
+        #     st.write("Are you sure you want to start a new encounter? This will reset all current data.")
+        #     if st.button("Yes, start new encounter", type="primary", use_container_width=True):
+        #         new_thread()
+        #     if st.button("No, cancel", type="secondary", use_container_width=True):
+        #         st.session_state.new_session_clicked = False
+        
+        st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab")
+                
         container = st.container()
-        container.float(float_css_helper(bottom="10px", padding= "10px"))
+        container.float(float_css_helper(bottom="10px", padding= "10px", background_color="#CED6E3", border_radius="10px"))
         with container:
              
             
             c1, c2 = st.columns([1,1])
             feedback_container = st.container()
-            with c1:
+            with c2:
                 handle_feedback(container=feedback_container)
                 
-            with c2:
-                if st.button('🔃New Session', type="secondary", use_container_width=True, help=new_session_prompt):
-                    st.session_state.new_session_clicked = True
+            # with c2:
+            #     if st.button('🔃New Session', type="secondary", use_container_width=True, help=new_session_prompt):
+            #         st.session_state.new_session_clicked = True
                     
-            if st.session_state.new_session_clicked:
-                st.write("Are you sure you want to start a new encounter? This will reset all current data.")
-                if st.button("Yes, start new encounter", type="primary", use_container_width=True):
-                    new_thread()
-                if st.button("No, cancel", type="secondary", use_container_width=True):
-                    st.session_state.new_session_clicked = False
+            # if st.session_state.new_session_clicked:
+            #     st.write("Are you sure you want to start a new encounter? This will reset all current data.")
+            #     if st.button("Yes, start new encounter", type="primary", use_container_width=True):
+            #         new_thread()
+            #     if st.button("No, cancel", type="secondary", use_container_width=True):
+            #         st.session_state.new_session_clicked = False
                 
                 
             c3, c4 = st.columns([1,1])
@@ -1250,23 +1261,54 @@ def display_functions_tab():
     #     if st.button("💉Which Procedure", use_container_width=True):
     #         consult_specialist_and_update_ddx("Which Procedure", procedure_checklist)
     display_sessions_tab()
+    st.divider()
+    st.subheader('🧠Diagnostic Tools')
+    if st.button("🔍Search Diagnostic CDTs", use_container_width=True, help="Identify, apply, and interpret relevant Clinical Decision Tools"):
+        st.session_state.specialist = "Perplexity"
+        consult_specialist_and_update_ddx("Search for a Diagnosis", search_CDTs)
+    col1, col2 = st.columns(2)
+    with col1:
+        # if st.button("➡️Next Step Recommendation", use_container_width=True):
+        #     st.session_state.specialist = "Emergency Medicine"
+        #     consult_specialist_and_update_ddx("Next Step Recommendation", next_step)
+        if st.button("🤔Challenge DDX", use_container_width=True, help="Use to broaden and critique the current DDX"):
+            st.session_state.specialist = "General Medicine"
+            consult_specialist_and_update_ddx("Challenge the DDX", challenge_ddx)
+            st.session_state.specialist = "Emergency Medicine"
+    with col2:
+        # if st.button('🛠️Apply Clinical Decision Tools', use_container_width=True):
+        #     st.session_state.specialist = "Clinical Decision Tools"
+        #     consult_specialist_and_update_ddx("Apply Clinical Decision Tools", apply_decision_tool)
+        #     st.session_state.specialist = "Emergency Medicine"
+        if st.button("🧠Refine DDX", use_container_width=True, help="Use Bayesian Reasoning to refine and narrow the DDX"):
+            st.session_state.specialist = "Bayesian Reasoner"
+            consult_specialist_and_update_ddx("Critical Thinking w Bayesian Reasoning", apply_bayesian_reasoning)
+            st.session_state.specialist = "Emergency Medicine"
+    st.subheader('💉Treatment Tools')
+    if st.button("🔍Search Treatment CDTs/Guidelines", use_container_width=True, help="Applies relevant CDTs, guidelines, or algorithms to guide treatment decisions and management."):
+        st.session_state.specialist = "Perplexity"
+        consult_specialist_and_update_ddx("Treatment Plan", treatment_plan)
+        st.session_state.specialist = "Emergency Medicine"
+    
+    st.divider()
     st.subheader('📝Clinical Notes')
     col1, col2 = st.columns(2)
     with col1:
-        if st.button('Write a Complete Note', use_container_width=True, help="Writes a full medical note on this patient"):
+        if st.button('Complete Note', use_container_width=True, help="Writes a full medical note on this patient"):
             st.session_state.specialist = "Note Writer"
             consult_specialist_and_update_ddx("Full Medical Note", "Write a note on this patient")
             st.session_state.specialist = "Emergency Medicine"
-        if st.button('Full Note except EMR results', use_container_width=True, help="a full not except for EMR results for you to paste in"):
-            st.session_state.specialist = "Note Writer"
-            consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
-            st.session_state.specialist = "Emergency Medicine"
-
-    with col2:
         if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
             st.session_state.specialist = "Note Writer"
             consult_specialist_and_update_ddx("HPI only", create_hpi)
             st.session_state.specialist = "Emergency Medicine"
+       
+    with col2:
+        if st.button('Focused Note', use_container_width=True, help="HPI, ROS, PE, A/P, then paste EMR smart data (meds, labs, imaging, etc)"):
+            st.session_state.specialist = "Note Writer"
+            consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
+            st.session_state.specialist = "Emergency Medicine"
+
         if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
             st.session_state.specialist = "Note Writer"
             consult_specialist_and_update_ddx("A&P only", create_ap)
@@ -1276,35 +1318,18 @@ def display_functions_tab():
     col1, col2 = st.columns(2)
     with col1:
 
-        if st.button("🙍Pt Education Note", use_container_width=True, help="Writes a personalized patient education note"):
+        if st.button("🙍Education Note", use_container_width=True, help="Writes a personalized patient education note"):
             st.session_state.specialist = "Patient Educator"
             consult_specialist_and_update_ddx("Patient Education Note", f"Write a patient education note for this patient in {st.session_state.patient_language}")
             st.session_state.specialist = "Emergency Medicine"
     with col2:
-        if st.button('💪Physical Therapy Plan', use_container_width=True, help="Writes a personalized PT plan"):
+        if st.button('💪Physical Therapy ', use_container_width=True, help="Writes a personalized Physical Therapy plan"):
             st.session_state.specialist = "Musculoskeletal Systems"
             consult_specialist_and_update_ddx("Physical Therapy Plan", pt_plan)
             st.session_state.specialist = "Emergency Medicine"
-    st.subheader('🧠Critical Thinking')
-    col1, col2 = st.columns(2)
-    with col1:
-        # if st.button("➡️Next Step Recommendation", use_container_width=True):
-        #     st.session_state.specialist = "Emergency Medicine"
-        #     consult_specialist_and_update_ddx("Next Step Recommendation", next_step)
-        if st.button("🤔Challenge the DDX", use_container_width=True, help="Use to broaden and critique the current DDX"):
-            st.session_state.specialist = "General Medicine"
-            consult_specialist_and_update_ddx("Challenge the DDX", challenge_ddx)
-            st.session_state.specialist = "Emergency Medicine"
-    with col2:
-        # if st.button('🛠️Apply Clinical Decision Tools', use_container_width=True):
-        #     st.session_state.specialist = "Clinical Decision Tools"
-        #     consult_specialist_and_update_ddx("Apply Clinical Decision Tools", apply_decision_tool)
-        #     st.session_state.specialist = "Emergency Medicine"
-        if st.button("🧠Critical Thinking w Bayesian Reasoning", use_container_width=True, help="Use to refine and narrow the DDX"):
-            st.session_state.specialist = "Bayesian Reasoner"
-            consult_specialist_and_update_ddx("Critical Thinking w Bayesian Reasoning", apply_bayesian_reasoning)
-            st.session_state.specialist = "Emergency Medicine"
     st.divider()
+
+    
        
 
 def display_specialist_tab():
@@ -1413,12 +1438,12 @@ def display_sessions_tab():
                 collection_name = session_options[session_name]
                 col1, col2 = st.columns(2)
                 with col1:
-                    if st.button("Load Selected Session", type='primary'):
+                    if st.button("Load Selected Patient Encounter", type='primary'):
                         st.session_state.load_session = collection_name
                         st.session_state.show_load_success = True
                         # st.success(f"Click 'Refresh' to load the chat history.")
                 with col2:
-                    if st.button("Delete Selected Session"):
+                    if st.button("Delete Selected Patient Encounter"):
                         if 'delete_confirmation' not in st.session_state:
                             st.session_state.delete_confirmation = False
                         st.session_state.delete_confirmation = True
@@ -1500,7 +1525,7 @@ def display_session_data(collection_name):
     # load_chat_history(collection_name)
     if st.button("load the chat history?", on_click=load_chat_history(collection_name)):
         # load_chat_history(collection_name)
-        st.success(f"Session Loaded")
+        st.success(f"Patient Encounter Loaded")
         st.rerun()
     display_delete_session_button(collection_name)
     
@@ -1508,7 +1533,7 @@ def display_delete_session_button(collection_name):
     if 'delete_confirmation' not in st.session_state:
         st.session_state.delete_confirmation = False
 
-    if st.button("Delete Session Data?"):
+    if st.button("Delete Patient Encounter Data?"):
         st.session_state.delete_confirmation = True
 
     if st.session_state.delete_confirmation:
@@ -1518,7 +1543,7 @@ def display_delete_session_button(collection_name):
             if st.button(f"Yes, delete {collection_name} data", type='primary', use_container_width=True):
                 print(f'DEBUG DELETE SESSION DATA COLLECTION NAME: {collection_name}')
                 delete_session_data(collection_name)
-                st.success(f"Session data {collection_name} deleted successfully.")
+                st.success(f"Patient Encounter data {collection_name} deleted successfully.")
                 st.session_state.delete_confirmation = False
                 load_session_data.clear()
                 time.sleep(1)  # Give user time to see the message
