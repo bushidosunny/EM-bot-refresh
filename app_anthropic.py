@@ -1194,7 +1194,11 @@ def display_sidebar():
             #display_critical_tasks()
             #display_follow_up_tasks()
             #st.divider()
+            
             display_functions_tab()
+            # Check if the specialty is Internal Medicine
+            print(f'DEBUG DISPLAY SIDEBAR SPECIALTY: {st.session_state.specialty} ')
+            
             
         with tab2:
             display_specialist_tab()
@@ -1262,11 +1266,16 @@ def display_functions_tab():
     #     if st.button("💉Which Procedure", use_container_width=True):
     #         consult_specialist_and_update_ddx("Which Procedure", procedure_checklist)
     display_sessions_tab()
+    
+    if st.session_state.get('specialty') == "Internal Medicine" or st.session_state.get('specialty') == "Internal Medicine":
+        document_processing()
+    
     st.divider()
     st.subheader('🧠Diagnostic Tools')
     if st.button("🔍Search Diagnostic CDTs", use_container_width=True, help="Identify, apply, and interpret relevant Clinical Decision Tools"):
         st.session_state.specialist = "Perplexity"
         consult_specialist_and_update_ddx("Search for a Diagnosis", search_CDTs)
+        st.session_state.specialist = st.session_state.specialty
     col1, col2 = st.columns(2)
     with col1:
         # if st.button("➡️Next Step Recommendation", use_container_width=True):
@@ -1275,7 +1284,7 @@ def display_functions_tab():
         if st.button("🤔Challenge DDX", use_container_width=True, help="Use to broaden and critique the current DDX"):
             st.session_state.specialist = "General Medicine"
             consult_specialist_and_update_ddx("Challenge the DDX", challenge_ddx)
-            st.session_state.specialist = "Emergency Medicine"
+            st.session_state.specialist = st.session_state.specialty
     with col2:
         # if st.button('🛠️Apply Clinical Decision Tools', use_container_width=True):
         #     st.session_state.specialist = "Clinical Decision Tools"
@@ -1284,12 +1293,12 @@ def display_functions_tab():
         if st.button("🧠Refine DDX", use_container_width=True, help="Use Bayesian Reasoning to refine and narrow the DDX"):
             st.session_state.specialist = "Bayesian Reasoner"
             consult_specialist_and_update_ddx("Critical Thinking w Bayesian Reasoning", apply_bayesian_reasoning)
-            st.session_state.specialist = "Emergency Medicine"
+            st.session_state.specialist = st.session_state.specialty
     st.subheader('💉Treatment Tools')
     if st.button("🔍Search Treatment CDTs/Guidelines", use_container_width=True, help="Applies relevant CDTs, guidelines, or algorithms to guide treatment decisions and management."):
         st.session_state.specialist = "Perplexity"
         consult_specialist_and_update_ddx("Treatment Plan", treatment_plan)
-        st.session_state.specialist = "Emergency Medicine"
+        st.session_state.specialist = st.session_state.specialty
     
     st.divider()
     st.subheader('📝Clinical Notes')
@@ -1298,11 +1307,11 @@ def display_functions_tab():
         if st.button('Complete Note', use_container_width=True, help="Writes a full medical note on this patient"):
             st.session_state.specialist = "Note Writer"
             consult_specialist_and_update_ddx("Full Medical Note", "Write a note on this patient")
-            st.session_state.specialist = "Emergency Medicine"
+            st.session_state.specialist = st.session_state.specialty
         if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
             st.session_state.specialist = "Note Writer"
             consult_specialist_and_update_ddx("HPI only", create_hpi)
-            st.session_state.specialist = "Emergency Medicine"
+            st.session_state.specialist = st.session_state.specialty
        
     with col2:
         if st.button('Focused Note', use_container_width=True, help="HPI, ROS, PE, A/P, then paste EMR smart data (meds, labs, imaging, etc)"):
@@ -1971,7 +1980,43 @@ def process_feedback(text: str) -> str:
     
     return response.choices[0].message.content
 
-
+def document_processing():
+    
+    st.markdown("---")
+    st.subheader("📄Document Processing")
+    
+    with st.expander("Document Processing"):
+        # Document paste area
+        doc_text = st.text_area("Paste your document here:", height=200)
+        
+        # Instructions for the chatbot
+        instructions = st.text_area("Instructions for document analysis:", 
+                                    value="Please evaluate these documents",
+                                    height=50)
+        
+        if st.button("Analyze Document"):
+            if doc_text:
+                # Prepare the message for the chatbot
+                analysis_request = f"""
+                Documents to analyze:
+                {doc_text}
+                
+                Instructions:
+                {instructions}
+                """
+                
+                # Add the analysis request to the chat history
+                consult_specialist_and_update_ddx("Analyze Document", analysis_request)
+                
+                # Get the chatbot's response (you'll need to implement this part based on your chatbot setup)
+                # For example:
+                # response = get_chatbot_response(analysis_request)
+                # st.session_state.messages.append({"role": "assistant", "content": response})
+                
+                st.success("Document analyzed. Please check the chat for the analysis results.")
+                st.rerun()
+            else:
+                st.warning("Please paste a document to analyze.")
 
  
 ############################################# Perplexity Model #############################################
