@@ -30,6 +30,12 @@ def get_cookie_manager():
 
 cookie_manager = get_cookie_manager()
 
+# UI default discrptions
+EM_NOTE = "EM Note"
+GENERAL_MEDICINE = "General Medicine"
+EMERGENCY_MEDICINE = "Emergency Medicine"
+
+
 SPECIALTIES = [
     "Emergency Medicine",
     "Internal Medicine",
@@ -448,7 +454,11 @@ class MongoAuthenticator:
                         st.session_state.username = user['username']
                         st.session_state.user_id = str(user['_id'])
                         st.session_state.email = user['email']
-                        st.session_state.preferred_note_type = user.get('preferred_note_type', "Emergency Medicine Note")
+                        st.session_state.specialty = user.get('specialty', EMERGENCY_MEDICINE)  # Add this line
+                        st.session_state.preferred_note_type = user.get('preferred_note_type', EM_NOTE)
+
+                        print(f'authenticated user specialty: {st.session_state.specialty}')
+                        print(f'authenticated user preferred_note_type: {st.session_state.preferred_note_type}')
                         
                         # Update user metrics and check/update daily login
                         self.update_user_metrics(user_id)

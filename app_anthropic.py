@@ -41,7 +41,7 @@ import secrets
 # import yaml
 # import bcrypt
 # from yaml.loader import SafeLoader
-from auth.MongoAuthenticator import MongoAuthenticator, User, SPECIALTIES
+from auth.MongoAuthenticator import *
 import extra_streamlit_components as stx
 import requests
 # # temp
@@ -64,11 +64,15 @@ MONGODB_URI = os.getenv('MONGODB_ATLAS_URI')
 ENVIRONMENT = os.getenv('ENVIRONMENT')
 PERPLEXITY_API_KEY = os.getenv('PERPLEXITY_API_KEY')
 
+
+
+
+
 # Initialize Anthropic client
-anthropic = Anthropic(api_key=ANTHROPIC_API_KEY)
+anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
 # Initialize the model
-model = ChatAnthropic(model="claude-3-5-sonnet-20240620", temperature=0.5, max_tokens=4096)
+anthropic_model = ChatAnthropic(model="claude-3-5-sonnet-20240620", temperature=0.5, max_tokens=4096)
 
 # Initialize MongoDB connection
 @st.cache_resource
@@ -101,11 +105,11 @@ def get_note_writer_instructions():
     return note_type_instructions.get(preferred_note_type, note_writer_system)
 
 specialist_data = {
-  "Emergency Medicine": {
+  EMERGENCY_MEDICINE: {
     "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
     "caption": "👨‍⚕️EM, Peds EM, ☠️Toxicology, Wilderness",
     "avatar": "https://i.ibb.co/LnrQp8p/Designer-17.jpg",
-    "system_instructions": emma_system
+    "system_instructions": emma_system,
   },
   "Perplexity": {
     "assistant_id": "perplexity_api",
@@ -151,11 +155,20 @@ specialist_data = {
     "avatar": "https://cdn.pixabay.com/photo/2015/12/09/22/19/muscle-1085672_1280.png",
     "system_instructions": musculoskeletal_system
   },
-  "General": {
+  GENERAL_MEDICINE: {
     "assistant_id": "asst_K2QHe4VfHGdyrrfTCiyctzyY",
     "caption": "ICU, Internal Medicine, HemOnc, Endocrinology",
-    "avatar": "https://cdn.pixabay.com/photo/2013/07/12/18/59/doctor-154130_1280.png",
-    "system_instructions": general_medicine_system
+    "avatar": "https://i.ibb.co/HCdc0Hx/0b0c6b4f-048c-43f9-a913-6711c4fe3ddf.jpg",
+    "system_instructions": general_medicine_system,
+    "subgroups": [
+      "Critical Care Medicine",
+      "Internal Medicine",
+      "Endocrinology",
+      "Geriatrics",
+      "Hematology",
+      "Oncology",
+      "Family Medicine"
+    ]
   },
   "Pediatrics": {
     "assistant_id": "asst_cVQwzy87fwOvTnb66zsvVB5L",
@@ -232,7 +245,7 @@ specialist_data = {
 }
 
 note_type_instructions = {
-    "EM Note": note_writer_system_em,
+    EM_NOTE: note_writer_system_em,
     "General Consultation Note": note_writer_system_consult,
     "General Progress Note": note_writer_system_progress,
     "IM Admission Note": note_writer_system_admission,
@@ -251,6 +264,7 @@ def initialize_session_state():
         session_state.count = 0
         session_state.id = secrets.token_hex(8)
         session_state.user_id = None
+        session_state.specialty = "Emergency Medicine"
         session_state.authentication_status = None
         session_state.show_registration = False
         session_state.show_forgot_username = False
@@ -826,9 +840,25 @@ def choose_specialist_radio():
     specialities = list(specialist_data.keys())
     captions = [specialist_data[speciality]["caption"] for speciality in specialities]
 
+    # Define a mapping of specific specialties to "General Medicine"
+    general_medicine_specialties = [
+        "Critical Care Medicine", "Internal Medicine", "HemOnc", "Endocrinology",
+        "Geriatrics", "Hematology", "Oncology", "Family Medicine"
+    ]
+
+    # Map user's specialty to "General Medicine" if it's in the list
+    user_specialty = st.session_state.specialty
+    default_specialty = "Emergency Medicine"
+    for specialty, data in specialist_data.items():
+        if user_specialty == specialty or (user_specialty in data.get("subgroups", [])):
+            default_specialty = specialty
+            break
+
+    default_index = specialities.index(default_specialty)
+
     specialist = st.radio("**:black[Choose Your Specialty Group]**", specialities, 
                           captions=captions, 
-                          index=specialities.index(st.session_state.specialist),
+                          index=default_index,
                           key="choose_specialist_radio")
 
     if specialist and specialist != st.session_state.specialist:
@@ -836,7 +866,26 @@ def choose_specialist_radio():
         st.session_state.assistant_id = specialist_data[specialist]["assistant_id"]
         st.session_state.specialist_avatar = specialist_data[specialist]["avatar"]
         st.session_state.system_instructions = specialist_data[specialist]["system_instructions"]
+        
+        # Display subgroup if available
+        if "subgroups" in specialist_data[specialist]:
+            subgroup = st.selectbox("Select your specific specialty:", 
+                                    ["General"] + specialist_data[specialist]["subgroups"],
+                                    index=0 if user_specialty not in specialist_data[specialist]["subgroups"] else 
+                                    specialist_data[specialist]["subgroups"].index(user_specialty) + 1)
+            if subgroup != "General":
+                st.session_state.subgroup_specialty = subgroup
+            else:
+                st.session_state.subgroup_specialty = specialist
+        else:
+            st.session_state.subgroup_specialty = specialist
+        
         st.rerun()
+
+    # Display current specialty information
+    # st.write(f"Current Specialty Group: **{st.session_state.specialist}**")
+    # if hasattr(st.session_state, 'subgroup_specialty') and st.session_state.subgroup_specialty != st.session_state.specialist:
+    #     st.write(f"Specific Specialty: **{st.session_state.subgroup_specialty}**")
 
 def button_input(specialist, prompt):
     st.session_state.assistant_id = specialist_data[specialist]["assistant_id"]
@@ -1137,7 +1186,7 @@ def display_sidebar():
             """, 
             unsafe_allow_html=True)
         
-        tab1, tab2, tab4, tab5 = st.tabs(["Functions", "Specialists", "Sessions","Settings"])
+        tab1, tab2, tab5 = st.tabs(["Functions", "Specialists","Settings"])
         
         with tab1:
             #display_pt_headline()
@@ -1153,8 +1202,8 @@ def display_sidebar():
         with tab5:
             display_settings_tab()
 
-        with tab4:
-            display_sessions_tab()
+        # with tab4:
+        #     display_sessions_tab()
 
         container = st.container()
         container.float(float_css_helper(bottom="10px", padding= "10px"))
@@ -1200,7 +1249,7 @@ def display_functions_tab():
     # with col2:
     #     if st.button("💉Which Procedure", use_container_width=True):
     #         consult_specialist_and_update_ddx("Which Procedure", procedure_checklist)
-
+    display_sessions_tab()
     st.subheader('📝Clinical Notes')
     col1, col2 = st.columns(2)
     with col1:
@@ -1243,7 +1292,7 @@ def display_functions_tab():
         #     st.session_state.specialist = "Emergency Medicine"
         #     consult_specialist_and_update_ddx("Next Step Recommendation", next_step)
         if st.button("🤔Challenge the DDX", use_container_width=True, help="Use to broaden and critique the current DDX"):
-            st.session_state.specialist = "General"
+            st.session_state.specialist = "General Medicine"
             consult_specialist_and_update_ddx("Challenge the DDX", challenge_ddx)
             st.session_state.specialist = "Emergency Medicine"
     with col2:
@@ -1611,7 +1660,7 @@ def get_response(user_question: str) -> str:
             messages = [system_message, user_message]
 
             # LLM Model Response
-            response = model.invoke(messages)
+            response = anthropic_model.invoke(messages)
             response_text = response.content
 
         response_placeholder.markdown(response_text)
