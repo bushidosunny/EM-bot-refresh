@@ -1558,9 +1558,6 @@ def display_feedback_button():
     if st.button("📝 Give Feedback", use_container_width=True, help="Help make EMMA better"):
         st.session_state.show_feedback = True
 
-
-
-############################################# User input processing #############################################
 def handle_user_input_container():
     input_container = st.container()
     input_container.float(float_css_helper(
@@ -1603,6 +1600,9 @@ def handle_user_input_container():
     elif user_chat:
         process_user_question(user_chat, specialist)
         st.rerun()
+
+
+############################################# User input processing #############################################
 
 def process_user_question(user_question, specialist):
     if user_question:
