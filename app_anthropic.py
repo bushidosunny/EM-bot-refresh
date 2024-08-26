@@ -1213,8 +1213,9 @@ def display_sidebar():
         #         new_thread()
         #     if st.button("No, cancel", type="secondary", use_container_width=True):
         #         st.session_state.new_session_clicked = False
-        
-        st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab")
+        st.divider()
+        st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
+        st.divider()
                 
         container = st.container()
         container.float(float_css_helper(bottom="10px", padding= "10px", background_color="#CED6E3", border_radius="10px"))
@@ -1327,7 +1328,7 @@ def display_functions_tab():
             st.session_state.specialist = "Musculoskeletal Systems"
             consult_specialist_and_update_ddx("Physical Therapy Plan", pt_plan)
             st.session_state.specialist = "Emergency Medicine"
-    st.divider()
+
 
     
        
@@ -1352,7 +1353,7 @@ def display_specialist_tab():
     st.text("")
     st.text("")
     st.text("")
-    st.markdown("---")
+
 
 def display_settings_tab():
     st.header("User Settings")
