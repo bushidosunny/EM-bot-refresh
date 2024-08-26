@@ -1321,6 +1321,7 @@ def display_settings_tab():
         )
 
         st.success("Settings saved successfully!")
+        time.sleep(1)
         st.rerun()  # Rerun the app to apply changes
 
 

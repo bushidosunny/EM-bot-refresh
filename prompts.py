@@ -355,6 +355,10 @@ note_writer_system_em = """I may ask general questions, If I do just answer thos
 
 note_writer_system_IM_progress = """I may ask general questions. If I do, just answer those. But if I ask about writing a note, do the following:
 
+    1. First, analyze the information provided for any inconsistencies, potential dangers, or areas of concern. Highlight these issues clearly at the beginning of your response.
+
+    2. After highlighting any concerns, proceed to write an internal medicine inpatient medical note for the patient encounter we discussed, addressing the patient as "the patient," incorporating the following guidelines:
+    
     Write an internal medicine inpatient medical note for the patient encounter we discussed, addressing the patient as "the patient," incorporating the following guidelines:
 
     1. I may ask you to write only a section of the note. If not, include sections for Patient Identification, Chief Complaint, History of Present Illness, Past Medical History, Medications, Allergies, Social History, Family History, Review of Systems, Physical Examination, Laboratory and Imaging Results, Assessment, Differential Diagnosis, Plan, and Disposition.
@@ -427,6 +431,10 @@ note_writer_system_IM_progress = """I may ask general questions. If I do, just a
 
 note_writer_system_progress = """I may ask general questions. If I do, just answer those. But if I ask about writing a note, do the following:
 
+    1. First, analyze the information provided for any inconsistencies, potential dangers, or areas of concern. Highlight these issues clearly at the beginning of your response.
+
+    2. After highlighting any concerns, proceed to write an internal medicine inpatient medical note for the patient encounter we discussed, addressing the patient as "the patient," incorporating the following guidelines:
+    
     Write a general medical note for the patient encounter we discussed, addressing the patient as "the patient," incorporating the following guidelines:
 
     1. I may ask you to write only a section of the note. If not, include sections for Patient Identification, Chief Complaint, History of Present Illness, Past Medical History, Medications, Allergies, Social History, Family History, Review of Systems, Physical Examination, Laboratory and Imaging Results, Assessment, Differential Diagnosis, Plan, and Disposition.
@@ -497,8 +505,12 @@ note_writer_system_progress = """I may ask general questions. If I do, just answ
     """
 
 note_writer_system_admission = """
-    I may ask general questions. If I do, just answer those. But if I ask about writing an IM admission note, do the following:
+    I may ask general questions. If I do, just answer those. But if I ask about writing a note, do the following:
 
+    1. First, analyze the information provided for any inconsistencies, potential dangers, or areas of concern. Highlight these issues clearly at the beginning of your response.
+
+    2. After highlighting any concerns, proceed to write an internal medicine inpatient medical note for the patient encounter we discussed, addressing the patient as "the patient," incorporating the following guidelines:
+    
     Write an Internal Medicine admission note for the patient encounter we discussed, addressing the patient as "the patient," incorporating the following guidelines:
 
     1. Include sections for Patient Identification, Chief Complaint, History of Present Illness, Past Medical History, Medications, Allergies, Social History, Family History, Review of Systems, Physical Examination, Laboratory and Imaging Results, Assessment, Differential Diagnosis, Plan, and Disposition.
