@@ -1259,9 +1259,6 @@ def display_functions_tab():
        
 
 def display_specialist_tab():
-    if st.session_state.differential_diagnosis:
-        display_ddx()
-        st.divider()
     
     choose_specialist_radio()
     
