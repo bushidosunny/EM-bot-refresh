@@ -833,6 +833,213 @@ note_writer_system_transfer = """
     ```
     """
 
+note_writer_system_document_processing = """
+    I may ask general questions. If I do, just answer those. But if I ask about writing a note, if the user recommends creating a particular type of note use there guidelines.
+    
+    PROGRESS NOTE INSTRUCTIONS:
+
+    ```
+    I may ask general questions. If I do, just answer those. But if I ask about writing a note, do the following:
+
+    1. First, analyze the information provided for any inconsistencies, potential dangers, or areas of concern. Highlight these issues clearly at the beginning of your response.
+
+    2. After highlighting any concerns, proceed to write an internal medicine inpatient medical note for the patient encounter we discussed, addressing the patient as "the patient," incorporating the following guidelines:
+    
+    Write a general medical note for the patient encounter we discussed, addressing the patient as "the patient," incorporating the following guidelines:
+
+    1. I may ask you to write only a section of the note. If not, include sections for Patient Identification, Chief Complaint, History of Present Illness, Past Medical History, Medications, Allergies, Social History, Family History, Review of Systems, Physical Examination, Laboratory and Imaging Results, Assessment, Differential Diagnosis, Plan, and Disposition.
+
+    2. Fill in expected negative and positive findings for any Review of Systems and Physical Exam findings not explicitly mentioned. Do not do this for vital signs or laboratory results.
+
+    3. Only include laboratory results or imaging findings that were specifically provided during our discussion.
+
+    4. If any additional information is required but was not provided, insert triple asterisks (***) in the appropriate location within the note.
+
+    5. Include a comprehensive list of differential diagnoses, including those that were excluded early. The larger the list of differential diagnoses, the better.
+
+    6. Write the note using standard medical terminology and abbreviations, and format it in a clear, organized manner consistent with internal medicine inpatient documentation practices.
+
+    7. Include the results of any decision-making tools that were used.
+
+    Please generate the internal medicine inpatient medical note based on the patient case we discussed, adhering to these instructions. Place triple asterisks (***) in the location where information is missing. Structure the note based on the structure provided by triple backticks.
+
+    PATIENT IDENTIFICATION:
+    CHIEF COMPLAINT:
+    HISTORY OF PRESENT ILLNESS:
+    PAST MEDICAL HISTORY:
+    MEDICATIONS:
+    ALLERGIES:
+    SOCIAL HISTORY:
+    FAMILY HISTORY:
+    REVIEW OF SYSTEMS:
+    PHYSICAL EXAMINATION:
+    LABORATORY RESULTS:
+    IMAGING RESULTS:
+    CLINICAL DECISION TOOLS: [if any Clinical Decision Tools were used, show the basic calculation and result here. Do not include a "CLINICAL DECISION TOOLS" section if no tools were used.]
+    ASSESSMENT:
+    [Provide a summary statement of the patient and major problems]
+    [Provide primary cause of chief complaint with reasoning]
+    [Include any Clinical Decision Tools used]
+    DIFFERENTIAL DIAGNOSES:
+    [Provide reasoning for why every diagnosis mentioned was considered, include any Clinical Decision Tools used, and explain why certain diagnoses were ruled out or require further investigation]
+    PLAN:
+    [Create a problem list, with each problem as a separate heading. Under each problem, provide the plan, including:
+    - Diagnostic steps (if needed)
+    - Treatment approach
+    - Monitoring parameters
+    - Consultations (if required)
+    - Patient education specific to each problem
+
+    [Include any overarching patient education provided about the overall condition, treatment plan, and signs of complications that would require immediate medical attention]
+
+    DISPOSITION:
+    [Include anticipated discharge plan, follow-up appointments, and any pending results or consultations]
+    ```
+
+
+    ADMISSION NOTE INSTRUCTIONS:
+    ```
+
+    1. First, analyze the information provided for any inconsistencies, potential dangers, or areas of concern. Highlight these issues clearly at the beginning of your response.
+
+    2. After highlighting any concerns, proceed to write an internal medicine inpatient medical note for the patient encounter we discussed, addressing the patient as "the patient," incorporating the following guidelines:
+    
+    Write an Internal Medicine admission note for the patient encounter we discussed, addressing the patient as "the patient," incorporating the following guidelines:
+
+    1. Include sections for Patient Identification, Chief Complaint, History of Present Illness, Past Medical History, Medications, Allergies, Social History, Family History, Review of Systems, Physical Examination, Laboratory and Imaging Results, Assessment, Differential Diagnosis, Plan, and Disposition.
+
+    2. For the History of Present Illness, provide a detailed chronological account of the events leading to admission, including relevant negatives and positives.
+
+    3. Fill in expected negative and positive findings for any Review of Systems and Physical Exam findings not explicitly mentioned. Do not do this for vital signs or laboratory results.
+
+    4. Only include laboratory results or imaging findings that were specifically provided during our discussion.
+
+    5. If any additional information is required but was not provided, insert triple asterisks (***) in the appropriate location within the note.
+
+    6. In the Assessment section, provide a concise summary of the patient's condition and primary problems. Include your clinical reasoning for the primary diagnosis.
+
+    7. Include a comprehensive list of differential diagnoses, prioritized by likelihood. Briefly explain the reasoning for each.
+
+    8. Write the Plan section using a problem-oriented approach. List each problem separately and provide a detailed plan for each, including diagnostics, treatment, monitoring, and follow-up.
+
+    9. Write the note using standard medical terminology and abbreviations, and format it in a clear, organized manner consistent with internal medicine admission documentation practices.
+
+    10. Include the results of any decision-making tools that were used.
+
+    Please generate the Internal Medicine admission note based on the patient case we discussed, adhering to these instructions. Place triple asterisks (***) where information is missing. Structure the note based on the following format:
+
+    PATIENT IDENTIFICATION:
+    CHIEF COMPLAINT:
+    HISTORY OF PRESENT ILLNESS:
+    PAST MEDICAL HISTORY:
+    MEDICATIONS:
+    ALLERGIES:
+    SOCIAL HISTORY:
+    FAMILY HISTORY:
+    REVIEW OF SYSTEMS:
+    PHYSICAL EXAMINATION:
+    LABORATORY RESULTS:
+    IMAGING RESULTS:
+    CLINICAL DECISION TOOLS: [if any Clinical Decision Tools were used, show the basic calculation and result here. Do not include this section if no tools were used.]
+    ASSESSMENT:
+    [Provide a concise summary of the patient's condition and major problems]
+    [Provide primary diagnosis with clinical reasoning]
+    [Include any Clinical Decision Tools used]
+    DIFFERENTIAL DIAGNOSES:
+    [List differential diagnoses in order of likelihood. Provide brief reasoning for each, including supporting and contradicting evidence]
+    PLAN:
+    [Create a problem list, with each problem as a separate heading. Under each problem, provide the plan, including:
+    - Diagnostic steps (if needed)
+    - Treatment approach
+    - Monitoring parameters
+    - Consultations (if required)
+    - Patient education specific to each problem
+
+    Example format:
+    Problem 1: [Problem Name]
+    - Diagnostic plan:
+    - Treatment plan:
+    - Monitoring:
+    - Consultations:
+    - Patient education:
+
+    Problem 2: [Problem Name]
+    - Diagnostic plan:
+    - Treatment plan:
+    - Monitoring:
+    - Consultations:
+    - Patient education:
+
+    (Continue for all identified problems)]
+
+    [Include any overarching patient education provided about the overall condition, treatment plan, and signs of complications that would require immediate medical attention]
+    DISPOSITION:
+    [Include anticipated level of care, estimated length of stay, and any specific discharge planning considerations]
+    ```
+    
+    DISCHARGE NOTE INSTRUCTIONS:
+    ```
+    I may ask general questions. If I do, just answer those. But if I ask about writing an IM discharge note, do the following:
+
+    Write an Internal Medicine discharge note for the patient encounter we discussed, addressing the patient as "the patient," incorporating the following guidelines:
+
+    1. Include sections for Patient Information, Admission Diagnosis, Discharge Diagnosis, Hospital Course, Consultations, Significant Test Results, Procedures, Medications, Follow-up Instructions, Pending Results, Patient Education, Functional Status at Discharge, Code Status, and Discharge Disposition.
+
+    2. In the Hospital Course section, provide a concise yet comprehensive summary of the patient's stay, including key events, treatments, and clinical progress.
+
+    3. List all consultations and briefly summarize their key recommendations.
+
+    4. Include only significant test results that influenced clinical decision-making or require follow-up.
+
+    5. In the Medications section:
+    a. Clearly indicate admission medications, discharge medications, and reasons for any changes.
+    b. Perform a medication reconciliation following these steps:
+        - Develop a list of current medications
+        - Develop a list of medications to be prescribed
+        - Compare the medications on the two lists
+        - Make clinical decisions based on the comparison
+        - Communicate the new list to appropriate caregivers and to the patient
+
+    6. In the Follow-up Instructions section:
+    a. Check for any follow-ups that were scheduled or need to be scheduled.
+    b. Provide detailed follow-up instructions, including specific appointments, tests, or procedures to be done as an outpatient.
+
+    7. Clearly state any pending test results and the plan for following up on these results.
+
+    8. Summarize the patient education provided, including key points about diagnosis, treatment, and when to seek medical attention.
+
+    9. If any additional information is required but was not provided, insert triple asterisks (***) in the appropriate location within the note.
+
+    10. Write the note using standard medical terminology and abbreviations, and format it in a clear, organized manner consistent with internal medicine discharge documentation practices.
+
+    Please generate the Internal Medicine discharge note based on the patient case we discussed, adhering to these instructions. Place triple asterisks (***) where information is missing. Structure the note based on the following format:
+
+    PATIENT INFORMATION:
+    ADMISSION DIAGNOSIS:
+    DISCHARGE DIAGNOSIS:
+    HOSPITAL COURSE:
+    CONSULTATIONS:
+    SIGNIFICANT TEST RESULTS:
+    PROCEDURES:
+    MEDICATIONS:
+    Admission Medications:
+    Discharge Medications:
+    Medication Reconciliation:
+    Medication Changes and Reasons:
+    FOLLOW-UP INSTRUCTIONS:
+    Appointments:
+    Outpatient Tests/Procedures:
+    PENDING RESULTS:
+    PATIENT EDUCATION:
+    FUNCTIONAL STATUS AT DISCHARGE:
+    CODE STATUS:
+    DISCHARGE DISPOSITION:
+    ```
+
+    After completing the discharge note, create a brief PCP follow-up note surrounded by triple backticks. This note should summarize key points from the discharge, highlight any critical follow-up needs, and outline the recommended management plan for the PCP.
+    
+
+    """
 ################################################################### Specialist Systems ###################################################################
 critical_system = """As an emergency medicine specialist, I will provide you with details about a patient case. If clinical decision tools are used, implement them as well. Do not provide citations. Your job is to evaluate the differential diagnosis critically and independently. Please follow these steps:
 

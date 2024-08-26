@@ -1994,7 +1994,7 @@ def document_processing():
                                     value="Please evaluate these documents",
                                     height=50)
         
-        if st.button("Analyze Document"):
+        if st.button("Process Document"):
             if doc_text:
                 # Prepare the message for the chatbot
                 analysis_request = f"""
