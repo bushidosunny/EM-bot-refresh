@@ -895,6 +895,12 @@ def choose_specialist_radio():
 def button_input(specialist, prompt):
     st.session_state.assistant_id = specialist_data[specialist]["assistant_id"]
     st.session_state.system_instructions = specialist_data[specialist]["system_instructions"]
+    print(f'DEBUG BUTTON INPUT SPECIALIST CHOSEN: {specialist}')
+    if specialist == NOTE_WRITER:
+        st.session_state.system_instructions = get_note_writer_instructions()
+    else:
+        st.session_state.system_instructions = specialist_data[specialist]["system_instructions"]
+    print(f'DEBUG BUTTON INPUT system_instructions: {st.session_state.system_instructions}')
  
     user_question = prompt
     if user_question:
@@ -1307,7 +1313,7 @@ def display_functions_tab():
 
     # internal medicine specific
     # st.divider()
-    if st.session_state.get('specialty') == "Internal Medicine" or st.session_state.get('specialty') == "Internal Medicine":
+    if st.session_state.get('specialty') == "Internal Medicine":
         document_processing()
         col1, col2 = st.columns(2)
         with col1:
@@ -1319,17 +1325,39 @@ def display_functions_tab():
             note_types = list(note_type_instructions.keys())  # Use the keys from our note_type_instructions dictionary
             
             current_note_type = user.preferred_note_type if hasattr(user, 'preferred_note_type') else "Emergency Medicine Note"
-            new_note_type = st.selectbox("Preferred Note Type", label_visibility="collapsed",
-                                        options=note_types, 
-                                        index=note_types.index(current_note_type) if current_note_type in note_types else 0,
-                                        key="preferred_note_type")
+            
+            # Use a unique key for the selectbox
+            selectbox_key = "preferred_note_type_selectbox"
+            
+            new_note_type = st.selectbox(
+                "Preferred Note Type", 
+                options=note_types, 
+                index=note_types.index(current_note_type),
+                key=selectbox_key
+            )
 
+            # Check if the note type has changed
+            if new_note_type != current_note_type:
+                # Update the user's preferred note type in the database
+                users_collection.update_one(
+                    {"username": st.session_state.username},
+                    {"$set": {"preferred_note_type": new_note_type}}
+                )
+                
+                # Update the session state
+                st.session_state.preferred_note_type = new_note_type
+                
+                # Optionally, you can display a success message
+                st.success(f"Preferred note type updated to: {new_note_type}")
+                
+                # If you need to refresh the page to reflect changes, you can use:
+                # st.rerun()
             
         col3, col4 = st.columns(2)
         with col3:
-            if st.button('Complete Note', use_container_width=True, help="Writes a full medical note on this patient"):
+            if st.button('Complete Note', use_container_width=True, help=f"Writes a full {st.session_state.preferred_note_type} note on this patient"):
                 st.session_state.specialist = NOTE_WRITER
-                consult_specialist_and_update_ddx("Full Medical Note", "Write a note on this patient")
+                consult_specialist_and_update_ddx("Full Medical Note", f"Write a {st.session_state.preferred_note_type} note on this patient")
                 st.session_state.specialist = st.session_state.specialty
             if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
                 st.session_state.specialist = NOTE_WRITER
@@ -1727,7 +1755,7 @@ def get_response(user_question: str) -> str:
             specialist = st.session_state.specialist
             if specialist == NOTE_WRITER:
                 system_instructions = specialist_data[specialist]["system_instructions"]()
-                # print(f'DEBUG SYSTEM if INSTRUCTIONS: {system_instructions}')
+                print(f'DEBUG SYSTEM GET_RESPONSE if INSTRUCTIONS: {system_instructions}')
             else:
                 system_instructions = specialist_data[specialist]["system_instructions"]
                 # print(f'DEBUG SYSTEM else INSTRUCTIONS: {system_instructions}')
