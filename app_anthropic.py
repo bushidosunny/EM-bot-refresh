@@ -1305,29 +1305,59 @@ def display_functions_tab():
         consult_specialist_and_update_ddx("Treatment Plan", treatment_plan)
         st.session_state.specialist = st.session_state.specialty
     
-    st.divider()
-    st.subheader('📝Clinical Notes')
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button('Complete Note', use_container_width=True, help="Writes a full medical note on this patient"):
-            st.session_state.specialist = NOTE_WRITER
-            consult_specialist_and_update_ddx("Full Medical Note", "Write a note on this patient")
-            st.session_state.specialist = st.session_state.specialty
-        if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
-            st.session_state.specialist = NOTE_WRITER
-            consult_specialist_and_update_ddx("HPI only", create_hpi)
-            st.session_state.specialist = st.session_state.specialty
-       
-    with col2:
-        if st.button('Focused Note', use_container_width=True, help="HPI, ROS, PE, A/P, then paste EMR smart data (meds, labs, imaging, etc)"):
-            st.session_state.specialist = NOTE_WRITER
-            consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
-            st.session_state.specialist = "Emergency Medicine"
 
-        if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
-            st.session_state.specialist = NOTE_WRITER
-            consult_specialist_and_update_ddx("A&P only", create_ap)
-            st.session_state.specialist = "Emergency Medicine"
+    # internal medicine specific
+    st.divider()
+    if st.session_state.get('specialty') == "Internal Medicine" or st.session_state.get('specialty') == "Internal Medicine":
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.subheader('📝Clinical Notes')
+            if st.button('Complete Note', use_container_width=True, help="Writes a full medical note on this patient"):
+                st.session_state.specialist = NOTE_WRITER
+                consult_specialist_and_update_ddx("Full Medical Note", "Write a note on this patient")
+                st.session_state.specialist = st.session_state.specialty
+            if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
+                st.session_state.specialist = NOTE_WRITER
+                consult_specialist_and_update_ddx("HPI only", create_hpi)
+                st.session_state.specialist = st.session_state.specialty
+        
+        with col2:
+
+            if st.button('Focused Note', use_container_width=True, help="HPI, ROS, PE, A/P, then paste EMR smart data (meds, labs, imaging, etc)"):
+                st.session_state.specialist = NOTE_WRITER
+                consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
+                st.session_state.specialist = "Emergency Medicine"
+
+            if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
+                st.session_state.specialist = NOTE_WRITER
+                consult_specialist_and_update_ddx("A&P only", create_ap)
+                st.session_state.specialist = "Emergency Medicine"
+    # other specialties
+    else:
+        st.subheader('📝Clinical Notes')
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button('Complete Note', use_container_width=True, help="Writes a full medical note on this patient"):
+                st.session_state.specialist = NOTE_WRITER
+                consult_specialist_and_update_ddx("Full Medical Note", "Write a note on this patient")
+                st.session_state.specialist = st.session_state.specialty
+            if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
+                st.session_state.specialist = NOTE_WRITER
+                consult_specialist_and_update_ddx("HPI only", create_hpi)
+                st.session_state.specialist = st.session_state.specialty
+        
+        with col2:
+            if st.button('Focused Note', use_container_width=True, help="HPI, ROS, PE, A/P, then paste EMR smart data (meds, labs, imaging, etc)"):
+                st.session_state.specialist = NOTE_WRITER
+                consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
+                st.session_state.specialist = "Emergency Medicine"
+
+            if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
+                st.session_state.specialist = NOTE_WRITER
+                consult_specialist_and_update_ddx("A&P only", create_ap)
+                st.session_state.specialist = "Emergency Medicine"
+
     st.subheader('📝Notes for Patients')
     update_patient_language()
     col1, col2 = st.columns(2)
@@ -1368,7 +1398,19 @@ def display_specialist_tab():
     st.text("")
     st.text("")
 
+def select_note_type():
+    new_specialty = st.selectbox("Default Specialty", 
+                                 options=SPECIALTIES, 
+                                 index=SPECIALTIES.index(current_specialty))
 
+    # Preferred Note Type
+    note_types = list(note_type_instructions.keys())  # Use the keys from our note_type_instructions dictionary
+    
+    current_note_type = user.preferred_note_type if hasattr(user, 'preferred_note_type') else "Emergency Medicine Note"
+    new_note_type = st.selectbox("Preferred Note Type", 
+                                 options=note_types, 
+                                 index=note_types.index(current_note_type) if current_note_type in note_types else 0)
+    
 def display_settings_tab():
     st.header("User Settings")
     st.markdown("[View EMMA Help Guide](https://veil-cry-a60.notion.site/EMMA-Help-Page-e681bf1c061041719b6666376cc88386)", unsafe_allow_html=True)
