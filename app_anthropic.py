@@ -895,12 +895,12 @@ def choose_specialist_radio():
 def button_input(specialist, prompt):
     st.session_state.assistant_id = specialist_data[specialist]["assistant_id"]
     st.session_state.system_instructions = specialist_data[specialist]["system_instructions"]
-    print(f'DEBUG BUTTON INPUT SPECIALIST CHOSEN: {specialist}')
+    # print(f'DEBUG BUTTON INPUT SPECIALIST CHOSEN: {specialist}')
     if specialist == NOTE_WRITER:
         st.session_state.system_instructions = get_note_writer_instructions()
     else:
         st.session_state.system_instructions = specialist_data[specialist]["system_instructions"]
-    print(f'DEBUG BUTTON INPUT system_instructions: {st.session_state.system_instructions}')
+    # print(f'DEBUG BUTTON INPUT system_instructions: {st.session_state.system_instructions}')
  
     user_question = prompt
     if user_question:
@@ -1366,12 +1366,12 @@ def display_functions_tab():
         with col4:
             if st.button('Focused Note', use_container_width=True, help="HPI, ROS, PE, A/P, then paste EMR smart data (meds, labs, imaging, etc)"):
                 st.session_state.specialist = NOTE_WRITER
-                consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
+                consult_specialist_and_update_ddx(f"Full Note except EMR results", f"Write a full {st.session_state.preferred_note_type} note except: 'VITALS', 'LABORATORY RESULTS', 'IMAGING'. put one triple asterisk (***) where the 'LABORATORY RESULTS' would have been.")
                 st.session_state.specialist = "Emergency Medicine"
 
             if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
                 st.session_state.specialist = NOTE_WRITER
-                consult_specialist_and_update_ddx("A&P only", create_ap)
+                consult_specialist_and_update_ddx(f"A&P only", create_ap)
                 st.session_state.specialist = "Emergency Medicine"
         
 
@@ -1629,7 +1629,7 @@ def display_delete_session_button(collection_name):
         col1, col2 = st.columns(2)
         with col1:
             if st.button(f"Yes, delete {collection_name} data", type='primary', use_container_width=True):
-                print(f'DEBUG DELETE SESSION DATA COLLECTION NAME: {collection_name}')
+                # print(f'DEBUG DELETE SESSION DATA COLLECTION NAME: {collection_name}')
                 delete_session_data(collection_name)
                 st.success(f"Patient Encounter data {collection_name} deleted successfully.")
                 st.session_state.delete_confirmation = False
@@ -1755,7 +1755,7 @@ def get_response(user_question: str) -> str:
             specialist = st.session_state.specialist
             if specialist == NOTE_WRITER:
                 system_instructions = specialist_data[specialist]["system_instructions"]()
-                print(f'DEBUG SYSTEM GET_RESPONSE if INSTRUCTIONS: {system_instructions}')
+                # print(f'DEBUG SYSTEM GET_RESPONSE if INSTRUCTIONS: {system_instructions}')
             else:
                 system_instructions = specialist_data[specialist]["system_instructions"]
                 # print(f'DEBUG SYSTEM else INSTRUCTIONS: {system_instructions}')
@@ -2088,7 +2088,7 @@ def document_processing():
                 # Add the analysis request to the chat history
                 st.session_state.specialist = NOTE_WRITER
                 st.session_state.preferred_note_type = "All Purpose Notes"
-                print(f'DEBUG DOCUMETN PROCESSING SPECIALIST: {st.session_state.specialist} and preferred_note_type: {st.session_state.preferred_note_type}')
+                # print(f'DEBUG DOCUMETN PROCESSING SPECIALIST: {st.session_state.specialist} and preferred_note_type: {st.session_state.preferred_note_type}')
                 consult_specialist_and_update_ddx("Analyze Document", analysis_request)
                 
                 # Get the chatbot's response (you'll need to implement this part based on your chatbot setup)
