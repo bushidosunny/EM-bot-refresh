@@ -34,6 +34,7 @@ cookie_manager = get_cookie_manager()
 EM_NOTE = "EM Note"
 GENERAL_MEDICINE = "General Medicine"
 EMERGENCY_MEDICINE = "Emergency Medicine"
+NOTE_WRITER = "Note Writer"
 
 
 SPECIALTIES = [

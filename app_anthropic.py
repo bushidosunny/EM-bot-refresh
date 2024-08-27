@@ -100,9 +100,12 @@ except (ServerSelectionTimeoutError, OperationFailure, ConfigurationError) as er
     st.error(f"Error connecting to MongoDB Atlas: {err}")
 
 def get_note_writer_instructions():
-    user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
-    preferred_note_type = user.preferred_note_type if hasattr(user, 'preferred_note_type') else "Emergency Medicine Note"
-    return note_type_instructions.get(preferred_note_type, note_writer_system)
+    if st.session_state.preferred_note_type:
+        return note_type_instructions.get(st.session_state.preferred_note_type, note_writer_system)
+    else:
+        user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
+        preferred_note_type = user.preferred_note_type if hasattr(user, 'preferred_note_type') else EM_NOTE
+        return note_type_instructions.get(preferred_note_type, note_writer_system)
 
 specialist_data = {
   EMERGENCY_MEDICINE: {
@@ -188,7 +191,7 @@ specialist_data = {
     "avatar": "https://cdn.pixabay.com/photo/2017/01/31/17/34/comic-characters-2025788_1280.png",
     "system_instructions": legal_system
   },
-  "Note Writer": {
+  NOTE_WRITER: {
     "assistant_id": "asst_Ua6cmp6dpTc33cSpuZxutGsX",
     "caption": "📝Medical Note Writer",
     "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png",
@@ -252,7 +255,8 @@ note_type_instructions = {
     "IM Discharge Note": note_writer_system_discharge,
     "IM Progress Note": note_writer_system_IM_progress,
     "Procedure Note": note_writer_system_procedure,
-    "Transfer Note": note_writer_system_transfer
+    "Transfer Note": note_writer_system_transfer,
+    "All Purpose Notes": note_writer_system_document_processing
 }
 
 ################################# Initialize Session State #####################################
@@ -265,6 +269,7 @@ def initialize_session_state():
         session_state.id = secrets.token_hex(8)
         session_state.user_id = None
         session_state.specialty = "Emergency Medicine"
+        session_state.preferred_note_type = None
         session_state.authentication_status = None
         session_state.show_registration = False
         session_state.show_forgot_username = False
@@ -925,9 +930,9 @@ def process_other_queries():
 
         with st.chat_message("AI", avatar=specialist_avatar):
             assistant_response = get_response(user_question)
-            if specialist != "Note Writer":
+            if specialist != NOTE_WRITER:
                 save_ai_message(st.session_state.username, specialist, assistant_response, specialist)
-            if specialist == "Note Writer":
+            if specialist == NOTE_WRITER:
                 save_note_details(st.session_state.username, assistant_response)
                 save_ai_message(st.session_state.username, specialist, assistant_response, specialist)
 
@@ -1305,22 +1310,22 @@ def display_functions_tab():
     col1, col2 = st.columns(2)
     with col1:
         if st.button('Complete Note', use_container_width=True, help="Writes a full medical note on this patient"):
-            st.session_state.specialist = "Note Writer"
+            st.session_state.specialist = NOTE_WRITER
             consult_specialist_and_update_ddx("Full Medical Note", "Write a note on this patient")
             st.session_state.specialist = st.session_state.specialty
         if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
-            st.session_state.specialist = "Note Writer"
+            st.session_state.specialist = NOTE_WRITER
             consult_specialist_and_update_ddx("HPI only", create_hpi)
             st.session_state.specialist = st.session_state.specialty
        
     with col2:
         if st.button('Focused Note', use_container_width=True, help="HPI, ROS, PE, A/P, then paste EMR smart data (meds, labs, imaging, etc)"):
-            st.session_state.specialist = "Note Writer"
+            st.session_state.specialist = NOTE_WRITER
             consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
             st.session_state.specialist = "Emergency Medicine"
 
         if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
-            st.session_state.specialist = "Note Writer"
+            st.session_state.specialist = NOTE_WRITER
             consult_specialist_and_update_ddx("A&P only", create_ap)
             st.session_state.specialist = "Emergency Medicine"
     st.subheader('📝Notes for Patients')
@@ -1675,10 +1680,12 @@ def get_response(user_question: str) -> str:
                     chat_context += f"AI: {message.content}\n"
             
             specialist = st.session_state.specialist
-            if specialist == "Note Writer":
+            if specialist == NOTE_WRITER:
                 system_instructions = specialist_data[specialist]["system_instructions"]()
+                # print(f'DEBUG SYSTEM if INSTRUCTIONS: {system_instructions}')
             else:
                 system_instructions = specialist_data[specialist]["system_instructions"]
+                # print(f'DEBUG SYSTEM else INSTRUCTIONS: {system_instructions}')
 
             if isinstance(system_instructions, list):
                 system_instructions = "\n".join(system_instructions)
@@ -2006,6 +2013,9 @@ def document_processing():
                 """
                 
                 # Add the analysis request to the chat history
+                st.session_state.specialist = NOTE_WRITER
+                st.session_state.preferred_note_type = "All Purpose Notes"
+                print(f'DEBUG DOCUMETN PROCESSING SPECIALIST: {st.session_state.specialist} and preferred_note_type: {st.session_state.preferred_note_type}')
                 consult_specialist_and_update_ddx("Analyze Document", analysis_request)
                 
                 # Get the chatbot's response (you'll need to implement this part based on your chatbot setup)

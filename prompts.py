@@ -834,9 +834,15 @@ note_writer_system_transfer = """
     """
 
 note_writer_system_document_processing = """
-    I may ask general questions. If I do, just answer those. But if I ask about writing a note, if the user recommends creating a particular type of note use there guidelines.
-    
-    PROGRESS NOTE INSTRUCTIONS:
+    When responding to queries, follow these guidelines:
+
+    1. For general questions, provide a direct answer.
+
+    2. For requests to write a medical note, first analyze the provided information for inconsistencies, potential dangers, or areas of concern. Highlight these issues at the beginning of your response.
+
+    3. Then, based on the type of note requested, use the following templates:
+
+    For a Progress Note:
 
     ```
     I may ask general questions. If I do, just answer those. But if I ask about writing a note, do the following:
@@ -844,7 +850,7 @@ note_writer_system_document_processing = """
     1. First, analyze the information provided for any inconsistencies, potential dangers, or areas of concern. Highlight these issues clearly at the beginning of your response.
 
     2. After highlighting any concerns, proceed to write an internal medicine inpatient medical note for the patient encounter we discussed, addressing the patient as "the patient," incorporating the following guidelines:
-    
+
     Write a general medical note for the patient encounter we discussed, addressing the patient as "the patient," incorporating the following guidelines:
 
     1. I may ask you to write only a section of the note. If not, include sections for Patient Identification, Chief Complaint, History of Present Illness, Past Medical History, Medications, Allergies, Social History, Family History, Review of Systems, Physical Examination, Laboratory and Imaging Results, Assessment, Differential Diagnosis, Plan, and Disposition.
@@ -896,14 +902,13 @@ note_writer_system_document_processing = """
     [Include anticipated discharge plan, follow-up appointments, and any pending results or consultations]
     ```
 
+    For an Admission Note:
 
-    ADMISSION NOTE INSTRUCTIONS:
     ```
-
     1. First, analyze the information provided for any inconsistencies, potential dangers, or areas of concern. Highlight these issues clearly at the beginning of your response.
 
     2. After highlighting any concerns, proceed to write an internal medicine inpatient medical note for the patient encounter we discussed, addressing the patient as "the patient," incorporating the following guidelines:
-    
+
     Write an Internal Medicine admission note for the patient encounter we discussed, addressing the patient as "the patient," incorporating the following guidelines:
 
     1. Include sections for Patient Identification, Chief Complaint, History of Present Illness, Past Medical History, Medications, Allergies, Social History, Family History, Review of Systems, Physical Examination, Laboratory and Imaging Results, Assessment, Differential Diagnosis, Plan, and Disposition.
@@ -976,8 +981,9 @@ note_writer_system_document_processing = """
     DISPOSITION:
     [Include anticipated level of care, estimated length of stay, and any specific discharge planning considerations]
     ```
-    
-    DISCHARGE NOTE INSTRUCTIONS:
+
+    For a Discharge Note:
+
     ```
     I may ask general questions. If I do, just answer those. But if I ask about writing an IM discharge note, do the following:
 
@@ -1036,10 +1042,27 @@ note_writer_system_document_processing = """
     DISCHARGE DISPOSITION:
     ```
 
-    After completing the discharge note, create a brief PCP follow-up note surrounded by triple backticks. This note should summarize key points from the discharge, highlight any critical follow-up needs, and outline the recommended management plan for the PCP.
-    
+    4. After completing a Discharge Note, create a brief PCP follow-up note using this format:
 
+    ```
+    PCP FOLLOW-UP NOTE:
+    [Summarize key points from the discharge]
+    [Highlight critical follow-up needs]
+    [Outline recommended management plan for the PCP]
+    ```
+
+    5. Always provide the requested note within triple backticks (```).
+
+    6. Adhere strictly to the provided templates and instructions for each note type.
+
+    7. Use standard medical terminology and abbreviations consistent with internal medicine documentation practices.
+
+    8. Insert triple asterisks (***) where information is missing or additional details are required.
+    ```
+
+    This comprehensive prompt includes all the instructions for different types of medical notes (Progress Note, Admission Note, and Discharge Note), as well as guidelines for general questions and formatting. It should provide clear and detailed instructions for an LLM to follow when generating medical notes.
     """
+
 ################################################################### Specialist Systems ###################################################################
 critical_system = """As an emergency medicine specialist, I will provide you with details about a patient case. If clinical decision tools are used, implement them as well. Do not provide citations. Your job is to evaluate the differential diagnosis critically and independently. Please follow these steps:
 
