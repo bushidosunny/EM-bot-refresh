@@ -1272,8 +1272,7 @@ def display_functions_tab():
     #         consult_specialist_and_update_ddx("Which Procedure", procedure_checklist)
     display_sessions_tab()
     
-    if st.session_state.get('specialty') == "Internal Medicine" or st.session_state.get('specialty') == "Internal Medicine":
-        document_processing()
+      
     
     st.divider()
     st.subheader('🧠Diagnostic Tools')
@@ -1307,12 +1306,27 @@ def display_functions_tab():
     
 
     # internal medicine specific
-    st.divider()
+    # st.divider()
     if st.session_state.get('specialty') == "Internal Medicine" or st.session_state.get('specialty') == "Internal Medicine":
-
+        document_processing()
         col1, col2 = st.columns(2)
         with col1:
             st.subheader('📝Clinical Notes')
+
+        with col2:
+            # Preferred Note Type
+            user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
+            note_types = list(note_type_instructions.keys())  # Use the keys from our note_type_instructions dictionary
+            
+            current_note_type = user.preferred_note_type if hasattr(user, 'preferred_note_type') else "Emergency Medicine Note"
+            new_note_type = st.selectbox("Preferred Note Type", label_visibility="collapsed",
+                                        options=note_types, 
+                                        index=note_types.index(current_note_type) if current_note_type in note_types else 0,
+                                        key="preferred_note_type")
+
+            
+        col3, col4 = st.columns(2)
+        with col3:
             if st.button('Complete Note', use_container_width=True, help="Writes a full medical note on this patient"):
                 st.session_state.specialist = NOTE_WRITER
                 consult_specialist_and_update_ddx("Full Medical Note", "Write a note on this patient")
@@ -1321,9 +1335,7 @@ def display_functions_tab():
                 st.session_state.specialist = NOTE_WRITER
                 consult_specialist_and_update_ddx("HPI only", create_hpi)
                 st.session_state.specialist = st.session_state.specialty
-        
-        with col2:
-
+        with col4:
             if st.button('Focused Note', use_container_width=True, help="HPI, ROS, PE, A/P, then paste EMR smart data (meds, labs, imaging, etc)"):
                 st.session_state.specialist = NOTE_WRITER
                 consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
@@ -1333,6 +1345,9 @@ def display_functions_tab():
                 st.session_state.specialist = NOTE_WRITER
                 consult_specialist_and_update_ddx("A&P only", create_ap)
                 st.session_state.specialist = "Emergency Medicine"
+        
+
+    
     # other specialties
     else:
         st.subheader('📝Clinical Notes')
@@ -1398,18 +1413,6 @@ def display_specialist_tab():
     st.text("")
     st.text("")
 
-def select_note_type():
-    new_specialty = st.selectbox("Default Specialty", 
-                                 options=SPECIALTIES, 
-                                 index=SPECIALTIES.index(current_specialty))
-
-    # Preferred Note Type
-    note_types = list(note_type_instructions.keys())  # Use the keys from our note_type_instructions dictionary
-    
-    current_note_type = user.preferred_note_type if hasattr(user, 'preferred_note_type') else "Emergency Medicine Note"
-    new_note_type = st.selectbox("Preferred Note Type", 
-                                 options=note_types, 
-                                 index=note_types.index(current_note_type) if current_note_type in note_types else 0)
     
 def display_settings_tab():
     st.header("User Settings")
