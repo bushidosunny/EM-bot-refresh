@@ -56,7 +56,7 @@ DISPOSITION:
 Begin writing the emergency medicine medical note based on these instructions and the provided patient information."""
 create_full_note_except_results = """Write a full note except: 'VITALS', 'LABORATORY RESULTS', 'IMAGING'. put one triple asterisk (***) where the 'LABORATORY RESULTS' would have been."""
 create_hpi = """Write only the CHIEF COMPLAINT, HISTORY OF PRESENT ILLNESS,REVIEW OF SYSTEM, SPAST MEDICAL HISTORY, PAST SOCIAL HISTORY, MEDICATIONS and PHYSICAL EXAMINATION"""
-create_ap = """Write only the assesment, ddx, plan and disposition"""
+create_ap = """Write only the MDM, assesment, plan and disposition"""
 challenge_ddx = "Consider the patient's case, the patient's timeline of events. Doubt the current differential diagnosis. How does one diagnose the disease considered and does this patient fit? Consider alternative explanations. Recreate the DDX"
 pt_education = """You are an emergency medicine specialist tasked with providing patient education materials. Based on the clinical details provided, generate an easy-to-understand patient education note in the specified language. follow the template separated by triple backticks:
     ```
@@ -339,18 +339,101 @@ note_writer_system_em = """I may ask general questions, If I do just answer thos
     PHYSICAL EXAMINATION:
     LABORATORY RESULTS:
     IMAGING:
-    CLINICAL DECISION TOOLS: [if any  Clinical Decision Tools were used, show the basic calculation and result here. Do not include a "CLINICAL DECISION TOOLS" section if no tools were used.]
+    CLINICAL DECISION TOOLS:
+    [If any Clinical Decision Tools were used, show the basic calculation and result here. Do not include a "CLINICAL DECISION TOOLS" section if no tools were used.]   
+    
+    MEDICAL DECISION MAKING:
+    [Summarize key findings from history, physical exam, and diagnostic studies]
+    [Explain clinical reasoning process]
+    [Discuss risk stratification for the patient's condition]
+    [Include differential diagnoses:]
+    - [List all diagnoses considered, from most to least likely, including those excluded early]
+    - [For each diagnosis, briefly state supporting and contradicting evidence from the patient's presentation]
+    - [Include probability estimates if discussed (very high, high, medium, low, or very low)]
+    - [Explain why certain diagnoses were ruled out or require further workup]
+    [Justify tests ordered, treatments given, and overall management plan]
+    [Address any uncertainties or complexities in the case and how they were approached]
+    [Explain how the differential informed the diagnostic and treatment plan]
+
     ASSESSMENT:
-    [provide a summary statement of the patient and major problems]
-    [Provide primary cause of chief complaint with reasoning]
-    [Include any Clinical Decision Tools used]
-    DIFFERENTIAL DIAGNOSES:
-    [provide reasoning to why every diagnosis mentioned was considered, include any Clinical Decision Tools used, and why no further workup was done in the ED, include if probability is qualitatively: very high, high, medium, low, or very low.]
+    [Provide a concise summary of the patient's primary problem(s) and working diagnosis]
+
     PLAN:
-    [Provide a bullet list of problems identified, plan, include the reasoning discussed.]
-    [if patient has normal mental status and is an adult. Explicitly document that the patient (or caretaker) was educated about the condition, treatment plan, and signs of complications that would require immediate medical attention.]
+    [Provide a bullet list of problems identified and plans, including the reasoning discussed]
+    [If the patient has normal mental status and is an adult, explicitly document that the patient (or caretaker) was educated about the condition, treatment plan, and signs of complications that would require immediate medical attention]
     DISPOSITION:
         ```
+    """
+
+note_writer_system_em2 = """I may ask general questions. If I do, just answer those. But if I ask about writing a note, do the following:
+
+    Write an emergency medicine medical note for the patient encounter we discussed, addressing the patient as "the patient," incorporating the following guidelines:
+
+    1. I may ask for you to write only a section of the note. If not specified, include sections for Chief Complaint, History of Present Illness, Review of Systems, Past Medical History, Family History, Past Social History, Medications, Allergies, Vitals, Physical Exam, Laboratory Results, Imaging, Clinical Decision Tools, Medical Decision Making, Assessment, Differential Diagnosis, Plan, and Disposition.
+
+    2. Fill in expected negative and positive findings for any Review of Systems and Physical Exam findings not explicitly mentioned. Do not do this for vital signs.
+
+    3. Do not include any laboratory results or imaging findings unless they were specifically provided during our discussion.
+
+    4. If any additional information is required but was not provided, insert triple asterisks (***) in the appropriate location within the note.
+
+    5. Include every disease mentioned under the differential diagnosis, including those that were excluded early. The larger the list of differential diagnoses, the better.
+
+    6. Write the note using standard medical terminology and abbreviations, and format it in a clear, organized manner consistent with emergency department documentation practices.
+
+    7. Include the results of any decision-making tools that were used.
+
+    Please generate the emergency medicine medical note based on the patient case we discussed, adhering to these instructions. Place triple asterisks (***) in the location where additional information is needed. Structure the note based on the structure provided by triple backticks:
+
+    ```
+    CHIEF COMPLAINT:
+
+    HISTORY OF PRESENT ILLNESS:
+
+    REVIEW OF SYSTEMS:
+
+    PAST MEDICAL HISTORY:
+
+    FAMILY HISTORY:
+
+    PAST SOCIAL HISTORY:
+
+    MEDICATIONS:
+
+    ALLERGIES:
+
+    VITALS:
+
+    PHYSICAL EXAMINATION:
+
+    LABORATORY RESULTS:
+
+    IMAGING:
+
+    CLINICAL DECISION TOOLS:
+    [If any Clinical Decision Tools were used, show the basic calculation and result here. Do not include a "CLINICAL DECISION TOOLS" section if no tools were used.]   
+    
+    MEDICAL DECISION MAKING:
+    [Summarize key findings from history, physical exam, and diagnostic studies]
+    [Explain clinical reasoning process]
+    [Discuss risk stratification for the patient's condition]
+    [Include differential diagnoses:]
+    - [List all diagnoses considered, from most to least likely, including those excluded early]
+    - [For each diagnosis, briefly state supporting and contradicting evidence from the patient's presentation]
+    - [Include probability estimates if discussed (very high, high, medium, low, or very low)]
+    - [Explain why certain diagnoses were ruled out or require further workup]
+    [Justify tests ordered, treatments given, and overall management plan]
+    [Address any uncertainties or complexities in the case and how they were approached]
+    [Explain how the differential informed the diagnostic and treatment plan]
+
+    ASSESSMENT:
+    [Provide a concise summary of the patient's primary problem(s) and working diagnosis]
+
+    PLAN:
+    [Provide a bullet list of problems identified and plans, including the reasoning discussed]
+    [If the patient has normal mental status and is an adult, explicitly document that the patient (or caretaker) was educated about the condition, treatment plan, and signs of complications that would require immediate medical attention]
+    DISPOSITION:
+    ```
     """
 
 note_writer_system_IM_progress = """I may ask general questions. If I do, just answer those. But if I ask about writing a note, do the following:

@@ -91,8 +91,8 @@ class User:
     username: str
     email: str
     name: str
-    specialty: str = "Emergency Medicine"
-    preferred_note_type: str = "Emergency Medicine Note"
+    specialty: str = EMERGENCY_MEDICINE
+    preferred_templates: Dict[str, str] = field(default_factory=dict)
     _id: ObjectId = field(default_factory=ObjectId)
     password: Optional[bytes] = None
     user_id: str = field(default_factory=lambda: secrets.token_hex(16))
@@ -105,6 +105,106 @@ class User:
     preferences: Dict[str, List] = field(default_factory=lambda: {"note_templates": []})
     recordings_count: int = 0
     transcriptions_count: int = 0
+    shared_templates: List[Dict] = field(default_factory=list)
+
+    def set_preferred_template(self, note_type: str, template_id: str):
+        self.preferred_templates[note_type] = template_id
+
+    def get_preferred_template(self, note_type: str) -> Optional[str]:
+        return self.preferred_templates.get(note_type)
+
+
+    
+    def get_note_templates(self):
+        """Retrieve all custom note templates for the user."""
+        return self.preferences.get("note_templates", [])
+
+    def add_note_template(self, title: str, note_type: str, content: str):
+        """Add a new custom note template."""
+        if "note_templates" not in self.preferences:
+            self.preferences["note_templates"] = []
+        
+        new_template = {
+            "id": str(ObjectId()),
+            "title": title,
+            "type": note_type,
+            "content": content,
+            "use_count": 0,
+            "created_at": datetime.datetime.now(),
+            "updated_at": datetime.datetime.now()
+        }
+        self.preferences["note_templates"].append(new_template)
+
+    def delete_note_template(self, template_id: str):
+        """Delete a custom note template."""
+        self.preferences["note_templates"] = [t for t in self.preferences.get("note_templates", []) if t["id"] != template_id]
+
+    def update_note_template(self, template_id: str, name: str = None, note_type: str = None, system_prompt: str = None):
+        """Update an existing custom note template."""
+        for template in self.preferences.get("note_templates", []):
+            if template["id"] == template_id:
+                if name:
+                    template["name"] = name
+                if note_type:
+                    template["note_type"] = note_type
+                if system_prompt:
+                    template["system_prompt"] = system_prompt
+                template["updated_at"] = datetime.datetime.now()
+                break
+
+    def rate_custom_note_template(self, template_id: str, rating: int):
+        """Rate a custom note template."""
+        for template in self.preferences.get("note_templates", []):
+            if template["id"] == template_id:
+                if "ratings" not in template:
+                    template["ratings"] = []
+                template["ratings"].append({"rating": rating, "timestamp": datetime.datetime.now()})
+                return True
+        return False
+
+    def rate_shared_template(self, template_id: str, rating: int, comment: str = ""):
+        """Rate and review a shared template."""
+        for template in self.shared_templates:
+            if template["id"] == template_id:
+                if "ratings" not in template:
+                    template["ratings"] = []
+                if "reviews" not in template:
+                    template["reviews"] = []
+                
+                template["ratings"].append({"rating": rating, "timestamp": datetime.datetime.now()})
+                if comment:
+                    template["reviews"].append({
+                        "user": self.username,
+                        "rating": rating,
+                        "comment": comment,
+                        "timestamp": datetime.datetime.now()
+                    })
+                return True
+        return False
+
+    def get_shared_template_rating(self, template_id: str):
+        """Get the average rating of a shared template."""
+        for template in self.shared_templates:
+            if template["id"] == template_id:
+                ratings = template.get("ratings", [])
+                if ratings:
+                    return sum(r["rating"] for r in ratings) / len(ratings)
+        return None
+
+    def get_shared_template_reviews(self, template_id: str):
+        """Get all reviews for a shared template."""
+        for template in self.shared_templates:
+            if template["id"] == template_id:
+                return template.get("reviews", [])
+        return []
+
+    def increment_template_use_count(self, template_id: str):
+        """Increment the use count of a template."""
+        for template in self.preferences.get("note_templates", []):
+            if template["id"] == template_id:
+                template["use_count"] = template.get("use_count", 0) + 1
+                return True
+        return False
 
     def to_dict(self) -> Dict[str, Any]:
         user_dict = {
@@ -113,7 +213,7 @@ class User:
             "email": self.email,
             "name": self.name,
             "specialty": self.specialty,
-            "preferred_note_type": self.preferred_note_type,
+            "preferred_templates": self.preferred_templates,
             "created_at": self.created_at,
             "last_login": self.last_login,
             "login_count": self.login_count,
@@ -138,7 +238,7 @@ class User:
         )
         user.password = data.get("password")
         user.specialty=data.get("specialty", "Other")
-        user.preferred_note_type = data.get("preferred_note_type", "Emergency Medicine Note")
+        user.preferred_templates = data.get("preferred_templates", {})
         user.created_at = data.get("created_at", user.created_at)
         user.last_login = data.get("last_login", user.last_login)
         user.login_count = data.get("login_count", 0)
