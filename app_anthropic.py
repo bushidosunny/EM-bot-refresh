@@ -1322,6 +1322,10 @@ def display_functions_tab():
         col1, col2 = st.columns(2)
         with col1:
             st.subheader('📝Clinical Notes')
+            if st.button('Write custome note', use_container_width=True):
+                st.session_state.specialist = NOTE_WRITER
+                write_medical_note()
+                st.session_state.specialist = st.session_state.specialty
 
         with col2:
             # Preferred Note Type

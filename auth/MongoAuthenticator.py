@@ -107,6 +107,98 @@ class User:
     transcriptions_count: int = 0
     shared_templates: List[Dict] = field(default_factory=list)
 
+    def get_note_templates(self):
+        """Retrieve all custom note templates for the user."""
+        return self.preferences.get("note_templates", [])
+
+    def add_note_template(self, title: str, note_type: str, content: str):
+        """Add a new custom note template."""
+        if "note_templates" not in self.preferences:
+            self.preferences["note_templates"] = []
+        
+        new_template = {
+            "id": str(ObjectId()),
+            "title": title,
+            "type": note_type,
+            "content": content,
+            "use_count": 0,
+            "created_at": datetime.datetime.now(),
+            "updated_at": datetime.datetime.now()
+        }
+        self.preferences["note_templates"].append(new_template)
+
+    def delete_note_template(self, template_id: str):
+        """Delete a custom note template."""
+        self.preferences["note_templates"] = [t for t in self.preferences.get("note_templates", []) if t["id"] != template_id]
+
+    def update_note_template(self, template_id: str, name: str = None, note_type: str = None, system_prompt: str = None):
+        """Update an existing custom note template."""
+        for template in self.preferences.get("note_templates", []):
+            if template["id"] == template_id:
+                if name:
+                    template["name"] = name
+                if note_type:
+                    template["note_type"] = note_type
+                if system_prompt:
+                    template["system_prompt"] = system_prompt
+                template["updated_at"] = datetime.datetime.now()
+                break
+
+    def rate_custom_note_template(self, template_id: str, rating: int):
+        """Rate a custom note template."""
+        for template in self.preferences.get("note_templates", []):
+            if template["id"] == template_id:
+                if "ratings" not in template:
+                    template["ratings"] = []
+                template["ratings"].append({"rating": rating, "timestamp": datetime.datetime.now()})
+                return True
+        return False
+
+    def rate_shared_template(self, template_id: str, rating: int, comment: str = ""):
+        """Rate and review a shared template."""
+        for template in self.shared_templates:
+            if template["id"] == template_id:
+                if "ratings" not in template:
+                    template["ratings"] = []
+                if "reviews" not in template:
+                    template["reviews"] = []
+                
+                template["ratings"].append({"rating": rating, "timestamp": datetime.datetime.now()})
+                if comment:
+                    template["reviews"].append({
+                        "user": self.username,
+                        "rating": rating,
+                        "comment": comment,
+                        "timestamp": datetime.datetime.now()
+                    })
+                return True
+        return False
+
+    def get_shared_template_rating(self, template_id: str):
+        """Get the average rating of a shared template."""
+        for template in self.shared_templates:
+            if template["id"] == template_id:
+                ratings = template.get("ratings", [])
+                if ratings:
+                    return sum(r["rating"] for r in ratings) / len(ratings)
+        return None
+
+    def get_shared_template_reviews(self, template_id: str):
+        """Get all reviews for a shared template."""
+        for template in self.shared_templates:
+            if template["id"] == template_id:
+                return template.get("reviews", [])
+        return []
+
+    def increment_template_use_count(self, template_id: str):
+        """Increment the use count of a template."""
+        for template in self.preferences.get("note_templates", []):
+            if template["id"] == template_id:
+                template["use_count"] = template.get("use_count", 0) + 1
+                return True
+        return False
+    shared_templates: List[Dict] = field(default_factory=list)
+
     def set_preferred_template(self, note_type: str, template_id: str):
         self.preferred_templates[note_type] = template_id
 
@@ -393,66 +485,12 @@ class MongoAuthenticator:
         self.cookie_manager = cookie_manager
         self.preauthorized_emails = PREAUTHORIZED_EMAILS.split(',') if isinstance(PREAUTHORIZED_EMAILS, str) else PREAUTHORIZED_EMAILS
 
-    def login(self, username: str, password: str) -> Tuple[Optional[str], bool, Optional[str]]:
-        user = self.users.find_one({"username": username})
-        if user and bcrypt.checkpw(password.encode('utf-8'), user['password']):
-            user_id = str(user['_id'])
-            self.create_cookie(user_id)
-            st.session_state.authentication_status = True
-            st.session_state.name = user['name']
-            st.session_state.username = username
-            st.session_state.email = user['email']
+    def set_preferred_template(self, note_type: str, template_id: str):
+        self.preferred_templates[note_type] = template_id
 
-            # Always increment login_count on manual login
-            self.users.update_one(
-                {"_id": ObjectId(user_id)},
-                {
-                    "$set": {
-                        "last_login": datetime.datetime.now(),
-                        "last_active": datetime.datetime.now()
-                    },
-                    "$inc": {"login_count": 1}
-                }
-            )
-
-            return user['name'], True, username
-        return None, False, None
-
-    def update_user_metrics(self, user_id: str) -> None:
-        logging.info(f"Updating user metrics for user_id: {user_id}")
-        try:
-            user_data = self.users.find_one({"_id": ObjectId(user_id)})
-            if user_data is None:
-                logging.error(f"No user found with id: {user_id}")
-                return
-
-            today = datetime.datetime.now().date()
-            last_login = user_data.get('last_login')
-
-            update_fields = {
-                "last_active": datetime.datetime.now()
-            }
-
-            if last_login is None or last_login.date() < today:
-                # It's a new day, update last_login and increment login_count
-                update_fields.update({
-                    "last_login": datetime.datetime.now(),
-                    "login_count": user_data.get('login_count', 0) + 1
-                })
-
-            result = self.users.update_one(
-                {"_id": ObjectId(user_id)},
-                {"$set": update_fields}
-            )
-
-            if result.modified_count == 1:
-                logging.info(f"Updated user metrics for user: {user_data['username']}")
-            else:
-                logging.warning(f"Failed to update user metrics for user: {user_data['username']}")
-
-        except Exception as e:
-            logging.error(f"Error updating user metrics for user {user_id}: {str(e)}")
-
+    def get_preferred_template(self, note_type: str) -> Optional[str]:
+        return self.preferred_templates.get(note_type)     
+       
     def create_new_session(self, user_id: str) -> None:
         logging.info(f"Creating new chat session for user_id: {user_id}")
         try:
@@ -469,6 +507,7 @@ class MongoAuthenticator:
         except Exception as e:
             logging.error(f"Error creating new chat session for user {user_id}: {str(e)}")
             st.error("An error occurred while creating a new chat session. Please try again.")
+
     def check_password_strength(self, password):
         if len(password) < 8:
             return "Weak"
