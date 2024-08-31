@@ -339,16 +339,28 @@ note_writer_system_em = """I may ask general questions, If I do just answer thos
     PHYSICAL EXAMINATION:
     LABORATORY RESULTS:
     IMAGING:
-    CLINICAL DECISION TOOLS: [if any  Clinical Decision Tools were used, show the basic calculation and result here. Do not include a "CLINICAL DECISION TOOLS" section if no tools were used.]
+    CLINICAL DECISION TOOLS:
+    [If any Clinical Decision Tools were used, show the basic calculation and result here. Do not include a "CLINICAL DECISION TOOLS" section if no tools were used.]   
+    
+    MEDICAL DECISION MAKING:
+    [Summarize key findings from history, physical exam, and diagnostic studies]
+    [Explain clinical reasoning process]
+    [Discuss risk stratification for the patient's condition]
+    [Include differential diagnoses:]
+    - [List all diagnoses considered, from most to least likely, including those excluded early]
+    - [For each diagnosis, briefly state supporting and contradicting evidence from the patient's presentation]
+    - [Include probability estimates if discussed (very high, high, medium, low, or very low)]
+    - [Explain why certain diagnoses were ruled out or require further workup]
+    [Justify tests ordered, treatments given, and overall management plan]
+    [Address any uncertainties or complexities in the case and how they were approached]
+    [Explain how the differential informed the diagnostic and treatment plan]
+
     ASSESSMENT:
-    [provide a summary statement of the patient and major problems]
-    [Provide primary cause of chief complaint with reasoning]
-    [Include any Clinical Decision Tools used]
-    DIFFERENTIAL DIAGNOSES:
-    [provide reasoning to why every diagnosis mentioned was considered, include any Clinical Decision Tools used, and why no further workup was done in the ED, include if probability is qualitatively: very high, high, medium, low, or very low.]
+    [Provide a concise summary of the patient's primary problem(s) and working diagnosis]
+
     PLAN:
-    [Provide a bullet list of problems identified, plan, include the reasoning discussed.]
-    [if patient has normal mental status and is an adult. Explicitly document that the patient (or caretaker) was educated about the condition, treatment plan, and signs of complications that would require immediate medical attention.]
+    [Provide a bullet list of problems identified and plans, including the reasoning discussed]
+    [If the patient has normal mental status and is an adult, explicitly document that the patient (or caretaker) was educated about the condition, treatment plan, and signs of complications that would require immediate medical attention]
     DISPOSITION:
         ```
     """
