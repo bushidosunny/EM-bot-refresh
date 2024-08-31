@@ -151,9 +151,6 @@ class User:
         self.preferences["note_templates"].append(new_template)
 
 
-
-
-
     def rate_custom_note_template(self, template_id: str, rating: int):
         """Rate a custom note template."""
         for template in self.preferences.get("note_templates", []):
@@ -510,6 +507,45 @@ class MongoAuthenticator:
             return user['name'], True, username
         return None, False, None
     
+    
+    def update_user_metrics(self, user_id: str) -> None:
+        logging.info(f"Updating user metrics for user_id: {user_id}")
+        try:
+            user_data = self.users.find_one({"_id": ObjectId(user_id)})
+            if user_data is None:
+                logging.error(f"No user found with id: {user_id}")
+                return
+
+            today = datetime.datetime.now().date()
+            last_login = user_data.get('last_login')
+
+            update_fields = {
+                "last_active": datetime.datetime.now()
+            }
+
+            if last_login is None or last_login.date() < today:
+                # It's a new day, update last_login and increment login_count
+                update_fields.update({
+                    "last_login": datetime.datetime.now(),
+                    "login_count": user_data.get('login_count', 0) + 1
+                })
+
+            result = self.users.update_one(
+                {"_id": ObjectId(user_id)},
+                {"$set": update_fields}
+            )
+
+            if result.modified_count == 1:
+                logging.info(f"Updated user metrics for user: {user_data['username']}")
+            else:
+                logging.warning(f"Failed to update user metrics for user: {user_data['username']}")
+
+        except Exception as e:
+            logging.error(f"Error updating user metrics for user {user_id}: {str(e)}")
+        
+
+
+
     def set_preferred_template(self, note_type: str, template_id: str):
         self.preferred_templates[note_type] = template_id
 
