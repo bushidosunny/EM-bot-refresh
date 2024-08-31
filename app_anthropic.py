@@ -1458,7 +1458,7 @@ def display_settings_tab():
     st.subheader("Note Templates")
     template_management_option = st.radio(
         "Choose an action:",
-        ["View Templates", "Create Template from Example", "Edit Template", "Delete Template"]
+        ["View Templates", "Create Template from Example", "Edit Template"]
     )
 
     if template_management_option == "View Templates":
@@ -1467,8 +1467,6 @@ def display_settings_tab():
         create_template_from_example(user)
     elif template_management_option == "Edit Template":
         edit_template(user)
-    elif template_management_option == "Delete Template":
-        delete_template(user)
 
     if st.button("Save Settings"):
         # Update user object
@@ -2284,17 +2282,9 @@ def display_templates(user):
             new_preferred_id = next(t['id'] for t in type_templates if t['title'] == new_preferred)
             if new_preferred_id != current_preferred_id:
                 user.set_preferred_template(note_type, new_preferred_id)
-                users_collection.update_one(
-                    {"username": st.session_state.username},
-                    {"$set": user.to_dict()}
-                )
                 st.success(f"Updated preferred template for {note_type}")
         elif current_preferred_id:
             user.set_preferred_template(note_type, None)
-            users_collection.update_one(
-                {"username": st.session_state.username},
-                {"$set": user.to_dict()}
-            )
             st.success(f"Removed preferred template for {note_type}")
 
         # Display each template
@@ -2309,17 +2299,40 @@ def display_templates(user):
                         st.session_state.editing_template = template['id']
                         st.rerun()
                 with col2:
-                    if st.button("Delete", key=f"delete_{template['id']}"):
-                        if st.checkbox(f"Confirm deletion of '{template['title']}'", key=f"confirm_delete_{template['id']}"):
-                            user.delete_note_template(template['id'])
-                            if current_preferred_id == template['id']:
-                                user.set_preferred_template(note_type, None)
-                            users_collection.update_one(
-                                {"username": st.session_state.username},
-                                {"$set": user.to_dict()}
-                            )
-                            st.success(f"Template '{template['title']}' deleted successfully!")
+                    delete_key = f"delete_{template['id']}"
+                    
+                    if st.button("Delete", key=delete_key):
+                        st.session_state.template_to_delete = template['id']
+                        st.session_state.show_delete_confirmation = True
+                        st.rerun()
+                # Handle template deletion confirmation
+                if hasattr(st.session_state, 'show_delete_confirmation') and st.session_state.show_delete_confirmation:
+                    st.warning("Are you sure you want to delete this template?")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("Yes, delete", key=f"confirm_delete_{template['id']}"):
+                            template_id = st.session_state.template_to_delete
+                            if user.delete_note_template(template_id):
+                                st.success(f"Template deleted successfully!")
+                                # Update the user in the database
+                                if authenticator.update_user(st.session_state.username, user.to_dict()):
+                                    st.success("User data updated in database.")
+                                else:
+                                    st.error("Failed to update user data in database.")
+                                # Clear the deletion state
+                                del st.session_state.template_to_delete
+                                del st.session_state.show_delete_confirmation
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.error(f"Failed to delete template")
+                    with col2:
+                        if st.button("No, cancel", key=f"cancel_delete_{template['id']}"):
+                            # Clear the deletion state
+                            del st.session_state.template_to_delete
+                            del st.session_state.show_delete_confirmation
                             st.rerun()
+    
 
     # Handle template editing
     if hasattr(st.session_state, 'editing_template'):

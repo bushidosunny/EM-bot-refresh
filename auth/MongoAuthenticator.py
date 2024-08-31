@@ -122,17 +122,10 @@ class User:
         else:
             self.preferred_templates[note_type] = template_id
 
-    def update_note_template(self, template_id, title, note_type, content):
-        for template in self.preferences.get("note_templates", []):
-            if template['id'] == template_id:
-                template['title'] = title
-                template['type'] = note_type
-                template['content'] = content
-                template['updated_at'] = datetime.datetime.now()
-                break
-
-    def delete_note_template(self, template_id):
-        self.preferences["note_templates"] = [t for t in self.preferences.get("note_templates", []) if t['id'] != template_id]
+    def delete_note_template(self, template_id: str) -> bool:
+        initial_length = len(self.preferences.get("note_templates", []))
+        self.preferences["note_templates"] = [t for t in self.preferences.get("note_templates", []) if t["id"] != template_id]
+        return len(self.preferences.get("note_templates", [])) < initial_length
 
     def add_note_template(self, title: str, note_type: str, content: str):
         """Add a new custom note template."""
@@ -181,14 +174,6 @@ class User:
                 return True
         return False
 
-    def get_shared_template_rating(self, template_id: str):
-        """Get the average rating of a shared template."""
-        for template in self.shared_templates:
-            if template["id"] == template_id:
-                ratings = template.get("ratings", [])
-                if ratings:
-                    return sum(r["rating"] for r in ratings) / len(ratings)
-        return None
 
     def get_shared_template_reviews(self, template_id: str):
         """Get all reviews for a shared template."""
@@ -196,58 +181,6 @@ class User:
             if template["id"] == template_id:
                 return template.get("reviews", [])
         return []
-
-    def increment_template_use_count(self, template_id: str):
-        """Increment the use count of a template."""
-        for template in self.preferences.get("note_templates", []):
-            if template["id"] == template_id:
-                template["use_count"] = template.get("use_count", 0) + 1
-                return True
-        return False
-    shared_templates: List[Dict] = field(default_factory=list)
-
-    def set_preferred_template(self, note_type: str, template_id: str):
-        self.preferred_templates[note_type] = template_id
-
-    def get_preferred_template(self, note_type: str) -> Optional[str]:
-        return self.preferred_templates.get(note_type)
-
-
-    
-    def get_note_templates(self):
-        """Retrieve all custom note templates for the user."""
-        return self.preferences.get("note_templates", [])
-
-    def add_note_template(self, title: str, note_type: str, content: str):
-        """Add a new custom note template."""
-        if "note_templates" not in self.preferences:
-            self.preferences["note_templates"] = []
-        
-        new_template = {
-            "id": str(ObjectId()),
-            "title": title,
-            "type": note_type,
-            "content": content,
-            "use_count": 0,
-            "created_at": datetime.datetime.now(),
-            "updated_at": datetime.datetime.now()
-        }
-        self.preferences["note_templates"].append(new_template)
-
-    def delete_note_template(self, template_id: str):
-        """Delete a custom note template."""
-        self.preferences["note_templates"] = [t for t in self.preferences.get("note_templates", []) if t["id"] != template_id]
-
-
-    def rate_custom_note_template(self, template_id: str, rating: int):
-        """Rate a custom note template."""
-        for template in self.preferences.get("note_templates", []):
-            if template["id"] == template_id:
-                if "ratings" not in template:
-                    template["ratings"] = []
-                template["ratings"].append({"rating": rating, "timestamp": datetime.datetime.now()})
-                return True
-        return False
 
     def rate_shared_template(self, template_id: str, rating: int, comment: str = ""):
         """Rate and review a shared template."""
@@ -442,21 +375,6 @@ class User:
     def increment_transcriptions(self) -> None:
         self.transcriptions_count += 1
 
-    def add_note_template(self, title: str, template_type: str, content: str) -> None:
-        template = {
-            "id": str(ObjectId()),
-            "title": title,
-            "type": template_type,
-            "content": content
-        }
-        self.preferences["note_templates"].append(template)
-
-    def get_note_template(self, template_id: str) -> Optional[Dict[str, Any]]:
-        return next((t for t in self.preferences["note_templates"] if t["id"] == template_id), None)
-
-    def get_note_templates(self) -> List[Dict[str, Any]]:
-        return self.preferences.get("note_templates", [])
-
     def update_note_template(self, template_id: str, title: str = None, note_type: str = None, content: str = None):
         for template in self.preferences.get("note_templates", []):
             if template["id"] == template_id:
@@ -468,10 +386,6 @@ class User:
                     template["content"] = content
                 template["updated_at"] = datetime.datetime.now()
                 break
-
-    def delete_note_template(self, template_id: str) -> None:
-        self.preferences["note_templates"] = [t for t in self.preferences["note_templates"] if t["id"] != template_id]
-  
 
 #################################### MongoAuthenticator Class ########################################
 class MongoAuthenticator:
@@ -546,11 +460,11 @@ class MongoAuthenticator:
 
 
 
-    def set_preferred_template(self, note_type: str, template_id: str):
-        self.preferred_templates[note_type] = template_id
+    # def set_preferred_template(self, note_type: str, template_id: str):
+    #     self.preferred_templates[note_type] = template_id
 
-    def get_preferred_template(self, note_type: str) -> Optional[str]:
-        return self.preferred_templates.get(note_type)     
+    # def get_preferred_template(self, note_type: str) -> Optional[str]:
+    #     return self.preferred_templates.get(note_type)     
        
     def create_new_session(self, user_id: str) -> None:
         logging.info(f"Creating new chat session for user_id: {user_id}")
@@ -695,7 +609,12 @@ class MongoAuthenticator:
             self.users.update_one({"username": username}, {"$set": {"password": hashed_password}})
             return new_password
         return None
-
+    def update_user(self, username: str, user_data: dict):
+        # Remove the _id field if it exists, as MongoDB doesn't allow updating this field
+        user_data.pop('_id', None)
+        result = self.users.update_one({"username": username}, {"$set": user_data})
+        return result.modified_count > 0
+    
     def update_user_details(self, username, field, new_value):
         if field in ['name', 'email']:
             self.users.update_one({"username": username}, {"$set": {field: new_value}})
