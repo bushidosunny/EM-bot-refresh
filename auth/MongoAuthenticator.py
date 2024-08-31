@@ -485,6 +485,31 @@ class MongoAuthenticator:
         self.cookie_manager = cookie_manager
         self.preauthorized_emails = PREAUTHORIZED_EMAILS.split(',') if isinstance(PREAUTHORIZED_EMAILS, str) else PREAUTHORIZED_EMAILS
 
+    def login(self, username: str, password: str) -> Tuple[Optional[str], bool, Optional[str]]:
+        user = self.users.find_one({"username": username})
+        if user and bcrypt.checkpw(password.encode('utf-8'), user['password']):
+            user_id = str(user['_id'])
+            self.create_cookie(user_id)
+            st.session_state.authentication_status = True
+            st.session_state.name = user['name']
+            st.session_state.username = username
+            st.session_state.email = user['email']
+
+            # Always increment login_count on manual login
+            self.users.update_one(
+                {"_id": ObjectId(user_id)},
+                {
+                    "$set": {
+                        "last_login": datetime.datetime.now(),
+                        "last_active": datetime.datetime.now()
+                    },
+                    "$inc": {"login_count": 1}
+                }
+            )
+
+            return user['name'], True, username
+        return None, False, None
+    
     def set_preferred_template(self, note_type: str, template_id: str):
         self.preferred_templates[note_type] = template_id
 
