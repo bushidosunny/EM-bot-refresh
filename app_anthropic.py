@@ -4,13 +4,20 @@ from prompts import *
 
 # if "page_config_set" not in st.session_state:
 #     print("About to set page config")
-st.set_page_config(
-    page_title="EMMA", page_icon="🤖", initial_sidebar_state="auto", layout="wide", menu_items={
-    'Get Help': 'https://www.perplexity.ai/',
-    'Report a bug': 'mailto:bushidosunny@gmail.com',
-    'About': disclaimer})
-    # st.session_state.page_config_set = True
-    # print("Page config set")
+if st.session_state.patient_cc and st.session_state.patient_cc != "":
+    st.set_page_config(
+        page_title=f"{st.session_state.patient_cc}", page_icon="🤖", initial_sidebar_state="auto", layout="wide", menu_items={
+        'Get Help': 'https://www.perplexity.ai/',
+        'Report a bug': 'mailto:bushidosunny@gmail.com',
+        'About': disclaimer})
+else:
+    st.set_page_config(
+        page_title="EMMA", page_icon="🤖", initial_sidebar_state="auto", layout="wide", menu_items={
+        'Get Help': 'https://www.perplexity.ai/',
+        'Report a bug': 'mailto:bushidosunny@gmail.com',
+        'About': disclaimer})
+        # st.session_state.page_config_set = True
+        # print("Page config set")
 import admin
 from streamlit_float import float_css_helper
 from anthropic import Anthropic
@@ -2684,7 +2691,8 @@ def handle_feedback(container=None):
                     "Which features of EMMA do you find most valuable?",
                     "How has EMMA impacted your efficiency or patient care?",
                     "Do you have any suggestions for improvements?",
-                    "Any cool cases?"
+                    "Is there anything you would like to see added to EMMA?",
+                    "Any cool cases to share?"
                 ]
                 for prompt in prompts:
                     st.write(f"• {prompt}")
@@ -2762,13 +2770,14 @@ def process_feedback(text: str) -> str:
 
         2. Good:
         - Positive feedback
+        - are the user's requirements met?
         - Praised features or aspects
         - Performance improvements (if mentioned)
         - Beneficial user experiences
 
         3. Bad:
-        - Main issues or concerns
-        - Negative user experiences
+        - Any requiremnts not met?
+        - Other issues or concerns
         - Underperforming features
         - Comparative disadvantages (if mentioned)
 
