@@ -1,16 +1,16 @@
 import streamlit as st
 from prompts import *
-print("Starting app")
+# print("Starting app")
 
-if "page_config_set" not in st.session_state:
-    print("About to set page config")
-    st.set_page_config(
-        page_title="EMMA", page_icon="🤖", initial_sidebar_state="auto", layout="wide", menu_items={
-        'Get Help': 'https://www.perplexity.ai/',
-        'Report a bug': 'mailto:bushidosunny@gmail.com',
-        'About': disclaimer})
-    st.session_state.page_config_set = True
-    print("Page config set")
+# if "page_config_set" not in st.session_state:
+#     print("About to set page config")
+st.set_page_config(
+    page_title="EMMA", page_icon="🤖", initial_sidebar_state="auto", layout="wide", menu_items={
+    'Get Help': 'https://www.perplexity.ai/',
+    'Report a bug': 'mailto:bushidosunny@gmail.com',
+    'About': disclaimer})
+    # st.session_state.page_config_set = True
+    # print("Page config set")
 import admin
 from streamlit_float import float_css_helper
 from anthropic import Anthropic
