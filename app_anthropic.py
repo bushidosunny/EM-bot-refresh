@@ -1322,10 +1322,6 @@ def display_functions_tab():
         col1, col2 = st.columns(2)
         with col1:
             st.subheader('📝Clinical Notes')
-            if st.button('Write custome note', use_container_width=True):
-                st.session_state.specialist = NOTE_WRITER
-                write_medical_note()
-                st.session_state.specialist = st.session_state.specialty
 
         with col2:
             # Preferred Note Type
@@ -1337,6 +1333,14 @@ def display_functions_tab():
                                         options=note_types, 
                                         index=note_types.index(current_note_type) if current_note_type in note_types else 0,
                                         key="IM_preferred_note_type")
+            if new_note_type != current_note_type:
+                user.preferred_note_type = new_note_type
+                users_collection.update_one({"username": st.session_state.username}, {"$set": user.to_dict()})
+                st.session_state.preferred_note_type = new_note_type
+
+
+                custom_template = user.get_preferred_template(new_note_type)
+                # st.success(f"Preferred note type updated to {new_note_type} with style {custom_template}")
 
             
         col3, col4 = st.columns(2)
@@ -2321,24 +2325,29 @@ def display_templates(user):
     if hasattr(st.session_state, 'editing_template'):
         edit_template(user, st.session_state.editing_template)
 
-def edit_template(user, template_id):
-    template = user.get_note_template(template_id)
+def edit_template(user):
+    templates = user.get_note_templates()
+    if not templates:
+        st.write("You don't have any custom templates to edit.")
+        return
+
+    template_to_edit = st.selectbox("Select template to edit", [t['title'] for t in templates])
+    template = next((t for t in templates if t['title'] == template_to_edit), None)
+
     if template:
         st.subheader(f"Editing Template: {template['title']}")
         new_title = st.text_input("Template Title", value=template['title'])
+        new_type = st.selectbox("Note Type", list(note_type_instructions.keys()), index=list(note_type_instructions.keys()).index(template['type']))
         new_content = st.text_area("System Prompt", value=template['content'], height=300)
+        
         if st.button("Save Changes"):
-            user.update_note_template(template_id, new_title, template['type'], new_content)
+            user.update_note_template(template['id'], new_title, new_type, new_content)
             users_collection.update_one(
                 {"username": st.session_state.username},
                 {"$set": user.to_dict()}
             )
             st.success("Template updated successfully!")
-            del st.session_state.editing_template
             time.sleep(2)
-            st.rerun()
-        if st.button("Cancel Editing"):
-            del st.session_state.editing_template
             st.rerun()
 
 def create_new_template(user):

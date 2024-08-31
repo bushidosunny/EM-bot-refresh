@@ -108,8 +108,31 @@ class User:
     shared_templates: List[Dict] = field(default_factory=list)
 
     def get_note_templates(self):
-        """Retrieve all custom note templates for the user."""
         return self.preferences.get("note_templates", [])
+
+    def get_note_template(self, template_id):
+        return next((t for t in self.get_note_templates() if t['id'] == template_id), None)
+
+    def get_preferred_template(self, note_type):
+        return self.preferred_templates.get(note_type)
+
+    def set_preferred_template(self, note_type, template_id):
+        if template_id is None:
+            self.preferred_templates.pop(note_type, None)
+        else:
+            self.preferred_templates[note_type] = template_id
+
+    def update_note_template(self, template_id, title, note_type, content):
+        for template in self.preferences.get("note_templates", []):
+            if template['id'] == template_id:
+                template['title'] = title
+                template['type'] = note_type
+                template['content'] = content
+                template['updated_at'] = datetime.datetime.now()
+                break
+
+    def delete_note_template(self, template_id):
+        self.preferences["note_templates"] = [t for t in self.preferences.get("note_templates", []) if t['id'] != template_id]
 
     def add_note_template(self, title: str, note_type: str, content: str):
         """Add a new custom note template."""
@@ -127,22 +150,9 @@ class User:
         }
         self.preferences["note_templates"].append(new_template)
 
-    def delete_note_template(self, template_id: str):
-        """Delete a custom note template."""
-        self.preferences["note_templates"] = [t for t in self.preferences.get("note_templates", []) if t["id"] != template_id]
 
-    def update_note_template(self, template_id: str, name: str = None, note_type: str = None, system_prompt: str = None):
-        """Update an existing custom note template."""
-        for template in self.preferences.get("note_templates", []):
-            if template["id"] == template_id:
-                if name:
-                    template["name"] = name
-                if note_type:
-                    template["note_type"] = note_type
-                if system_prompt:
-                    template["system_prompt"] = system_prompt
-                template["updated_at"] = datetime.datetime.now()
-                break
+
+
 
     def rate_custom_note_template(self, template_id: str, rating: int):
         """Rate a custom note template."""
@@ -231,18 +241,6 @@ class User:
         """Delete a custom note template."""
         self.preferences["note_templates"] = [t for t in self.preferences.get("note_templates", []) if t["id"] != template_id]
 
-    def update_note_template(self, template_id: str, name: str = None, note_type: str = None, system_prompt: str = None):
-        """Update an existing custom note template."""
-        for template in self.preferences.get("note_templates", []):
-            if template["id"] == template_id:
-                if name:
-                    template["name"] = name
-                if note_type:
-                    template["note_type"] = note_type
-                if system_prompt:
-                    template["system_prompt"] = system_prompt
-                template["updated_at"] = datetime.datetime.now()
-                break
 
     def rate_custom_note_template(self, template_id: str, rating: int):
         """Rate a custom note template."""
@@ -462,15 +460,17 @@ class User:
     def get_note_templates(self) -> List[Dict[str, Any]]:
         return self.preferences.get("note_templates", [])
 
-    def update_note_template(self, template_id: str, title: Optional[str] = None, template_type: Optional[str] = None, content: Optional[str] = None) -> None:
-        template = self.get_note_template(template_id)
-        if template:
-            if title:
-                template["title"] = title
-            if template_type:
-                template["type"] = template_type
-            if content:
-                template["content"] = content
+    def update_note_template(self, template_id: str, title: str = None, note_type: str = None, content: str = None):
+        for template in self.preferences.get("note_templates", []):
+            if template["id"] == template_id:
+                if title:
+                    template["title"] = title
+                if note_type:
+                    template["type"] = note_type
+                if content:
+                    template["content"] = content
+                template["updated_at"] = datetime.datetime.now()
+                break
 
     def delete_note_template(self, template_id: str) -> None:
         self.preferences["note_templates"] = [t for t in self.preferences["note_templates"] if t["id"] != template_id]
