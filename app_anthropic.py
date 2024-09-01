@@ -4,7 +4,7 @@ from prompts import *
 
 # if "page_config_set" not in st.session_state:
 #     print("About to set page config")
-if st.session_state.patient_cc and st.session_state.patient_cc != "":
+if hasattr(st.session_state, 'patient_cc') and st.session_state.patient_cc != "":
     st.set_page_config(
         page_title=f"{st.session_state.patient_cc}", page_icon="🤖", initial_sidebar_state="auto", layout="wide", menu_items={
         'Get Help': 'https://www.perplexity.ai/',
@@ -224,7 +224,7 @@ specialist_data = {
     "assistant_id": "asst_twf42nzGoYLtrHAZeENLcI5d",
     "caption": "Pt education Note Writer",
     "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png",
-    "system_instructions": patient_educator_system
+    "system_instructions": lambda: f"User's name: Dr {st.session_state.name}. User's specialty: {st.session_state.specialty}Hospital/Clinic: {st.session_state.hospital_name}, Hospital Contact info: {st.session_state.hospital_contact}. Today's Date is {datetime.datetime.now().strftime('%m/%d/%Y')} \n {patient_educator_system}"
   },
   "Dr. Longevity": {
     "assistant_id": "asst_sRjFUQFCD0dNOl7513qb4gGv",
@@ -285,6 +285,8 @@ def initialize_session_state():
         session_state.count = 0
         session_state.id = secrets.token_hex(8)
         session_state.user_id = None
+        session_state.hospital_name = None
+        session_state.hospital_contact = None
         session_state.specialty = "Emergency Medicine"
         session_state.preferred_note_type = None
         session_state.authentication_status = None
@@ -958,7 +960,7 @@ def process_other_queries():
         st.rerun()
 
 def update_patient_language():
-    patient_language = st.text_input("Type patient language if not English", value=st.session_state.patient_language)
+    patient_language = st.text_input("Type patient language if not English", value=st.session_state.patient_language, autocomplete="on", label_visibility="collapsed")
     if patient_language != st.session_state.patient_language:
         st.session_state.patient_language = patient_language
 
@@ -1292,11 +1294,11 @@ def display_functions_tab():
       
     
     st.divider()
-    st.subheader('🧠Diagnostic Tools')
-    if st.button("🔍Search Diagnostic CDTs", use_container_width=True, help="Identify, apply, and interpret relevant Clinical Decision Tools"):
-        st.session_state.specialist = "Perplexity"
-        consult_specialist_and_update_ddx("Search for a Diagnosis", search_CDTs)
-        st.session_state.specialist = st.session_state.specialty
+    st.subheader('🧰 Tools')
+    # if st.button("🔍Search Diagnostic CDTs", use_container_width=True, help="Identify, apply, and interpret relevant Clinical Decision Tools"):
+    #     st.session_state.specialist = "Perplexity"
+    #     consult_specialist_and_update_ddx("Search for a Diagnosis", search_CDTs)
+    #     st.session_state.specialist = st.session_state.specialty
     col1, col2 = st.columns(2)
     with col1:
         # if st.button("➡️Next Step Recommendation", use_container_width=True):
@@ -1315,10 +1317,10 @@ def display_functions_tab():
             st.session_state.specialist = "Bayesian Reasoner"
             consult_specialist_and_update_ddx("Critical Thinking w Bayesian Reasoning", apply_bayesian_reasoning)
             st.session_state.specialist = st.session_state.specialty
-    st.subheader('💉Treatment Tools')
-    if st.button("🔍Search Treatment CDTs/Guidelines", use_container_width=True, help="Applies relevant CDTs, guidelines, or algorithms to guide treatment decisions and management."):
+    # st.subheader('💉Treatment Tools')
+    if st.button("🔍Search for CDTs/Guidelines", use_container_width=True, help="Applies relevant CDTs, guidelines, or algorithms to guide treatment decisions and management."):
         st.session_state.specialist = "Perplexity"
-        consult_specialist_and_update_ddx("Treatment Plan", treatment_plan)
+        consult_specialist_and_update_ddx("Treatment Plan", search_CDTs)
         st.session_state.specialist = st.session_state.specialty
     
 
@@ -1398,19 +1400,32 @@ def display_functions_tab():
                 consult_specialist_and_update_ddx("A&P only", create_ap)
                 st.session_state.specialist = st.session_state.specialty
 
-    st.subheader('📝Notes for Patients')
-    update_patient_language()
+    st.subheader('📝Notes for Patients in specified language')
+    
     col1, col2 = st.columns(2)
     with col1:
-
+        update_patient_language()
+        if st.button("🏢Work Note", use_container_width=True, help="Writes a personalized patient work note"):
+            st.session_state.specialist = "Patient Educator"
+            consult_specialist_and_update_ddx("Patient Work Note", f"Write a patient work note for this patient in {st.session_state.patient_language}. ")
+            st.session_state.specialist = st.session_state.specialty
+        if st.button("🏫School Note", use_container_width=True, help="Writes a personalized patient school note"):
+            st.session_state.specialist = "Patient Educator"
+            consult_specialist_and_update_ddx("Patient School Note", f"Write a patient school note for this patient in {st.session_state.patient_language}. ")
+            st.session_state.specialist = st.session_state.specialty
+        
+    with col2:
         if st.button("🙍Education Note", use_container_width=True, help="Writes a personalized patient education note"):
             st.session_state.specialist = "Patient Educator"
             consult_specialist_and_update_ddx("Patient Education Note", f"Write a patient education note for this patient in {st.session_state.patient_language}")
             st.session_state.specialist = st.session_state.specialty
-    with col2:
         if st.button('💪Physical Therapy ', use_container_width=True, help="Writes a personalized Physical Therapy plan"):
             st.session_state.specialist = "Musculoskeletal Systems"
             consult_specialist_and_update_ddx("Physical Therapy Plan", pt_plan)
+            st.session_state.specialist = st.session_state.specialty
+        if st.button("🏈Sports/Gym Note", use_container_width=True, help="Writes a personalized patient Sports/Gym note"):
+            st.session_state.specialist = "Patient Educator"
+            consult_specialist_and_update_ddx("Patient Sports/Gym Note", f"Write a patient Sports/Gym note for this patient in {st.session_state.patient_language}. ")
             st.session_state.specialist = st.session_state.specialty
 
 
@@ -1446,6 +1461,12 @@ def display_settings_tab():
     # Load current user settings
     user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
 
+    # User Details Section
+    st.subheader("User Details")
+    new_name = st.text_input("Name", value=user.name)
+    new_hospital_name = st.text_input("Hospital/Clinic Name", value=user.hospital_name)
+    new_hospital_contact = st.text_input("Hospital Contact Information", value=user.hospital_contact)
+
     # Default Specialty
     current_specialty = user.specialty if user.specialty else "Emergency Medicine"
     new_specialty = st.selectbox("Default Specialty", 
@@ -1477,9 +1498,17 @@ def display_settings_tab():
 
     if st.button("Save Settings"):
         # Update user object
+        user.name = new_name
+        user.hospital_name = new_hospital_name
+        user.hospital_contact = new_hospital_contact
         user.specialty = new_specialty
-        st.session_state.specialty = new_specialty
         user.preferred_note_type = new_note_type
+
+        # Update session state
+        st.session_state.name = new_name
+        st.session_state.hospital_name = new_hospital_name
+        st.session_state.hospital_contact = new_hospital_contact
+        st.session_state.specialty = new_specialty
         st.session_state.preferred_note_type = new_note_type
 
         # Save to database
@@ -2497,21 +2526,25 @@ def get_response(user_question: str) -> str:
                     chat_context += f"AI: {message.content}\n"
             
             specialist = st.session_state.specialist
-            if specialist == NOTE_WRITER:
-                system_instructions = specialist_data[specialist]["system_instructions"]()
+            system_instructions = specialist_data[specialist]["system_instructions"]
+            
+            # Handle callable system_instructions (including NOTE_WRITER and Patient Educator)
+            if callable(system_instructions):
+                system_instructions = system_instructions()
                 print(f'DEBUG get_response SYSTEM INSTRUCTIONS: {system_instructions}')
-                # print(f'DEBUG SYSTEM if INSTRUCTIONS: {system_instructions}')
-            else:
-                system_instructions = specialist_data[specialist]["system_instructions"]
-                # print(f'DEBUG SYSTEM else INSTRUCTIONS: {system_instructions}')
 
             if isinstance(system_instructions, list):
                 system_instructions = "\n".join(system_instructions)
 
-            system_prompt = system_instructions.format(
-                REQUESTED_SECTIONS='ALL',
-                FILL_IN_EXPECTED_FINDINGS='fill in the normal healthy findings and include them in the note accordingly'
-            )
+            # Only format if it's a string and contains placeholders
+            if isinstance(system_instructions, str) and ("{" in system_instructions and "}" in system_instructions):
+                system_prompt = system_instructions.format(
+                    REQUESTED_SECTIONS='ALL',
+                    FILL_IN_EXPECTED_FINDINGS='fill in the normal healthy findings and include them in the note accordingly'
+                )
+            else:
+                system_prompt = system_instructions
+
             system_message = SystemMessage(content=system_prompt)
             
             user_content = f"Chat History:\n{chat_context}\n\nUser: {user_question}"
@@ -2606,67 +2639,6 @@ def authenticated_user():
         st.error(f"An error occurred: {str(e)}")
         logging.error(f"Unhandled exception in authenticated_user: {str(e)}", exc_info=True)
 
-# def handle_feedback():
-#     if 'show_feedback' not in st.session_state:
-#         st.session_state.show_feedback = False
-#     if 'feedback_text' not in st.session_state:
-#         st.session_state.feedback_text = ""
-
-#     if st.sidebar.button("📝 Give Feedback", key="feedback_button") or st.session_state.show_feedback:
-#         st.session_state.show_feedback = True
-#         with st.sidebar.expander("Feedback", expanded=True):
-#             st.write("Your feedback is crucial to making EMMA better. Please share your thoughts freely. AI will process your thoughts into different catagories:")
-            
-#             # Display prompts
-#             prompts = [
-#                 "How easy is it to use EMMA?",
-#                 "What performance issues have you encountered?",
-#                 "Which features of EMMA do you find most valuable?",
-#                 "How has EMMA impacted your efficiency or patient care?",
-#                 "Do you have any suggestions for improvements?"
-#             ]
-#             for prompt in prompts:
-#                 st.write(f"• {prompt}")
-            
-            
-#             # Text input
-#             st.session_state.feedback_text = st.text_area("Type/Record your feedback here...", value=st.session_state.feedback_text, key="feedback_text_area", height=150)
-            
-#             # Voice recording
-#             col1, col2 = st.columns([3, 1])
-#             with col1:
-#                 st.write("Or record your feedback:")
-#             with col2:
-#                 audio_text = record_audio(key="feedback_recorder", width=True)
-#                 if audio_text:
-#                     st.session_state.feedback_text += " " + audio_text
-#                     st.rerun()  # Rerun to update the text area
-            
-#             col3, col4 = st.columns([1, 1])
-#             with col3:
-#                 if st.button("Submit Feedback", key="submit_feedback_button", type="primary"):
-#                     if st.session_state.feedback_text:
-#                         # Process feedback using AI
-#                         processed_feedback = process_feedback(st.session_state.feedback_text)
-                        
-#                         # Save both raw and processed feedback
-#                         if authenticator.save_feedback(st.session_state.user_id, st.session_state.feedback_text, processed_feedback):
-#                             st.success("Thank you for your feedback! It has been processed and saved.")
-#                             st.session_state.show_feedback = False
-#                             st.session_state.feedback_text = ""
-#                             time.sleep(1)  # Give user time to see the message
-#                             st.rerun()
-#                         else:
-#                             st.error("There was an error saving your feedback. Please try again.")
-#                     else:
-#                         st.warning("Please provide some feedback before submitting.")
-            
-#             with col4:
-#                 if st.button("Cancel", key="cancel_feedback_button"):
-#                     st.session_state.show_feedback = False
-#                     st.session_state.feedback_text = ""
-#                     time.sleep(1)  # Give user time to see the message
-#                     st.rerun()
 
 def handle_feedback(container=None):
     if 'show_feedback' not in st.session_state:
@@ -2686,6 +2658,7 @@ def handle_feedback(container=None):
                 
                 # Display prompts
                 prompts = [
+                    "Any problems with Diagnosis, Treatment, or Documentation?",
                     "How easy is it to use EMMA?",
                     "What performance issues have you encountered?",
                     "Which features of EMMA do you find most valuable?",
@@ -2764,7 +2737,11 @@ def handle_feedback(container=None):
 
 def process_feedback(text: str) -> str:
     clean_feedback_prompt = """
-        Analyze the following user feedback for EMMA (Emergency Medicine Management Assistant) and provide a concise report. Only include information directly addressed in the user feedback. Do not infer or add information not explicitly mentioned. Categorize the analysis into three main themes: Good, Bad, and Action Items.
+        Analyze the following user feedback for EMMA (Emergency Medicine Management Assistant) and provide a concise report. 
+        Only include information directly addressed in the user feedback. 
+        Do not infer or add information not explicitly mentioned. 
+        Categorize the analysis into three main themes: Good, Bad, and Action Items. 
+        Our main priorities to solve involve items related to usability, diagnosis, treatment, and documentation.
 
         1. Key Points Summary (1-2 sentences)
 
@@ -2782,7 +2759,7 @@ def process_feedback(text: str) -> str:
         - Comparative disadvantages (if mentioned)
 
         4. Action Items:
-        - Suggestions for improvement
+        - Suggestions for improvement. 
         - Actionable solutions to reported issues
         - Feature requests or modifications
         - Areas needing further investigation or feedback

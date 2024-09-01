@@ -106,6 +106,114 @@ class User:
     recordings_count: int = 0
     transcriptions_count: int = 0
     shared_templates: List[Dict] = field(default_factory=list)
+    hospital_name: str = ""
+    hospital_contact: str = ""
+
+    def to_dict(self) -> Dict[str, Any]:
+        user_dict = {
+            "_id": self._id,
+            "username": self.username,
+            "email": self.email,
+            "name": self.name,
+            "specialty": self.specialty,
+            "preferred_templates": self.preferred_templates,
+            "created_at": self.created_at,
+            "last_login": self.last_login,
+            "login_count": self.login_count,
+            "last_active": self.last_active,
+            "sessions_created": self.sessions_created, 
+            "total_session_time": self.total_session_time,
+            "preferences": self.preferences,
+            "recordings_count": self.recordings_count,
+            "transcriptions_count": self.transcriptions_count,
+            "hospital_name": self.hospital_name,
+            "hospital_contact": self.hospital_contact
+        }
+        if self.password:
+            user_dict["password"] = self.password
+        return user_dict
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'User':
+        user = cls(
+            username=data["username"],
+            email=data["email"],
+            name=data["name"],
+            _id=data.get("_id")
+        )
+        user.password = data.get("password")
+        user.specialty=data.get("specialty", "Other")
+        user.preferred_templates = data.get("preferred_templates", {})
+        user.created_at = data.get("created_at", user.created_at)
+        user.last_login = data.get("last_login", user.last_login)
+        user.login_count = data.get("login_count", 0)
+        user.sessions_created = data.get("sessions_created", 0)
+        user.last_active = data.get("last_active", user.last_active)
+        user.total_session_time = data.get("total_session_time", 0)
+        user.preferences = data.get("preferences", {"note_templates": []})
+        user.recordings_count = data.get("recordings_count", 0)
+        user.transcriptions_count = data.get("transcriptions_count", 0)
+        user.hospital_name = data.get("hospital_name", "")
+        user.hospital_contact = data.get("hospital_contact", "")
+        return user
+    
+    def update_user_details(self, field: str, value: str) -> None:
+        if field in ['name', 'hospital_name', 'hospital_contact']:
+            setattr(self, field, value)
+    def update_login(self) -> None:
+        self.last_login = datetime.datetime.now()
+        self.login_count += 1
+
+    def update_activity(self) -> None:
+        self.last_active = datetime.datetime.now()
+
+    def update_user_metrics(self, user_id: str) -> None:
+        logging.info(f"Updating user metrics for user_id: {user_id}")
+        try:
+            user_data = self.users.find_one({"_id": ObjectId(user_id)})
+            if user_data is None:
+                logging.error(f"No user found with id: {user_id}")
+                return
+
+            today = datetime.datetime.now().date()
+            last_login = user_data.get('last_login')
+
+            update_fields = {
+                "last_active": datetime.datetime.now()
+            }
+
+            if last_login is None or last_login.date() < today:
+                # It's a new day, update last_login and increment login_count
+                update_fields.update({
+                    "last_login": datetime.datetime.now(),
+                    "login_count": user_data.get('login_count', 0) + 1
+                })
+
+            result = self.users.update_one(
+                {"_id": ObjectId(user_id)},
+                {"$set": update_fields}
+            )
+
+            if result.modified_count == 1:
+                logging.info(f"Updated user metrics for user: {user_data['username']}")
+            else:
+                logging.warning(f"Failed to update user metrics for user: {user_data['username']}")
+
+        except Exception as e:
+            logging.error(f"Error updating user metrics for user {user_id}: {str(e)}")
+
+
+    def increment_sessions_created(self) -> None:
+            self.sessions_created += 1
+
+    def add_session_time(self, duration: int) -> None:
+        self.total_session_time += duration
+
+    def increment_recordings(self) -> None:
+        self.recordings_count += 1
+
+    def increment_transcriptions(self) -> None:
+        self.transcriptions_count += 1
 
     def get_note_templates(self):
         return self.preferences.get("note_templates", [])
@@ -122,6 +230,7 @@ class User:
         else:
             self.preferred_templates[note_type] = template_id
 
+    ########## User Template Methods ##########
     def delete_note_template(self, template_id: str) -> bool:
         initial_length = len(self.preferences.get("note_templates", []))
         self.preferences["note_templates"] = [t for t in self.preferences.get("note_templates", []) if t["id"] != template_id]
@@ -174,7 +283,6 @@ class User:
                 return True
         return False
 
-
     def get_shared_template_reviews(self, template_id: str):
         """Get all reviews for a shared template."""
         for template in self.shared_templates:
@@ -225,155 +333,6 @@ class User:
                 template["use_count"] = template.get("use_count", 0) + 1
                 return True
         return False
-
-    def to_dict(self) -> Dict[str, Any]:
-        user_dict = {
-            "_id": self._id,
-            "username": self.username,
-            "email": self.email,
-            "name": self.name,
-            "specialty": self.specialty,
-            "preferred_templates": self.preferred_templates,
-            "created_at": self.created_at,
-            "last_login": self.last_login,
-            "login_count": self.login_count,
-            "last_active": self.last_active,
-            "sessions_created": self.sessions_created, 
-            "total_session_time": self.total_session_time,
-            "preferences": self.preferences,
-            "recordings_count": self.recordings_count,
-            "transcriptions_count": self.transcriptions_count
-        }
-        if self.password:
-            user_dict["password"] = self.password
-        return user_dict
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'User':
-        user = cls(
-            username=data["username"],
-            email=data["email"],
-            name=data["name"],
-            _id=data.get("_id")
-        )
-        user.password = data.get("password")
-        user.specialty=data.get("specialty", "Other")
-        user.preferred_templates = data.get("preferred_templates", {})
-        user.created_at = data.get("created_at", user.created_at)
-        user.last_login = data.get("last_login", user.last_login)
-        user.login_count = data.get("login_count", 0)
-        user.sessions_created = data.get("sessions_created", 0)
-        user.last_active = data.get("last_active", user.last_active)
-        user.total_session_time = data.get("total_session_time", 0)
-        user.preferences = data.get("preferences", {"note_templates": []})
-        user.recordings_count = data.get("recordings_count", 0)
-        user.transcriptions_count = data.get("transcriptions_count", 0)
-        return user
-
-    def update_login(self) -> None:
-        self.last_login = datetime.datetime.now()
-        self.login_count += 1
-
-    def update_activity(self) -> None:
-        self.last_active = datetime.datetime.now()
-
-    # def create_or_update_daily_session(self, user_id: str) -> None:
-    #     logging.info(f"Checking daily session for user_id: {user_id}")
-    #     try:
-    #         user_data = self.users.find_one({"_id": ObjectId(user_id)})
-    #         if user_data is None:
-    #             logging.error(f"No user found with id: {user_id}")
-    #             st.error("Session error: User not found. Please log in again.")
-    #             self.logout()
-    #             st.rerun()
-    #             return
-
-    #         today = datetime.datetime.now().date()
-    #         last_login = user_data.get('last_login')
-
-    #         if last_login is None or last_login.date() < today:
-    #             # It's a new day, increment the session count
-    #             result = self.users.update_one(
-    #                 {"_id": ObjectId(user_id)},
-    #                 {
-    #                     "$inc": {"sessions_created": 1},
-    #                     "$set": {"last_login": datetime.datetime.now()}
-    #                 }
-    #             )
-
-    #             if result.modified_count == 1:
-    #                 logging.info(f"Incremented daily session count for user: {user_data['username']}")
-    #             else:
-    #                 logging.warning(f"Failed to increment daily session count for user: {user_data['username']}")
-    #         else:
-    #             logging.info(f"User {user_data['username']} already has an active session today")
-
-    #     except Exception as e:
-    #         logging.error(f"Error updating daily session for user {user_id}: {str(e)}")
-    #         st.error("An error occurred while updating your session. Please try again.")
-
-    def update_user_metrics(self, user_id: str) -> None:
-        logging.info(f"Updating user metrics for user_id: {user_id}")
-        try:
-            user_data = self.users.find_one({"_id": ObjectId(user_id)})
-            if user_data is None:
-                logging.error(f"No user found with id: {user_id}")
-                return
-
-            today = datetime.datetime.now().date()
-            last_login = user_data.get('last_login')
-
-            update_fields = {
-                "last_active": datetime.datetime.now()
-            }
-
-            if last_login is None or last_login.date() < today:
-                # It's a new day, update last_login and increment login_count
-                update_fields.update({
-                    "last_login": datetime.datetime.now(),
-                    "login_count": user_data.get('login_count', 0) + 1
-                })
-
-            result = self.users.update_one(
-                {"_id": ObjectId(user_id)},
-                {"$set": update_fields}
-            )
-
-            if result.modified_count == 1:
-                logging.info(f"Updated user metrics for user: {user_data['username']}")
-            else:
-                logging.warning(f"Failed to update user metrics for user: {user_data['username']}")
-
-        except Exception as e:
-            logging.error(f"Error updating user metrics for user {user_id}: {str(e)}")
-        
-
-        # user_obj = User.from_dict(self.users.find_one({"_id": ObjectId(user_id)}))
-        # user_obj.update_login()
-        # user_obj.update_activity()
-
-        # self.users.update_one(
-        #     {"_id": ObjectId(user_id)},
-        #     {
-        #         "$set": {
-        #             "last_login": user_obj.last_login,
-        #             "login_count": user_obj.login_count,
-        #             "last_active": user_obj.last_active,
-        #         }
-        #     }
-        # )
-
-    def increment_sessions_created(self) -> None:
-            self.sessions_created += 1
-
-    def add_session_time(self, duration: int) -> None:
-        self.total_session_time += duration
-
-    def increment_recordings(self) -> None:
-        self.recordings_count += 1
-
-    def increment_transcriptions(self) -> None:
-        self.transcriptions_count += 1
 
     def update_note_template(self, template_id: str, title: str = None, note_type: str = None, content: str = None):
         for template in self.preferences.get("note_templates", []):
