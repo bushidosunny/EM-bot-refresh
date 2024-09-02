@@ -1,16 +1,23 @@
 import streamlit as st
 from prompts import *
-print("Starting app")
+# print("Starting app")
 
-if "page_config_set" not in st.session_state:
-    print("About to set page config")
+# if "page_config_set" not in st.session_state:
+#     print("About to set page config")
+if hasattr(st.session_state, 'patient_cc') and st.session_state.patient_cc != "":
+    st.set_page_config(
+        page_title=f"{st.session_state.patient_cc}", page_icon="🤖", initial_sidebar_state="auto", layout="wide", menu_items={
+        'Get Help': 'https://www.perplexity.ai/',
+        'Report a bug': 'mailto:bushidosunny@gmail.com',
+        'About': disclaimer})
+else:
     st.set_page_config(
         page_title="EMMA", page_icon="🤖", initial_sidebar_state="auto", layout="wide", menu_items={
         'Get Help': 'https://www.perplexity.ai/',
         'Report a bug': 'mailto:bushidosunny@gmail.com',
         'About': disclaimer})
-    st.session_state.page_config_set = True
-    print("Page config set")
+        # st.session_state.page_config_set = True
+        # print("Page config set")
 import admin
 from streamlit_float import float_css_helper
 from anthropic import Anthropic
@@ -94,18 +101,28 @@ try:
     shared_buttons_collection = db['shared_buttons']
     shared_layouts_collection = db['shared_layouts']
     mongo_client.admin.command('ping')
+    
     logging.info("Successfully connected to MongoDB")
 except (ServerSelectionTimeoutError, OperationFailure, ConfigurationError) as err:
     logging.error(f"Error connecting to MongoDB Atlas: {err}")
     st.error(f"Error connecting to MongoDB Atlas: {err}")
 
 def get_note_writer_instructions():
-    if st.session_state.preferred_note_type:
-        return note_type_instructions.get(st.session_state.preferred_note_type, note_writer_system)
-    else:
-        user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
-        preferred_note_type = user.preferred_note_type if hasattr(user, 'preferred_note_type') else EM_NOTE
-        return note_type_instructions.get(preferred_note_type, note_writer_system)
+    user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
+    note_type = st.session_state.preferred_note_type
+
+    # Check if there's a preferred custom template for this note type
+    preferred_template_id = user.get_preferred_template(note_type)
+    if preferred_template_id:
+        template = next((t for t in user.get_note_templates() if t['id'] == preferred_template_id), None)
+        if template:
+            base_instructions = note_type_instructions.get(note_type, note_writer_system)
+            print(f"Using preferred custom template for {note_type}")
+            print(f"DEBUG Base Instructions: {base_instructions}\n\nAdditional Custom Instructions:\n{template['content']}")
+            return f"{base_instructions}\n\nYOU MUST FOLLOW THE USER'S CUSTOM INSTRUCTIONS BELOW:\n{template['content']}"
+    
+    # If no preferred custom template, use the default instructions
+    return note_type_instructions.get(note_type, note_writer_system)
 
 specialist_data = {
   EMERGENCY_MEDICINE: {
@@ -207,7 +224,7 @@ specialist_data = {
     "assistant_id": "asst_twf42nzGoYLtrHAZeENLcI5d",
     "caption": "Pt education Note Writer",
     "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png",
-    "system_instructions": patient_educator_system
+    "system_instructions": lambda: f"User's name: Dr {st.session_state.name}. User's specialty: {st.session_state.specialty}Hospital/Clinic: {st.session_state.hospital_name}, Hospital Contact info: {st.session_state.hospital_contact}. Today's Date is {datetime.datetime.now().strftime('%m/%d/%Y')} \n {patient_educator_system}"
   },
   "Dr. Longevity": {
     "assistant_id": "asst_sRjFUQFCD0dNOl7513qb4gGv",
@@ -268,6 +285,8 @@ def initialize_session_state():
         session_state.count = 0
         session_state.id = secrets.token_hex(8)
         session_state.user_id = None
+        session_state.hospital_name = None
+        session_state.hospital_contact = None
         session_state.specialty = "Emergency Medicine"
         session_state.preferred_note_type = None
         session_state.authentication_status = None
@@ -917,11 +936,6 @@ def button_input(specialist, prompt):
         st.session_state.critical_actions = []
         st.rerun()
 
-def update_patient_language():
-    patient_language = st.text_input("Type patient language if not English", value=st.session_state.patient_language)
-    if patient_language != st.session_state.patient_language:
-        st.session_state.patient_language = patient_language
-
 def process_other_queries():
     if st.session_state.user_question_sidebar != "" and st.session_state.user_question_sidebar != st.session_state.old_user_question_sidebar:
         specialist_avatar = specialist_data[st.session_state.specialist]["avatar"]
@@ -936,22 +950,26 @@ def process_other_queries():
 
         with st.chat_message("AI", avatar=specialist_avatar):
             assistant_response = get_response(user_question)
-            if specialist != NOTE_WRITER:
-                save_ai_message(st.session_state.username, specialist, assistant_response, specialist)
             if specialist == NOTE_WRITER:
                 save_note_details(st.session_state.username, assistant_response)
-                save_ai_message(st.session_state.username, specialist, assistant_response, specialist)
+            save_ai_message(st.session_state.username, specialist, assistant_response, specialist)
 
         st.session_state.chat_history.append(AIMessage(assistant_response, avatar=specialist_avatar))
         st.session_state.old_user_question_sidebar = user_question
+        st.session_state.assistant_response = assistant_response  # Store the response for display in write_medical_note
 
         chat_history = chat_history_string()
         parse_json(chat_history) 
 
         # Clear completed tasks
         st.session_state.completed_tasks_str = ""
-        st.session_state.specialist = "Emergency Medicine"
         st.rerun()
+
+def update_patient_language():
+    patient_language = st.text_input("Type patient language if not English", value=st.session_state.patient_language, autocomplete="on", label_visibility="collapsed")
+    if patient_language != st.session_state.patient_language:
+        st.session_state.patient_language = patient_language
+
 
 
 def new_thread():
@@ -1209,6 +1227,7 @@ def display_sidebar():
             display_functions_tab()
             # Check if the specialty is Internal Medicine
             print(f'DEBUG DISPLAY SIDEBAR SPECIALTY: {st.session_state.specialty} ')
+            print(f'DEBUG DISPLAY SIDEBAR PREFERRED NOTE TYPE: {st.session_state.preferred_note_type}')
             
             
         with tab2:
@@ -1281,11 +1300,11 @@ def display_functions_tab():
       
     
     st.divider()
-    st.subheader('🧠Diagnostic Tools')
-    if st.button("🔍Search Diagnostic CDTs", use_container_width=True, help="Identify, apply, and interpret relevant Clinical Decision Tools"):
-        st.session_state.specialist = "Perplexity"
-        consult_specialist_and_update_ddx("Search for a Diagnosis", search_CDTs)
-        st.session_state.specialist = st.session_state.specialty
+    st.subheader('🧰 Tools')
+    # if st.button("🔍Search Diagnostic CDTs", use_container_width=True, help="Identify, apply, and interpret relevant Clinical Decision Tools"):
+    #     st.session_state.specialist = "Perplexity"
+    #     consult_specialist_and_update_ddx("Search for a Diagnosis", search_CDTs)
+    #     st.session_state.specialist = st.session_state.specialty
     col1, col2 = st.columns(2)
     with col1:
         # if st.button("➡️Next Step Recommendation", use_container_width=True):
@@ -1304,10 +1323,10 @@ def display_functions_tab():
             st.session_state.specialist = "Bayesian Reasoner"
             consult_specialist_and_update_ddx("Critical Thinking w Bayesian Reasoning", apply_bayesian_reasoning)
             st.session_state.specialist = st.session_state.specialty
-    st.subheader('💉Treatment Tools')
-    if st.button("🔍Search Treatment CDTs/Guidelines", use_container_width=True, help="Applies relevant CDTs, guidelines, or algorithms to guide treatment decisions and management."):
+    # st.subheader('💉Treatment Tools')
+    if st.button("🔍Search for CDTs/Guidelines", use_container_width=True, help="Applies relevant CDTs, guidelines, or algorithms to guide treatment decisions and management."):
         st.session_state.specialist = "Perplexity"
-        consult_specialist_and_update_ddx("Treatment Plan", treatment_plan)
+        consult_specialist_and_update_ddx("Treatment Plan", search_CDTs)
         st.session_state.specialist = st.session_state.specialty
     
 
@@ -1325,6 +1344,19 @@ def display_functions_tab():
             note_types = list(note_type_instructions.keys())  # Use the keys from our note_type_instructions dictionary
             
             current_note_type = user.preferred_note_type if hasattr(user, 'preferred_note_type') else "Emergency Medicine Note"
+            new_note_type = st.selectbox("Preferred Note Type", label_visibility="collapsed",
+                                        options=note_types, 
+                                        index=note_types.index(current_note_type) if current_note_type in note_types else 0,
+                                        key="IM_preferred_note_type")
+            if new_note_type != current_note_type:
+                user.preferred_note_type = new_note_type
+                users_collection.update_one({"username": st.session_state.username}, {"$set": user.to_dict()})
+                st.session_state.preferred_note_type = new_note_type
+
+
+                custom_template = user.get_preferred_template(new_note_type)
+                # st.success(f"Preferred note type updated to {new_note_type} with style {custom_template}")
+
             
             # Use a unique key for the selectbox
             selectbox_key = "preferred_note_type_selectbox"
@@ -1356,8 +1388,10 @@ def display_functions_tab():
         col3, col4 = st.columns(2)
         with col3:
             if st.button('Complete Note', use_container_width=True, help=f"Writes a full {st.session_state.preferred_note_type} note on this patient"):
+            if st.button('Complete Note', use_container_width=True, help=f"Writes a full {current_note_type} on this patient"):
                 st.session_state.specialist = NOTE_WRITER
                 consult_specialist_and_update_ddx("Full Medical Note", f"Write a {st.session_state.preferred_note_type} note on this patient")
+                consult_specialist_and_update_ddx("Full Medical Note", f"Write a {current_note_type} on this patient")
                 st.session_state.specialist = st.session_state.specialty
             if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
                 st.session_state.specialist = NOTE_WRITER
@@ -1394,27 +1428,40 @@ def display_functions_tab():
             if st.button('Focused Note', use_container_width=True, help="HPI, ROS, PE, A/P, then paste EMR smart data (meds, labs, imaging, etc)"):
                 st.session_state.specialist = NOTE_WRITER
                 consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
-                st.session_state.specialist = "Emergency Medicine"
+                st.session_state.specialist = st.session_state.specialty
 
             if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
                 st.session_state.specialist = NOTE_WRITER
                 consult_specialist_and_update_ddx("A&P only", create_ap)
-                st.session_state.specialist = "Emergency Medicine"
+                st.session_state.specialist = st.session_state.specialty
 
-    st.subheader('📝Notes for Patients')
-    update_patient_language()
+    st.subheader('📝Notes for Patients in specified language')
+    
     col1, col2 = st.columns(2)
     with col1:
-
+        update_patient_language()
+        if st.button("🏢Work Note", use_container_width=True, help="Writes a personalized patient work note"):
+            st.session_state.specialist = "Patient Educator"
+            consult_specialist_and_update_ddx("Patient Work Note", f"Write a patient work note for this patient in {st.session_state.patient_language}. ")
+            st.session_state.specialist = st.session_state.specialty
+        if st.button("🏫School Note", use_container_width=True, help="Writes a personalized patient school note"):
+            st.session_state.specialist = "Patient Educator"
+            consult_specialist_and_update_ddx("Patient School Note", f"Write a patient school note for this patient in {st.session_state.patient_language}. ")
+            st.session_state.specialist = st.session_state.specialty
+        
+    with col2:
         if st.button("🙍Education Note", use_container_width=True, help="Writes a personalized patient education note"):
             st.session_state.specialist = "Patient Educator"
             consult_specialist_and_update_ddx("Patient Education Note", f"Write a patient education note for this patient in {st.session_state.patient_language}")
-            st.session_state.specialist = "Emergency Medicine"
-    with col2:
+            st.session_state.specialist = st.session_state.specialty
         if st.button('💪Physical Therapy ', use_container_width=True, help="Writes a personalized Physical Therapy plan"):
             st.session_state.specialist = "Musculoskeletal Systems"
             consult_specialist_and_update_ddx("Physical Therapy Plan", pt_plan)
-            st.session_state.specialist = "Emergency Medicine"
+            st.session_state.specialist = st.session_state.specialty
+        if st.button("🏈Sports/Gym Note", use_container_width=True, help="Writes a personalized patient Sports/Gym note"):
+            st.session_state.specialist = "Patient Educator"
+            consult_specialist_and_update_ddx("Patient Sports/Gym Note", f"Write a patient Sports/Gym note for this patient in {st.session_state.patient_language}. ")
+            st.session_state.specialist = st.session_state.specialty
 
 
     
@@ -1445,32 +1492,58 @@ def display_specialist_tab():
 def display_settings_tab():
     st.header("User Settings")
     st.markdown("[View EMMA Help Guide](https://veil-cry-a60.notion.site/EMMA-Help-Page-e681bf1c061041719b6666376cc88386)", unsafe_allow_html=True)
+    
     # Load current user settings
     user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
+
+    # User Details Section
+    st.subheader("User Details")
+    new_name = st.text_input("Name", value=user.name)
+    new_hospital_name = st.text_input("Hospital/Clinic Name", value=user.hospital_name)
+    new_hospital_contact = st.text_input("Hospital Contact Information", value=user.hospital_contact)
 
     # Default Specialty
     current_specialty = user.specialty if user.specialty else "Emergency Medicine"
     new_specialty = st.selectbox("Default Specialty", 
                                  options=SPECIALTIES, 
-                                 index=SPECIALTIES.index(current_specialty))
+                                 index=SPECIALTIES.index(current_specialty),
+                                 key="settings_specialty")
 
     # Preferred Note Type
-    note_types = list(note_type_instructions.keys())  # Use the keys from our note_type_instructions dictionary
-    
+    note_types = list(note_type_instructions.keys())
     current_note_type = user.preferred_note_type if hasattr(user, 'preferred_note_type') else "Emergency Medicine Note"
     new_note_type = st.selectbox("Preferred Note Type", 
                                  options=note_types, 
-                                 index=note_types.index(current_note_type) if current_note_type in note_types else 0)
+                                 index=note_types.index(current_note_type) if current_note_type in note_types else 0,
+                                 key="settings_preferred_note_type")  # Changed key here
 
-    # Other settings can be added here as needed
+    # Note Templates Management
+    st.subheader("Note Templates")
+    template_management_option = st.radio(
+        "Choose an action:",
+        ["View Templates", "Create Template from Example", "Edit Template"]
+    )
+
+    if template_management_option == "View Templates":
+        display_templates(user)
+    elif template_management_option == "Create Template from Example":
+        create_template_from_example(user)
+    elif template_management_option == "Edit Template":
+        edit_template(user)
 
     if st.button("Save Settings"):
         # Update user object
+        user.name = new_name
+        user.hospital_name = new_hospital_name
+        user.hospital_contact = new_hospital_contact
         user.specialty = new_specialty
         user.preferred_note_type = new_note_type
 
-        # Update other settings...
         # Update session state
+        st.session_state.name = new_name
+        st.session_state.hospital_name = new_hospital_name
+        st.session_state.hospital_contact = new_hospital_contact
+        st.session_state.specialty = new_specialty
         st.session_state.preferred_note_type = new_note_type
 
         # Save to database
@@ -1642,7 +1715,7 @@ def display_delete_session_button(collection_name):
                 st.rerun()
 
 def display_feedback_button():
-    if st.button("📝 Give Feedback", use_container_width=True, help="Help make EMMA better"):
+    if st.button("📝 Feedback", use_container_width=True, help="Help make EMMA better"):
         st.session_state.show_feedback = True
 
 def handle_user_input_container():
@@ -1687,6 +1760,741 @@ def handle_user_input_container():
     elif user_chat:
         process_user_question(user_chat, specialist)
         st.rerun()
+
+########################################### Template Functions ###########################################
+
+def share_template(template_id: str, shared_with: List[str]):
+    user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
+    shared_template = user.share_template(template_id, shared_with)
+    
+    if shared_template:
+        shared_templates_collection.insert_one(shared_template)
+        for username in shared_with:
+            recipient = User.from_dict(users_collection.find_one({"username": username}))
+            if recipient:
+                recipient.add_shared_template(shared_template)
+                users_collection.update_one(
+                    {"username": username},
+                    {"$set": {"shared_templates": recipient.shared_templates}}
+                )
+        return True
+    return False
+
+def get_shareable_users():
+    current_user = st.session_state.username
+    return [user['username'] for user in users_collection.find({"username": {"$ne": current_user}})]
+
+def update_shared_template_rating(template_id: str, username: str, rating: int, comment: str = ""):
+    shared_templates_collection.update_one(
+        {"id": template_id},
+        {
+            "$push": {
+                "ratings": {"user": username, "rating": rating},
+                "reviews": {"user": username, "rating": rating, "comment": comment, "timestamp": datetime.datetime.now()}
+            }
+        }
+    )
+
+def get_featured_templates():
+    return list(shared_templates_collection.find().sort([("ratings.rating", -1)]).limit(5))
+
+def manage_custom_templates():
+    st.subheader("Manage Custom Note Templates")
+
+    user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
+    custom_templates = user.get_note_templates()
+    shared_templates = user.shared_templates
+
+    # Featured Templates Section
+    st.subheader("Featured Templates")
+    featured_templates = get_featured_templates()
+    for template in featured_templates:
+        avg_rating = sum(r["rating"] for r in template.get("ratings", [])) / len(template.get("ratings", [1])) if template.get("ratings") else 0
+        st.write(f"⭐ {template['name']} (Avg Rating: {avg_rating:.1f}/5)")
+
+    # Filtering and Sorting Options
+    st.subheader("All Shared Templates")
+    sort_option = st.selectbox("Sort by:", ["Rating", "Use Count", "Recency"])
+    filter_option = st.multiselect("Filter by Note Type:", list(set(t["note_type"] for t in shared_templates)))
+
+    # Sort and filter shared templates
+    filtered_templates = [t for t in shared_templates if not filter_option or t["note_type"] in filter_option]
+    if sort_option == "Rating":
+        filtered_templates.sort(key=lambda t: sum(r["rating"] for r in t.get("ratings", [])) / len(t.get("ratings", [1])) if t.get("ratings") else 0, reverse=True)
+    elif sort_option == "Use Count":
+        filtered_templates.sort(key=lambda t: t.get("use_count", 0), reverse=True)
+    else:  # Recency
+        filtered_templates.sort(key=lambda t: max((r["timestamp"] for r in t.get("reviews", [])), default=datetime.datetime.min), reverse=True)
+
+    for template in filtered_templates:
+        avg_rating = user.get_shared_template_rating(template['id'])
+        with st.expander(f"{template['name']} - Shared by: {template['original_author']} (Avg Rating: {avg_rating:.1f if avg_rating else 0}/5)"):
+            st.write(f"Note Type: {template['note_type']}")
+            st.text_area("System Prompt", value=template['system_prompt'], height=150, key=f"shared_prompt_{template['id']}")
+            
+            # Add rating and review functionality
+            user_rating = st.slider("Rate this template", 1, 5, key=f"rate_shared_{template['id']}")
+            user_comment = st.text_area("Leave a comment (optional)", key=f"comment_shared_{template['id']}")
+            if st.button("Submit Review", key=f"submit_review_{template['id']}"):
+                if user.rate_shared_template(template['id'], user_rating, user_comment):
+                    update_shared_template_rating(template['id'], user.username, user_rating, user_comment)
+                    users_collection.update_one(
+                        {"username": st.session_state.username},
+                        {"$set": {"shared_templates": user.shared_templates}}
+                    )
+                    st.success("Review submitted successfully!")
+                    st.rerun()
+            
+            # Display existing reviews
+            st.subheader("Reviews")
+            reviews = user.get_shared_template_reviews(template['id'])
+            for review in reviews:
+                st.write(f"User: {review['user']}")
+                st.write(f"Rating: {'⭐' * review['rating']}")
+                st.write(f"Comment: {review['comment']}")
+                st.write(f"Date: {review['timestamp'].strftime('%Y-%m-%d %H:%M')}")
+                st.write("---")
+
+    # Custom Templates Section
+    st.subheader("Your Custom Templates")
+    for template in custom_templates:
+        with st.expander(f"{template['name']} ({template['note_type']})"):
+            st.write(f"Use Count: {template.get('use_count', 0)}")
+            st.text_area("System Prompt", value=template['system_prompt'], height=150, key=f"custom_prompt_{template['id']}")
+            
+            if st.button("Share", key=f"share_{template['id']}"):
+                shareable_users = get_shareable_users()
+                shared_with = st.multiselect("Share with:", shareable_users)
+                if st.button("Confirm Share"):
+                    if share_template(template['id'], shared_with):
+                        st.success(f"Template '{template['name']}' shared successfully!")
+                    else:
+                        st.error("Failed to share template. Please try again.")
+
+            if st.button("Edit", key=f"edit_{template['id']}"):
+                st.session_state.editing_template = template['id']
+            
+            if st.button("Delete", key=f"delete_{template['id']}"):
+                user.delete_note_template(template['id'])
+                users_collection.update_one(
+                    {"username": st.session_state.username},
+                    {"$set": {"preferences": user.preferences}}
+                )
+                st.success(f"Template '{template['name']}' deleted successfully!")
+                st.rerun()
+
+    # ... (rest of the function for creating/editing templates)
+
+def check_new_shared_templates():
+    user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
+    new_templates = [t for t in user.shared_templates if t.get('new', True)]
+    
+    if new_templates:
+        st.sidebar.warning(f"You have {len(new_templates)} new shared template(s)!")
+        if st.sidebar.button("View Shared Templates"):
+            st.session_state.show_shared_templates = True
+
+def mark_shared_templates_as_seen():
+    user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
+    for template in user.shared_templates:
+        template['new'] = False
+    users_collection.update_one(
+        {"username": st.session_state.username},
+        {"$set": {"shared_templates": user.shared_templates}}
+    )
+
+def manage_custom_templates():
+    st.subheader("Manage Note Templates")
+
+    user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
+    custom_templates = user.get_note_templates()
+    shared_templates = user.shared_templates
+
+    # Featured Templates Section
+    st.subheader("Featured Templates")
+    featured_templates = get_featured_templates()
+    for template in featured_templates:
+        avg_rating = sum(r["rating"] for r in template.get("ratings", [])) / len(template.get("ratings", [1])) if template.get("ratings") else 0
+        st.write(f"⭐ {template['name']} (Avg Rating: {avg_rating:.1f}/5)")
+
+    # Shared Templates Section
+    st.subheader("Shared Templates")
+    
+    # Filtering and Sorting Options
+    col1, col2 = st.columns(2)
+    with col1:
+        sort_option = st.selectbox("Sort by:", ["Rating", "Use Count", "Recency"])
+    with col2:
+        filter_option = st.multiselect("Filter by Note Type:", list(set(t["note_type"] for t in shared_templates)))
+
+    # Sort and filter shared templates
+    filtered_templates = [t for t in shared_templates if not filter_option or t["note_type"] in filter_option]
+    if sort_option == "Rating":
+        filtered_templates.sort(key=lambda t: sum(r["rating"] for r in t.get("ratings", [])) / len(t.get("ratings", [1])) if t.get("ratings") else 0, reverse=True)
+    elif sort_option == "Use Count":
+        filtered_templates.sort(key=lambda t: t.get("use_count", 0), reverse=True)
+    else:  # Recency
+        filtered_templates.sort(key=lambda t: max((r["timestamp"] for r in t.get("reviews", [])), default=datetime.datetime.min), reverse=True)
+
+    for template in filtered_templates:
+        avg_rating = user.get_shared_template_rating(template['id'])
+        with st.expander(f"{template['name']} - Shared by: {template['original_author']} (Avg Rating: {avg_rating:.1f if avg_rating else 0}/5)"):
+            st.write(f"Note Type: {template['note_type']}")
+            st.text_area("System Prompt", value=template['system_prompt'], height=150, key=f"shared_prompt_{template['id']}")
+            
+            # Rating and review functionality
+            col1, col2 = st.columns(2)
+            with col1:
+                user_rating = st.slider("Rate this template", 1, 5, key=f"rate_shared_{template['id']}")
+            with col2:
+                user_comment = st.text_area("Leave a comment (optional)", key=f"comment_shared_{template['id']}")
+            if st.button("Submit Review", key=f"submit_review_{template['id']}"):
+                if user.rate_shared_template(template['id'], user_rating, user_comment):
+                    update_shared_template_rating(template['id'], user.username, user_rating, user_comment)
+                    users_collection.update_one(
+                        {"username": st.session_state.username},
+                        {"$set": {"shared_templates": user.shared_templates}}
+                    )
+                    st.success("Review submitted successfully!")
+                    st.rerun()
+            
+            # Display existing reviews
+            st.subheader("Reviews")
+            reviews = user.get_shared_template_reviews(template['id'])
+            for review in reviews:
+                st.write(f"User: {review['user']}")
+                st.write(f"Rating: {'⭐' * review['rating']}")
+                st.write(f"Comment: {review['comment']}")
+                st.write(f"Date: {review['timestamp'].strftime('%Y-%m-%d %H:%M')}")
+                st.write("---")
+
+            # Accept or reject shared template
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Accept", key=f"accept_{template['id']}"):
+                    user.add_note_template(template['name'], template['note_type'], template['system_prompt'])
+                    users_collection.update_one(
+                        {"username": st.session_state.username},
+                        {"$set": {"preferences": user.preferences}}
+                    )
+                    st.success(f"Template '{template['name']}' added to your custom templates!")
+                    st.rerun()
+            with col2:
+                if st.button("Reject", key=f"reject_{template['id']}"):
+                    user.shared_templates = [t for t in user.shared_templates if t['id'] != template['id']]
+                    users_collection.update_one(
+                        {"username": st.session_state.username},
+                        {"$set": {"shared_templates": user.shared_templates}}
+                    )
+                    st.success(f"Template '{template['name']}' removed from shared templates.")
+                    st.rerun()
+
+    # Custom Templates Section
+    st.subheader("Your Custom Templates")
+    for template in custom_templates:
+        with st.expander(f"{template['name']} ({template['note_type']})"):
+            st.write(f"Use Count: {template.get('use_count', 0)}")
+            st.text_area("System Prompt", value=template['system_prompt'], height=150, key=f"custom_prompt_{template['id']}")
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("Share", key=f"share_{template['id']}"):
+                    shareable_users = get_shareable_users()
+                    shared_with = st.multiselect("Share with:", shareable_users)
+                    if st.button("Confirm Share"):
+                        if share_template(template['id'], shared_with):
+                            st.success(f"Template '{template['name']}' shared successfully!")
+                        else:
+                            st.error("Failed to share template. Please try again.")
+            with col2:
+                if st.button("Edit", key=f"edit_{template['id']}"):
+                    st.session_state.editing_template = template['id']
+            with col3:
+                if st.button("Delete", key=f"delete_{template['id']}"):
+                    user.delete_note_template(template['id'])
+                    users_collection.update_one(
+                        {"username": st.session_state.username},
+                        {"$set": {"preferences": user.preferences}}
+                    )
+                    st.success(f"Template '{template['name']}' deleted successfully!")
+                    st.rerun()
+
+    # Create New Template Section
+    st.subheader("Create New Template")
+    new_template_name = st.text_input("New Template Name")
+    new_template_type = st.selectbox("Note Type", list(note_type_instructions.keys()))
+    new_template_prompt = st.text_area("System Prompt", height=150)
+    if st.button("Create Template"):
+        if new_template_name and new_template_prompt:
+            user.add_note_template(new_template_name, new_template_type, new_template_prompt)
+            users_collection.update_one(
+                {"username": st.session_state.username},
+                {"$set": {"preferences": user.preferences}}
+            )
+            st.success(f"New template '{new_template_name}' created successfully!")
+            st.rerun()
+        else:
+            st.error("Please provide both a name and a prompt for the new template.")
+
+    # Edit Template Section
+    if 'editing_template' in st.session_state:
+        template = user.get_note_template(st.session_state.editing_template)
+        if template:
+            st.subheader(f"Editing Template: {template['name']}")
+            edited_name = st.text_input("Template Name", value=template['name'])
+            edited_type = st.selectbox("Note Type", list(note_type_instructions.keys()), index=list(note_type_instructions.keys()).index(template['note_type']))
+            edited_prompt = st.text_area("System Prompt", value=template['system_prompt'], height=150)
+            if st.button("Save Changes"):
+                user.update_note_template(template['id'], edited_name, edited_type, edited_prompt)
+                users_collection.update_one(
+                    {"username": st.session_state.username},
+                    {"$set": {"preferences": user.preferences}}
+                )
+                st.success("Template updated successfully!")
+                del st.session_state.editing_template
+                st.rerun()
+            if st.button("Cancel Editing"):
+                del st.session_state.editing_template
+                st.rerun()
+
+def analyze_note_format(example_note: str, note_type: str):
+    system_prompt = f"""
+    Analyze the following {note_type} and create detailed system instructions for generating similar notes. Focus on:
+
+    1. Overall structure and sections
+    2. Level of detail in each section
+    3. Use of medical terminology, abbreviations, and specialized language
+    4. Temporal organization of information
+    5. Presentation of patient demographics and identifiers
+    6. Structure of assessment and treatment plan
+    7. Integration of objective data (lab results, vital signs, etc.)
+    8. Documentation of patient-provider interactions
+    9. Follow-up and continuity of care elements
+    10. Any unique formatting or style elements, including:
+        - Use of bullet points, numbered lists, or other formatting
+        - Emphasis techniques (bold, italics, underlining)
+        - Use of templates or standardized sections
+    11. Compliance and regulatory elements
+ 
+
+    Your output should be in the form of clear, concise instructions that could be given to an AI to reproduce this note style, capturing the unique preferences and requirements of the healthcare provider.
+
+    Example Note:
+    {example_note}
+
+    Based on this analysis, provide only the system instructions for generating similar notes. Provide an outline with format instructions of the desired note for easy reference. Do not include any commentary before or after the instructions.
+    """
+
+    system_message = SystemMessage(content=system_prompt)
+    user_message = HumanMessage(content="Please analyze the note and provide system instructions.")
+
+    messages = [system_message, user_message]
+
+    # LLM Model Response
+    response = anthropic_model.invoke(messages)
+    response_text = response.content
+
+    return response_text
+
+def create_template_from_example(user):
+    st.subheader("Create Template from Example")
+    
+    if 'template_creation_stage' not in st.session_state:
+        st.session_state.template_creation_stage = 'initial'
+
+    if st.session_state.template_creation_stage == 'initial':
+        new_template_title = st.text_input("Template Title")
+        new_template_type = st.selectbox("Note Type", list(note_type_instructions.keys()))
+        example_note = st.text_area("Paste your example note here", height=300)
+        
+        if st.button("Analyze Note"):
+            if example_note and new_template_title and new_template_type:
+                with st.spinner("Analyzing note format..."):
+                    analyzed_instructions = analyze_note_format(example_note, new_template_type)
+                st.session_state.analyzed_instructions = analyzed_instructions
+                st.session_state.new_template_title = new_template_title
+                st.session_state.new_template_type = new_template_type
+                st.session_state.template_creation_stage = 'edit_instructions'
+                st.rerun()
+            else:
+                st.error("Please provide a title, note type, and an example note to analyze.")
+
+    elif st.session_state.template_creation_stage == 'edit_instructions':
+        st.subheader(f"Editing Template: {st.session_state.new_template_title}")
+        st.write(f"Note Type: {st.session_state.new_template_type}")
+        
+        edited_instructions = st.text_area("System Instructions (you can edit these)", 
+                                           value=st.session_state.analyzed_instructions, 
+                                           height=300)
+        
+        if st.button("Generate Sample Note"):
+            with st.spinner("Generating sample note..."):
+                sample_note = generate_sample_note(edited_instructions, st.session_state.new_template_type)
+            st.session_state.sample_note = sample_note
+            st.session_state.template_creation_stage = 'review_sample'
+            st.rerun()
+
+    elif st.session_state.template_creation_stage == 'review_sample':
+        st.subheader(f"Review Sample Note: {st.session_state.new_template_title}")
+        st.write(f"Note Type: {st.session_state.new_template_type}")
+        
+        st.text_area("Sample Note", value=st.session_state.sample_note, height=300, disabled=True)
+        
+        feedback = st.text_area("Provide feedback or suggestions for improvement", height=150)
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("Refine Instructions"):
+                if feedback:
+                    with st.spinner("Refining instructions..."):
+                        refined_instructions = refine_instructions(st.session_state.analyzed_instructions, feedback)
+                    st.session_state.analyzed_instructions = refined_instructions
+                    st.session_state.template_creation_stage = 'edit_instructions'
+                    st.rerun()
+                else:
+                    st.error("Please provide feedback for refinement.")
+        
+        with col2:
+            if st.button("Save Template"):
+                set_as_preferred = st.checkbox("Set as preferred template for this note type")
+                template_id = user.add_note_template(st.session_state.new_template_title, 
+                                                     st.session_state.new_template_type, 
+                                                     st.session_state.analyzed_instructions)
+                if set_as_preferred:
+                    user.set_preferred_template(st.session_state.new_template_type, template_id)
+                
+                users_collection.update_one(
+                    {"username": st.session_state.username},
+                    {"$set": user.to_dict()}
+                )
+                st.success(f"New template '{st.session_state.new_template_title}' created successfully!")
+                reset_template_creation_state()
+                time.sleep(30)
+                st.rerun()
+        
+        with col3:
+            if st.button("Start Over"):
+                reset_template_creation_state()
+                st.rerun()
+
+def reset_template_creation_state():
+    if 'template_creation_stage' in st.session_state:
+        del st.session_state.template_creation_stage
+    if 'analyzed_instructions' in st.session_state:
+        del st.session_state.analyzed_instructions
+    if 'new_template_title' in st.session_state:
+        del st.session_state.new_template_title
+    if 'new_template_type' in st.session_state:
+        del st.session_state.new_template_type
+    if 'sample_note' in st.session_state:
+        del st.session_state.sample_note
+
+def refine_instructions(current_instructions: str, feedback: str):
+    system_prompt = f"""
+    You are an AI assistant specialized in refining medical note generation instructions. 
+    Given the current instructions and user feedback, improve the instructions to better meet the user's needs.
+
+    Current Instructions:
+    {current_instructions}
+
+    User Feedback:
+    {feedback}
+
+    Please provide only the refined instructions that address the user's feedback while maintaining the overall structure and purpose of the note. Do not include any commentary.
+    """
+
+    system_message = SystemMessage(content=system_prompt)
+    user_message = HumanMessage(content="Please refine the instructions based on the given feedback.")
+
+    messages = [system_message, user_message]
+
+    # LLM Model Response
+    response = anthropic_model.invoke(messages)
+    response_text = response.content
+
+    return response_text
+
+def generate_sample_note(system_instructions: str, note_type: str):
+    system_prompt = f"""
+    You are an AI assistant specialized in generating medical notes. Use the following system instructions to create a sample {note_type}. 
+    Generate a realistic but fictional patient scenario.
+
+    System Instructions:
+    {system_instructions}
+
+    Now, generate a sample {note_type} based on these instructions.
+    """
+
+    system_message = SystemMessage(content=system_prompt)
+    user_message = HumanMessage(content="Please generate a sample note based on the given instructions.")
+
+    messages = [system_message, user_message]
+
+    # LLM Model Response
+    response = anthropic_model.invoke(messages)
+    response_text = response.content
+
+    return response_text    
+
+
+def write_medical_note():
+    user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
+    custom_templates = user.get_note_templates()
+    
+    # Combine default and custom templates
+    all_templates = [{"title": "Default", "type": st.session_state.preferred_note_type, "content": note_type_instructions[st.session_state.preferred_note_type]}] + custom_templates
+    
+    # Sort templates by use count (if available)
+    all_templates.sort(key=lambda x: x.get('use_count', 0), reverse=True)
+    
+    # Create options for selectbox
+    template_options = [f"{t['title']} ({t['type']}) - Uses: {t.get('use_count', 0)}" for t in all_templates]
+    
+    selected_template = st.selectbox("Choose Note Template", template_options)
+    
+    # Extract the template title from the selected option
+    selected_title = selected_template.split(" (")[0]
+    
+    # Find the selected template
+    template = next((t for t in all_templates if t['title'] == selected_title), None)
+    
+    if not template:
+        st.error("Selected template not found. Using default template.")
+        template = all_templates[0]  # Use the default template
+
+    # Note generation code
+    st.subheader("Patient Information")
+    patient_info = st.text_area("Enter patient information", height=150)
+
+    prompt = f"Generate a {template['type']} based on the following patient information:\n\n{patient_info}\n\nUse the following system instructions for the note format:\n\n{template['content']}"
+    
+    # Set the specialist to NOTE_WRITER
+    original_specialist = st.session_state.specialist
+    st.session_state.specialist = NOTE_WRITER
+    
+    # Generate the note
+    with st.spinner("Generating medical note..."):
+        generated_note = get_response(prompt)
+    
+    # Reset the specialist
+    st.session_state.specialist = original_specialist
+    
+    # Display the generated note
+    st.subheader("Generated Medical Note")
+    st.text_area("Generated Note", value=generated_note, height=300)
+    
+    # Save the note
+    save_note_details(st.session_state.username, generated_note)
+    
+    # Increment use count for custom templates
+    if template['title'] != "Default":
+        user.increment_template_use_count(template['id'])
+        users_collection.update_one(
+            {"username": st.session_state.username},
+            {"$set": {"preferences": user.preferences}}
+        )
+    
+    # After generating the note, ask for feedback
+    if template['title'] != "Default":
+        st.write("How satisfied are you with this note?")
+        rating = st.slider("Rate this template", 1, 5, 3)
+        feedback = st.text_area("Provide feedback (optional)")
+        if st.button("Submit Feedback"):
+            user.rate_custom_note_template(template['id'], rating)
+            if feedback:
+                # You might want to store this feedback for future improvements
+                pass
+            users_collection.update_one(
+                {"username": st.session_state.username},
+                {"$set": {"preferences": user.preferences}}
+            )
+            st.success("Thank you for your feedback!")
+
+
+################################ template UI ################################
+def display_templates(user):
+    st.subheader("View and Manage Templates")
+    
+    # Get all templates
+    templates = user.get_note_templates()
+    if not templates:
+        st.write("You don't have any custom templates yet.")
+        return
+
+    # Group templates by note type
+    templates_by_type = {}
+    for template in templates:
+        if template['type'] not in templates_by_type:
+            templates_by_type[template['type']] = []
+        templates_by_type[template['type']].append(template)
+
+    # Display templates grouped by note type
+    for note_type, type_templates in templates_by_type.items():
+        st.write(f"### {note_type}")
+        
+        # Get the current preferred template for this note type
+        current_preferred_id = user.get_preferred_template(note_type)
+        
+        # Create a selectbox for choosing the preferred template
+        template_options = ["None"] + [t['title'] for t in type_templates]
+        preferred_index = 0
+        if current_preferred_id:
+            preferred_index = next((i for i, t in enumerate(type_templates) if t['id'] == current_preferred_id), 0) + 1
+
+        new_preferred = st.selectbox(
+            f"Preferred template for {note_type}:",
+            options=template_options,
+            index=preferred_index,
+            key=f"preferred_{note_type}"
+        )
+
+        # Update the preferred template if changed
+        if new_preferred != "None":
+            new_preferred_id = next(t['id'] for t in type_templates if t['title'] == new_preferred)
+            if new_preferred_id != current_preferred_id:
+                user.set_preferred_template(note_type, new_preferred_id)
+                st.success(f"Updated preferred template for {note_type}")
+        elif current_preferred_id:
+            user.set_preferred_template(note_type, None)
+            st.success(f"Removed preferred template for {note_type}")
+
+        # Display each template
+        for template in type_templates:
+            with st.expander(f"{template['title']} ({'Preferred' if template['id'] == current_preferred_id else 'Custom'})"):
+                st.write(f"Use Count: {template.get('use_count', 0)}")
+                st.text_area("System Prompt", value=template['content'], height=150, key=f"view_prompt_{template['id']}", disabled=True)
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("Edit", key=f"edit_{template['id']}"):
+                        st.session_state.editing_template = template['id']
+                        st.rerun()
+                with col2:
+                    delete_key = f"delete_{template['id']}"
+                    
+                    if st.button("Delete", key=delete_key):
+                        st.session_state.template_to_delete = template['id']
+                        st.session_state.show_delete_confirmation = True
+                        st.rerun()
+                # Handle template deletion confirmation
+                if hasattr(st.session_state, 'show_delete_confirmation') and st.session_state.show_delete_confirmation:
+                    st.warning("Are you sure you want to delete this template?")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("Yes, delete", key=f"confirm_delete_{template['id']}"):
+                            template_id = st.session_state.template_to_delete
+                            if user.delete_note_template(template_id):
+                                st.success(f"Template deleted successfully!")
+                                # Update the user in the database
+                                if authenticator.update_user(st.session_state.username, user.to_dict()):
+                                    st.success("User data updated in database.")
+                                else:
+                                    st.error("Failed to update user data in database.")
+                                # Clear the deletion state
+                                del st.session_state.template_to_delete
+                                del st.session_state.show_delete_confirmation
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.error(f"Failed to delete template")
+                    with col2:
+                        if st.button("No, cancel", key=f"cancel_delete_{template['id']}"):
+                            # Clear the deletion state
+                            del st.session_state.template_to_delete
+                            del st.session_state.show_delete_confirmation
+                            st.rerun()
+    
+
+    # Handle template editing
+    if hasattr(st.session_state, 'editing_template'):
+        edit_template(user, st.session_state.editing_template)
+
+def edit_template(user):
+    templates = user.get_note_templates()
+    if not templates:
+        st.write("You don't have any custom templates to edit.")
+        return
+
+    template_to_edit = st.selectbox("Select template to edit", [t['title'] for t in templates])
+    template = next((t for t in templates if t['title'] == template_to_edit), None)
+
+    if template:
+        st.subheader(f"Editing Template: {template['title']}")
+        new_title = st.text_input("Template Title", value=template['title'])
+        new_type = st.selectbox("Note Type", list(note_type_instructions.keys()), index=list(note_type_instructions.keys()).index(template['type']))
+        new_content = st.text_area("System Prompt", value=template['content'], height=300)
+        
+        if st.button("Save Changes"):
+            user.update_note_template(template['id'], new_title, new_type, new_content)
+            users_collection.update_one(
+                {"username": st.session_state.username},
+                {"$set": user.to_dict()}
+            )
+            st.success("Template updated successfully!")
+            time.sleep(2)
+            st.rerun()
+
+def create_new_template(user):
+    st.subheader("Create New Template")
+    new_template_title = st.text_input("Template Title")
+    new_template_type = st.selectbox("Note Type", list(note_type_instructions.keys()))
+    
+    use_example = st.checkbox("Use an example note to generate instructions")
+    
+    if use_example:
+        example_note = st.text_area("Paste your example note here", height=300)
+        if st.button("Analyze Note"):
+            if example_note:
+                with st.spinner("Analyzing note format..."):
+                    analyzed_instructions = analyze_note_format(example_note, new_template_type)
+                st.session_state.analyzed_instructions = analyzed_instructions
+                st.success("Note analyzed! You can now edit the generated instructions.")
+            else:
+                st.error("Please provide an example note to analyze.")
+    
+    if 'analyzed_instructions' in st.session_state:
+        new_template_content = st.text_area("System Instructions (you can edit these)", 
+                                            value=st.session_state.analyzed_instructions, 
+                                            height=300)
+    else:
+        new_template_content = st.text_area("System Instructions", height=300)
+    
+    if st.button("Create Template"):
+        if new_template_title and new_template_content:
+            user.add_note_template(new_template_title, new_template_type, new_template_content)
+            users_collection.update_one(
+                {"username": st.session_state.username},
+                {"$set": {"preferences": user.preferences}}
+            )
+            st.success(f"New template '{new_template_title}' created successfully!")
+            if 'analyzed_instructions' in st.session_state:
+                del st.session_state.analyzed_instructions
+            time.sleep(2)
+            st.rerun()
+        else:
+            st.error("Please provide both a title and instructions for the new template.")
+
+def delete_template(user):
+    templates = user.get_note_templates()
+    if not templates:
+        st.write("You don't have any custom templates to delete.")
+        return
+
+    template_to_delete = st.selectbox("Select template to delete", [t['title'] for t in templates])
+    template = next((t for t in templates if t['title'] == template_to_delete), None)
+
+    if template:
+        st.write(f"Are you sure you want to delete the template '{template['title']}'?")
+        if st.button("Confirm Delete"):
+            user.delete_note_template(template['id'])
+            users_collection.update_one(
+                {"username": st.session_state.username},
+                {"$set": {"preferences": user.preferences}}
+            )
+            st.success(f"Template '{template['title']}' deleted successfully!")
+            time.sleep(2)
+            st.rerun()
+
 
 
 ############################################# User input processing #############################################
@@ -1753,6 +2561,12 @@ def get_response(user_question: str) -> str:
                     chat_context += f"AI: {message.content}\n"
             
             specialist = st.session_state.specialist
+            system_instructions = specialist_data[specialist]["system_instructions"]
+            
+            # Handle callable system_instructions (including NOTE_WRITER and Patient Educator)
+            if callable(system_instructions):
+                system_instructions = system_instructions()
+                print(f'DEBUG get_response SYSTEM INSTRUCTIONS: {system_instructions}')
             if specialist == NOTE_WRITER:
                 system_instructions = specialist_data[specialist]["system_instructions"]()
                 # print(f'DEBUG SYSTEM GET_RESPONSE if INSTRUCTIONS: {system_instructions}')
@@ -1763,10 +2577,15 @@ def get_response(user_question: str) -> str:
             if isinstance(system_instructions, list):
                 system_instructions = "\n".join(system_instructions)
 
-            system_prompt = system_instructions.format(
-                REQUESTED_SECTIONS='ALL',
-                FILL_IN_EXPECTED_FINDINGS='fill in the normal healthy findings and include them in the note accordingly'
-            )
+            # Only format if it's a string and contains placeholders
+            if isinstance(system_instructions, str) and ("{" in system_instructions and "}" in system_instructions):
+                system_prompt = system_instructions.format(
+                    REQUESTED_SECTIONS='ALL',
+                    FILL_IN_EXPECTED_FINDINGS='fill in the normal healthy findings and include them in the note accordingly'
+                )
+            else:
+                system_prompt = system_instructions
+
             system_message = SystemMessage(content=system_prompt)
             
             user_content = f"Chat History:\n{chat_context}\n\nUser: {user_question}"
@@ -1802,6 +2621,10 @@ def authenticated_user():
             st.session_state.collection_name = collection_name
             del st.session_state.load_session  # Clear the flag after loading
 
+        if st.session_state.get('show_shared_templates', False):
+            manage_custom_templates()
+            mark_shared_templates_as_seen()
+            st.session_state.show_shared_templates = False
 
         if st.session_state.differential_diagnosis:
             col1, col2 = st.columns([2, 1])
@@ -1857,67 +2680,6 @@ def authenticated_user():
         st.error(f"An error occurred: {str(e)}")
         logging.error(f"Unhandled exception in authenticated_user: {str(e)}", exc_info=True)
 
-# def handle_feedback():
-#     if 'show_feedback' not in st.session_state:
-#         st.session_state.show_feedback = False
-#     if 'feedback_text' not in st.session_state:
-#         st.session_state.feedback_text = ""
-
-#     if st.sidebar.button("📝 Give Feedback", key="feedback_button") or st.session_state.show_feedback:
-#         st.session_state.show_feedback = True
-#         with st.sidebar.expander("Feedback", expanded=True):
-#             st.write("Your feedback is crucial to making EMMA better. Please share your thoughts freely. AI will process your thoughts into different catagories:")
-            
-#             # Display prompts
-#             prompts = [
-#                 "How easy is it to use EMMA?",
-#                 "What performance issues have you encountered?",
-#                 "Which features of EMMA do you find most valuable?",
-#                 "How has EMMA impacted your efficiency or patient care?",
-#                 "Do you have any suggestions for improvements?"
-#             ]
-#             for prompt in prompts:
-#                 st.write(f"• {prompt}")
-            
-            
-#             # Text input
-#             st.session_state.feedback_text = st.text_area("Type/Record your feedback here...", value=st.session_state.feedback_text, key="feedback_text_area", height=150)
-            
-#             # Voice recording
-#             col1, col2 = st.columns([3, 1])
-#             with col1:
-#                 st.write("Or record your feedback:")
-#             with col2:
-#                 audio_text = record_audio(key="feedback_recorder", width=True)
-#                 if audio_text:
-#                     st.session_state.feedback_text += " " + audio_text
-#                     st.rerun()  # Rerun to update the text area
-            
-#             col3, col4 = st.columns([1, 1])
-#             with col3:
-#                 if st.button("Submit Feedback", key="submit_feedback_button", type="primary"):
-#                     if st.session_state.feedback_text:
-#                         # Process feedback using AI
-#                         processed_feedback = process_feedback(st.session_state.feedback_text)
-                        
-#                         # Save both raw and processed feedback
-#                         if authenticator.save_feedback(st.session_state.user_id, st.session_state.feedback_text, processed_feedback):
-#                             st.success("Thank you for your feedback! It has been processed and saved.")
-#                             st.session_state.show_feedback = False
-#                             st.session_state.feedback_text = ""
-#                             time.sleep(1)  # Give user time to see the message
-#                             st.rerun()
-#                         else:
-#                             st.error("There was an error saving your feedback. Please try again.")
-#                     else:
-#                         st.warning("Please provide some feedback before submitting.")
-            
-#             with col4:
-#                 if st.button("Cancel", key="cancel_feedback_button"):
-#                     st.session_state.show_feedback = False
-#                     st.session_state.feedback_text = ""
-#                     time.sleep(1)  # Give user time to see the message
-#                     st.rerun()
 
 def handle_feedback(container=None):
     if 'show_feedback' not in st.session_state:
@@ -1937,12 +2699,14 @@ def handle_feedback(container=None):
                 
                 # Display prompts
                 prompts = [
+                    "Any problems with Diagnosis, Treatment, or Documentation?",
                     "How easy is it to use EMMA?",
                     "What performance issues have you encountered?",
                     "Which features of EMMA do you find most valuable?",
                     "How has EMMA impacted your efficiency or patient care?",
                     "Do you have any suggestions for improvements?",
-                    "Any cool cases?"
+                    "Is there anything you would like to see added to EMMA?",
+                    "Any cool cases to share?"
                 ]
                 for prompt in prompts:
                     st.write(f"• {prompt}")
@@ -2014,24 +2778,29 @@ def handle_feedback(container=None):
 
 def process_feedback(text: str) -> str:
     clean_feedback_prompt = """
-        Analyze the following user feedback for EMMA (Emergency Medicine Management Assistant) and provide a concise report. Only include information directly addressed in the user feedback. Do not infer or add information not explicitly mentioned. Categorize the analysis into three main themes: Good, Bad, and Action Items.
+        Analyze the following user feedback for EMMA (Emergency Medicine Management Assistant) and provide a concise report. 
+        Only include information directly addressed in the user feedback. 
+        Do not infer or add information not explicitly mentioned. 
+        Categorize the analysis into three main themes: Good, Bad, and Action Items. 
+        Our main priorities to solve involve items related to usability, diagnosis, treatment, and documentation.
 
         1. Key Points Summary (1-2 sentences)
 
         2. Good:
         - Positive feedback
+        - are the user's requirements met?
         - Praised features or aspects
         - Performance improvements (if mentioned)
         - Beneficial user experiences
 
         3. Bad:
-        - Main issues or concerns
-        - Negative user experiences
+        - Any requiremnts not met?
+        - Other issues or concerns
         - Underperforming features
         - Comparative disadvantages (if mentioned)
 
         4. Action Items:
-        - Suggestions for improvement
+        - Suggestions for improvement. 
         - Actionable solutions to reported issues
         - Feature requests or modifications
         - Areas needing further investigation or feedback
