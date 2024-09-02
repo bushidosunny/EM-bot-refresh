@@ -72,9 +72,6 @@ ENVIRONMENT = os.getenv('ENVIRONMENT')
 PERPLEXITY_API_KEY = os.getenv('PERPLEXITY_API_KEY')
 
 
-
-
-
 # Initialize Anthropic client
 anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -300,7 +297,8 @@ def initialize_session_state():
         session_state.chat_history = []
         session_state.user_question = ""
         session_state.legal_question = ""
-        session_state.note_input = ""
+        session_state.additional_clinic_note_input = ""
+        session_state.additional_pt_note_input = ""
         session_state.json_data = {}
         session_state.pt_data = {}
         session_state.differential_diagnosis = []
@@ -964,7 +962,16 @@ def update_patient_language():
     if patient_language != st.session_state.patient_language:
         st.session_state.patient_language = patient_language
 
+def additional_pt_note_instructions():
+    note_instructions = st.text_input("Additional Note Instructions", value=st.session_state.additional_pt_note_input, autocomplete="on", label_visibility="visible", key="additional_pt_note_input")
+    if note_instructions != st.session_state.additional_pt_note_input:
+        st.session_state.additional_pt_note_input = note_instructions
+        print(f'DEBUG ADDITIONAL PT NOTE INSTRUCTIONS: {st.session_state.additional_pt_note_input}')
 
+def addiitional_clinic_note_instructions():
+    note_instructions = st.text_input("Additional Note Instructions", value=st.session_state.additional_clinic_note_input, autocomplete="on", label_visibility="visible", key="additional_clinic_note_input")
+    if note_instructions != st.session_state.additional_clinic_note_input:
+        st.session_state.additional_clinic_note_input = note_instructions
 
 def new_thread():
     # Clear all session state variables
@@ -1328,6 +1335,7 @@ def display_functions_tab():
     # st.divider()
     if st.session_state.get('specialty') == "Internal Medicine" or st.session_state.get('specialty') == "Internal Medicine":
         document_processing()
+        addiitional_clinic_note_instructions()
         col1, col2 = st.columns(2)
         with col1:
             st.subheader('📝Clinical Notes')
@@ -1354,78 +1362,136 @@ def display_functions_tab():
             
         col3, col4 = st.columns(2)
         with col3:
-            if st.button('Complete Note', use_container_width=True, help=f"Writes a full {current_note_type} on this patient"):
+            if st.button('Complete Note', use_container_width=True, help="Writes a full medical note on this patient"):
                 st.session_state.specialist = NOTE_WRITER
-                consult_specialist_and_update_ddx("Full Medical Note", f"Write a {current_note_type} on this patient")
+                if st.session_state.additional_clinic_note_input != "":
+                    consult_specialist_and_update_ddx("Full Medical Note", f"Write a note on this patient. Additional instructions: {st.session_state.additional_clinic_note_input}")
+                    st.session_state.additional_clinic_note_input = ""
+                else:
+                    consult_specialist_and_update_ddx("Full Medical Note", "Write a note on this patient")
                 st.session_state.specialist = st.session_state.specialty
             if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
                 st.session_state.specialist = NOTE_WRITER
-                consult_specialist_and_update_ddx("HPI only", create_hpi)
+                if st.session_state.additional_clinic_note_input != "":
+                    consult_specialist_and_update_ddx("HPI only", f"Write a HPI on this patient. Additional instructions: {st.session_state.additional_clinic_note_input}")
+                    st.session_state.additional_clinic_note_input = ""
+                else:
+                    consult_specialist_and_update_ddx("HPI only", create_hpi)
                 st.session_state.specialist = st.session_state.specialty
+        
         with col4:
             if st.button('Focused Note', use_container_width=True, help="HPI, ROS, PE, A/P, then paste EMR smart data (meds, labs, imaging, etc)"):
                 st.session_state.specialist = NOTE_WRITER
-                consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
-                st.session_state.specialist = "Emergency Medicine"
+                if st.session_state.additional_clinic_note_input != "":
+                    consult_specialist_and_update_ddx("Full Note except EMR results", f"Write a full note on this patient except for the EMR results. Additional instructions: {st.session_state.additional_clinic_note_input}")
+                    st.session_state.additional_clinic_note_input = ""
+                else:
+                    consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
+                st.session_state.specialist = st.session_state.specialty
 
             if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
                 st.session_state.specialist = NOTE_WRITER
-                consult_specialist_and_update_ddx("A&P only", create_ap)
-                st.session_state.specialist = "Emergency Medicine"
+                if st.session_state.additional_clinic_note_input != "":
+                    consult_specialist_and_update_ddx("A&P only", f"Write an Assessment and Plan for this patient. Additional instructions: {st.session_state.additional_clinic_note_input}")
+                    st.session_state.additional_clinic_note_input = ""
+                else:
+                    consult_specialist_and_update_ddx("A&P only", create_ap)
+                st.session_state.specialist = st.session_state.specialty
         
 
     
     # other specialties
     else:
         st.subheader('📝Clinical Notes')
+        addiitional_clinic_note_instructions()
         col1, col2 = st.columns(2)
         with col1:
             if st.button('Complete Note', use_container_width=True, help="Writes a full medical note on this patient"):
                 st.session_state.specialist = NOTE_WRITER
-                consult_specialist_and_update_ddx("Full Medical Note", "Write a note on this patient")
+                if st.session_state.additional_clinic_note_input != "":
+                    consult_specialist_and_update_ddx("Full Medical Note", f"Write a note on this patient. Additional instructions: {st.session_state.additional_clinic_note_input}")
+                    st.session_state.additional_clinic_note_input = ""
+                else:
+                    consult_specialist_and_update_ddx("Full Medical Note", "Write a note on this patient")
                 st.session_state.specialist = st.session_state.specialty
             if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
                 st.session_state.specialist = NOTE_WRITER
-                consult_specialist_and_update_ddx("HPI only", create_hpi)
+                if st.session_state.additional_clinic_note_input != "":
+                    consult_specialist_and_update_ddx("HPI only", f"Write a HPI on this patient. Additional instructions: {st.session_state.additional_clinic_note_input}")
+                    st.session_state.additional_clinic_note_input = ""
+                else:
+                    consult_specialist_and_update_ddx("HPI only", create_hpi)
                 st.session_state.specialist = st.session_state.specialty
         
         with col2:
             if st.button('Focused Note', use_container_width=True, help="HPI, ROS, PE, A/P, then paste EMR smart data (meds, labs, imaging, etc)"):
                 st.session_state.specialist = NOTE_WRITER
-                consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
+                if st.session_state.additional_clinic_note_input != "":
+                    consult_specialist_and_update_ddx("Full Note except EMR results", f"Write a full note on this patient except for the EMR results. Additional instructions: {st.session_state.additional_clinic_note_input}")
+                    st.session_state.additional_clinic_note_input = ""
+                else:
+                    consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
                 st.session_state.specialist = st.session_state.specialty
 
             if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
                 st.session_state.specialist = NOTE_WRITER
-                consult_specialist_and_update_ddx("A&P only", create_ap)
+                if st.session_state.additional_clinic_note_input != "":
+                    consult_specialist_and_update_ddx("A&P only", f"Write an Assessment and Plan for this patient. Additional instructions: {st.session_state.additional_clinic_note_input}")
+                    st.session_state.additional_clinic_note_input = ""
+                else:
+                    consult_specialist_and_update_ddx("A&P only", create_ap)
                 st.session_state.specialist = st.session_state.specialty
 
     st.subheader('📝Notes for Patients in specified language')
+    additional_pt_note_instructions()
     
     col1, col2 = st.columns(2)
     with col1:
         update_patient_language()
         if st.button("🏢Work Note", use_container_width=True, help="Writes a personalized patient work note"):
             st.session_state.specialist = "Patient Educator"
-            consult_specialist_and_update_ddx("Patient Work Note", f"Write a patient work note for this patient in {st.session_state.patient_language}. ")
+            if st.session_state.additional_pt_note_input != "":
+                consult_specialist_and_update_ddx("Patient Work Note", f"(Write a patient work note for this patient in {st.session_state.patient_language}. Additional insturctions: {st.session_state.additional_pt_note_input}. ")
+                st.session_state.additional_pt_note_input = ""
+            else:
+                consult_specialist_and_update_ddx("Patient Work Note", f"Write a patient work note for this patient in {st.session_state.patient_language}")
             st.session_state.specialist = st.session_state.specialty
+
         if st.button("🏫School Note", use_container_width=True, help="Writes a personalized patient school note"):
             st.session_state.specialist = "Patient Educator"
-            consult_specialist_and_update_ddx("Patient School Note", f"Write a patient school note for this patient in {st.session_state.patient_language}. ")
+            if st.session_state.additional_pt_note_input != "":
+                consult_specialist_and_update_ddx("Patient School Note", f"Write a patient school note for this patient in{st.session_state.patient_language}. Additional insturctions: {st.session_state.additional_pt_note_input}. ")
+                st.session_state.additional_pt_note_input = ""
+            else:
+                consult_specialist_and_update_ddx("Patient School Note", f"Write a patient school note for this patient in {st.session_state.patient_language}")
             st.session_state.specialist = st.session_state.specialty
         
     with col2:
         if st.button("🙍Education Note", use_container_width=True, help="Writes a personalized patient education note"):
             st.session_state.specialist = "Patient Educator"
-            consult_specialist_and_update_ddx("Patient Education Note", f"Write a patient education note for this patient in {st.session_state.patient_language}")
+            if st.session_state.additional_pt_note_input != "":
+                consult_specialist_and_update_ddx("Patient Education Note", f"Write a patient education note for this patient in {st.session_state.patient_language}. Additional insturctions: {st.session_state.additional_pt_note_input}. ")
+                st.session_state.additional_pt_note_input = ""
+            else:
+                consult_specialist_and_update_ddx("Patient Education Note", f"Write a patient education note for this patient in {st.session_state.patient_language}")
             st.session_state.specialist = st.session_state.specialty
+
         if st.button('💪Physical Therapy ', use_container_width=True, help="Writes a personalized Physical Therapy plan"):
             st.session_state.specialist = "Musculoskeletal Systems"
-            consult_specialist_and_update_ddx("Physical Therapy Plan", pt_plan)
+            if st.session_state.additional_pt_note_input != "":
+                consult_specialist_and_update_ddx("Physical Therapy Plan", f"Write a patient Physical Therapy plan for this patient in {st.session_state.patient_language}. Additional insturctions: {st.session_state.additional_pt_note_input}. ")
+                st.session_state.additional_pt_note_input = ""
+            else:
+                consult_specialist_and_update_ddx("Physical Therapy Plan", pt_plan)
             st.session_state.specialist = st.session_state.specialty
+
         if st.button("🏈Sports/Gym Note", use_container_width=True, help="Writes a personalized patient Sports/Gym note"):
             st.session_state.specialist = "Patient Educator"
-            consult_specialist_and_update_ddx("Patient Sports/Gym Note", f"Write a patient Sports/Gym note for this patient in {st.session_state.patient_language}. ")
+            if st.session_state.additional_pt_note_input != "":
+                consult_specialist_and_update_ddx("Patient Sports/Gym Note", f"Write a patient Sports/Gym note for this patient in {st.session_state.patient_language}. Additional insturctions: {st.session_state.additional_pt_note_input}. ")
+                st.session_state.additional_pt_note_input = ""
+            else:
+                consult_specialist_and_update_ddx("Patient Sports/Gym Note", f"Write a patient Sports/Gym note for this patient in {st.session_state.patient_language}. ")
             st.session_state.specialist = st.session_state.specialty
 
 
@@ -1520,9 +1586,7 @@ def display_settings_tab():
         st.success("Settings saved successfully!")
         time.sleep(1)
         st.rerun()  # Rerun the app to apply changes
-
-
-    
+ 
 
 def display_chat_history():
     for message in st.session_state.chat_history:
@@ -2585,7 +2649,7 @@ def authenticated_user():
             mark_shared_templates_as_seen()
             st.session_state.show_shared_templates = False
 
-        if st.session_state.differential_diagnosis:
+        if hasattr(st.session_state, 'differential_diagnosis'):
             col1, col2 = st.columns([2, 1])
             with col1:
                 with st.container():
@@ -2884,6 +2948,8 @@ def get_perplexity_response(user_question: str) -> str:
 def main():
     
     initialize_session_state()
+    print("DEBUG: Session State Initialized")
+    print(st.session_state)
     
     # Add a small delay to allow cookie to be read
     time.sleep(.3)
