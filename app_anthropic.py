@@ -1083,18 +1083,6 @@ def display_header():
         """, 
         unsafe_allow_html=True)
 
-# def display_critical_tasks():
-#     #print(f'DEBUG SS TATE CRITICAL ACTIONS:{st.session_state.critical_actions}')
-#     if st.session_state.critical_actions:
-#         st.markdown(f"<h5>❗Critical Actions</h5>", unsafe_allow_html=True)
-#         tasks = st.session_state.critical_actions.keys() if isinstance(st.session_state.critical_actions, dict) else st.session_state.critical_actions
-        
-#         for task in tasks:
-#             key = f"critical_{task}"
-#             if st.checkbox(f"❗{task}", key=key):
-#                 if task not in st.session_state.completed_tasks_str:
-#                     st.session_state.completed_tasks_str += f"Completed: {task}. "
-
 def display_critical_tasks():
     if st.session_state.critical_actions:
         st.markdown(f"<h5>❗Critical Actions</h5>", unsafe_allow_html=True)
@@ -1201,7 +1189,6 @@ def display_pt_headline():
             st.error(f"Missing key in patient data: {e}")
             st.title("EMMA")
 
-
 def display_sidebar():
     with st.sidebar:
         st.markdown(
@@ -1253,12 +1240,14 @@ def display_sidebar():
         st.divider()
                 
         container = st.container()
-        container.float(float_css_helper(bottom="10px", padding= "10px", background_color="#CED6E3", border_radius="10px"))
+        # container.float(float_css_helper(bottom="10px", padding= "10px", background_color="#CED6E3", border_radius="10px"))
         with container:
              
             
             c1, c2 = st.columns([1,1])
             feedback_container = st.container()
+            with c1:
+                st.markdown(f'Welcome {st.session_state.name}!')
             with c2:
                 handle_feedback(container=feedback_container)
                 
@@ -1275,16 +1264,14 @@ def display_sidebar():
                 
                 
             c3, c4 = st.columns([1,1])
-            with c3:
-                st.markdown(f'Welcome {st.session_state.name}!')
+            # with c3:
+            #     st.markdown(f'Welcome {st.session_state.name}!')
             with c4:
                 if st.button("Logout", key="logout_button", use_container_width=True):
                     authenticator.logout()
                     st.success("You have been logged out successfully.")
                     time.sleep(1)  # Give user time to see the message
                     st.rerun()
-
-
 
 def display_functions_tab():
     # st.subheader('Process Management')
@@ -1494,10 +1481,6 @@ def display_functions_tab():
                 consult_specialist_and_update_ddx("Patient Sports/Gym Note", f"Write a patient Sports/Gym note for this patient in {st.session_state.patient_language}. ")
             st.session_state.specialist = st.session_state.specialty
 
-
-    
-       
-
 def display_specialist_tab():
     
     choose_specialist_radio()
@@ -1519,7 +1502,6 @@ def display_specialist_tab():
     st.text("")
     st.text("")
 
-    
 def display_settings_tab():
     st.header("User Settings")
     st.markdown("[View EMMA Help Guide](https://veil-cry-a60.notion.site/EMMA-Help-Page-e681bf1c061041719b6666376cc88386)", unsafe_allow_html=True)
@@ -1587,7 +1569,6 @@ def display_settings_tab():
         time.sleep(1)
         st.rerun()  # Rerun the app to apply changes
  
-
 def display_chat_history():
     for message in st.session_state.chat_history:
         if isinstance(message, HumanMessage):
@@ -1672,8 +1653,7 @@ def display_sessions_tab():
                 st.error(f"Session '{session_name}' not found in options.")
     else:
         st.write("No sessions found for this user.")
-
-    
+ 
 def display_session_data(collection_name):
     st.session_state.session_id = collection_name
     categorized_data = load_session_data(collection_name)
