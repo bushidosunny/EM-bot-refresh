@@ -1387,7 +1387,6 @@ def display_functions_tab():
             
         col3, col4 = st.columns(2)
         with col3:
-            if st.button('Complete Note', use_container_width=True, help=f"Writes a full {st.session_state.preferred_note_type} note on this patient"):
             if st.button('Complete Note', use_container_width=True, help=f"Writes a full {current_note_type} on this patient"):
                 st.session_state.specialist = NOTE_WRITER
                 consult_specialist_and_update_ddx("Full Medical Note", f"Write a {st.session_state.preferred_note_type} note on this patient")
