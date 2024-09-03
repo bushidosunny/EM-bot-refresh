@@ -20,6 +20,7 @@ else:
         # print("Page config set")
 import admin
 from streamlit_float import float_css_helper
+from streamlit_js_eval import streamlit_js_eval
 from anthropic import Anthropic
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
@@ -1569,7 +1570,6 @@ def display_settings_tab():
         time.sleep(1)
         st.rerun()  # Rerun the app to apply changes
 
-from streamlit_js_eval import streamlit_js_eval
 
 
 def display_chat_history():
