@@ -1492,7 +1492,7 @@ def display_functions_tab():
     display_sessions_tab()
     
     st.divider()
-    st.subheader('🧰 Quick Actions')
+    st.subheader('🧰 Quick Action Buttons')
     
     # Initialize session state for additional instructions if not exists
     if 'additional_instructions' not in st.session_state:
@@ -1503,7 +1503,7 @@ def display_functions_tab():
         st.session_state.additional_instructions = ""
 
     # General additional instructions input
-    additional_instructions = st.text_input("Additional Instructions (applied to all actions)", 
+    additional_instructions = st.text_input("Additional Instructions (applied to all action buttons)", 
                                             value=st.session_state.additional_instructions,
                                             key="additional_instructions")
 
