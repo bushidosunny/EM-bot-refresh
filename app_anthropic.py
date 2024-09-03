@@ -2680,7 +2680,7 @@ def authenticated_user():
             mark_shared_templates_as_seen()
             st.session_state.show_shared_templates = False
 
-        if hasattr(st.session_state, 'differential_diagnosis'):
+        if st.session_state.differential_diagnosis:
             col1, col2 = st.columns([2, 1])
             with col1:
                 with st.container():
