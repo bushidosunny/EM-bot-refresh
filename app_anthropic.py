@@ -1204,7 +1204,7 @@ def display_sidebar():
             """, 
             unsafe_allow_html=True)
         
-        tab1, tab2, tab5 = st.tabs(["Functions", "Specialists","Settings"])
+        tab1, tab5 = st.tabs(["Functions", "Settings"])
         
         with tab1:
             #display_pt_headline()
@@ -1219,8 +1219,8 @@ def display_sidebar():
             print(f'DEBUG DISPLAY SIDEBAR PREFERRED NOTE TYPE: {st.session_state.preferred_note_type}')
             
             
-        with tab2:
-            display_specialist_tab()
+        # with tab2:
+        #     display_specialist_tab()
         
         with tab5:
             display_settings_tab()
@@ -1514,7 +1514,10 @@ def display_functions_tab():
     # Helper function for button actions
     def button_action(specialist, prompt_template, action_name):
         st.session_state.specialist = specialist
-        prompt = f"{prompt_template}\n\nAdditional Instructions: {st.session_state.additional_instructions}"
+        if st.session_state.additional_instructions != "":
+            prompt = f"{prompt_template}\n\nAdditional Instructions: {st.session_state.additional_instructions}"
+        else:
+            prompt = prompt_template
         consult_specialist_and_update_ddx(action_name, prompt)
         st.session_state.specialist = st.session_state.specialty
         clear_instructions()
@@ -1524,13 +1527,14 @@ def display_functions_tab():
     with col1:
         if st.button("🤔Challenge DDX", use_container_width=True, help="Use to broaden and critique the current DDX"):
             button_action("General Medicine", challenge_ddx, "Challenge the DDX")
-    
+        if st.button("🌎Web Search", use_container_width=True, help="Perplexity web search."):
+            button_action("Perplexity", "", "Search the Web")
     with col2:
         if st.button("🧠Refine DDX", use_container_width=True, help="Use Bayesian Reasoning to refine and narrow the DDX"):
             button_action("Bayesian Reasoner", apply_bayesian_reasoning, "Critical Thinking w Bayesian Reasoning")
 
-    if st.button("🔍Search for CDTs/Guidelines", use_container_width=True, help="Applies relevant CDTs, guidelines, or algorithms to guide treatment decisions and management."):
-        button_action("Perplexity", search_CDTs, "Treatment Plan")
+        if st.button("🔍Search for CDTs/Guidelines", use_container_width=True, help="Applies relevant CDTs, guidelines, or algorithms to guide treatment decisions and management."):
+            button_action("Perplexity", search_CDTs, "Treatment Plan")
 
     # Check if the specialty is Internal Medicine
     if st.session_state.get('specialty') == "Internal Medicine":
