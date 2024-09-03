@@ -1568,15 +1568,66 @@ def display_settings_tab():
         st.success("Settings saved successfully!")
         time.sleep(1)
         st.rerun()  # Rerun the app to apply changes
- 
+
+from streamlit_js_eval import streamlit_js_eval
+
+
 def display_chat_history():
-    for message in st.session_state.chat_history:
+    for i, message in enumerate(st.session_state.chat_history):
         if isinstance(message, HumanMessage):
-            with st.chat_message("user", avatar=st.session_state.user_photo_url):                
-                st.markdown(message.content, unsafe_allow_html=True)
+            with st.chat_message("user", avatar=st.session_state.user_photo_url):
+                col1, col2 = st.columns([0.97, 0.03])
+                with col1:
+                    st.markdown(message.content, unsafe_allow_html=True)
+                with col2:
+                    # Custom CSS for the delete button
+                    st.markdown("""
+                    <style>
+                    .delete-button {
+                        background-color: transparent;
+                        border: none;
+                        color: transparent;
+                        cursor: pointer;
+                        font-size: 18px;
+                        transition: color 0.3s ease;
+                        padding: 0;
+                    }
+                    .delete-button:hover {
+                        color: #FF4B4B;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+                    
+                    # Create a unique key for each delete button
+                    if st.button("🗑️", key=f"delete_user_{i}", help="Delete this message", 
+                                 on_click=delete_message, args=(i,),
+                                 kwargs={"message_type": "user_input"},
+                                 use_container_width=True):
+                        st.rerun()
         else:
             with st.chat_message("AI", avatar=message.avatar):
-                st.markdown(message.content, unsafe_allow_html=True)
+                col1, col2 = st.columns([0.97, 0.03])
+                with col1:
+                    st.markdown(message.content, unsafe_allow_html=True)
+                with col2:
+                    if st.button("🗑️", key=f"delete_ai_{i}", help="Delete this message", 
+                                 on_click=delete_message, args=(i,),
+                                 kwargs={"message_type": "ai_input"},
+                                 use_container_width=True):
+                        st.rerun()
+
+# Add this to your Streamlit app
+st.markdown("""
+<script>
+window.getMessage = function() {
+    return new Promise(function(resolve) {
+        window.addEventListener('message', function(e) {
+            resolve(JSON.stringify(e.data));
+        });
+    });
+}
+</script>
+""", unsafe_allow_html=True)
 
 def display_sessions_tab():
     user_id = st.session_state.user_id  # Use Google ID instead of username
@@ -2683,7 +2734,6 @@ def authenticated_user():
         st.error(f"An error occurred: {str(e)}")
         logging.error(f"Unhandled exception in authenticated_user: {str(e)}", exc_info=True)
 
-
 def handle_feedback(container=None):
     if 'show_feedback' not in st.session_state:
         st.session_state.show_feedback = False
@@ -2776,8 +2826,6 @@ def handle_feedback(container=None):
                 if st.session_state.show_processed_feedback and st.session_state.processed_feedback:
                     st.write("Processed Feedback:")
                     st.write(st.session_state.processed_feedback)
-
-
 
 def process_feedback(text: str) -> str:
     clean_feedback_prompt = """
@@ -2873,7 +2921,26 @@ def document_processing():
             else:
                 st.warning("Please paste a document to analyze.")
 
- 
+def delete_message(index: int, message_type: str):
+    if 0 <= index < len(st.session_state.chat_history):
+        # Remove from chat history
+        deleted_message = st.session_state.chat_history.pop(index)
+        
+        # Remove from MongoDB
+        delete_message_from_mongodb(deleted_message, message_type)
+
+def delete_message_from_mongodb(message, message_type: str):
+    collection = db[st.session_state.collection_name]
+    
+    # Delete the message from MongoDB
+    result = collection.delete_one({
+        "type": message_type,
+        "message": message.content,
+        "user_id": st.session_state.username
+    })
+    
+    if result.deleted_count == 0:
+        st.warning("Message not found in the database. It may have been already deleted.")
 ############################################# Perplexity Model #############################################
 
 def get_perplexity_response(user_question: str) -> str:
@@ -2928,11 +2995,12 @@ def get_perplexity_response(user_question: str) -> str:
 def main():
     
     initialize_session_state()
-    print("DEBUG: Session State Initialized")
-    print(st.session_state)
     
     # Add a small delay to allow cookie to be read
     time.sleep(.3)
+
+
+
 
     # Check if user is already authenticated
     if authenticator.authenticate():
