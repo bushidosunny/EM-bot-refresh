@@ -1,7 +1,7 @@
 import streamlit as st
 from prompts import *
 # print("Starting app")
-import sentry_sdk
+# import sentry_sdk
 
 
 # if "page_config_set" not in st.session_state:
