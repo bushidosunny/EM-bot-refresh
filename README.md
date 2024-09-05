@@ -15,7 +15,7 @@ To run
 streamlit run app_anthropic.py
 ```
 
-TO run admin
+To run admin
 
 ```
 streamlit run admin.py
