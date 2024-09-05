@@ -75,16 +75,16 @@ ENVIRONMENT = os.getenv('ENVIRONMENT')
 PERPLEXITY_API_KEY = os.getenv('PERPLEXITY_API_KEY')
 SENTTRY_DSN = os.getenv('SENTRY_DSN')
 
-sentry_sdk.init(
-    dsn=SENTTRY_DSN,
-    # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for tracing.
-    traces_sample_rate=1.0,
-    # Set profiles_sample_rate to 1.0 to profile 100%
-    # of sampled transactions.
-    # We recommend adjusting this value in production.
-    profiles_sample_rate=1.0,
-)
+# sentry_sdk.init(
+#     dsn=SENTTRY_DSN,
+#     # Set traces_sample_rate to 1.0 to capture 100%
+#     # of transactions for tracing.
+#     traces_sample_rate=1.0,
+#     # Set profiles_sample_rate to 1.0 to profile 100%
+#     # of sampled transactions.
+#     # We recommend adjusting this value in production.
+#     profiles_sample_rate=1.0,
+# )
 # Initialize Anthropic client
 anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
