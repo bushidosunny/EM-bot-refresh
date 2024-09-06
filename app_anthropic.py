@@ -1,5 +1,15 @@
 import streamlit as st
 from prompts import *
+import sentry_sdk
+import os
+
+SENTRY_DSN = os.getenv('SENTRY_DSN')
+
+sentry_sdk.init(
+    dsn=SENTRY_DSN,
+    traces_sample_rate=1.0,
+    profiles_sample_rate=1.0,
+)
 # print("Starting app")
 
 # if "page_config_set" not in st.session_state:
@@ -24,7 +34,6 @@ from streamlit_js_eval import streamlit_js_eval
 from anthropic import Anthropic
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-import os
 import io
 import time
 from dotenv import load_dotenv
@@ -72,7 +81,6 @@ MONGODB_URI = os.getenv('MONGODB_ATLAS_URI')
 ENVIRONMENT = os.getenv('ENVIRONMENT')
 PERPLEXITY_API_KEY = os.getenv('PERPLEXITY_API_KEY')
 
-
 # Initialize Anthropic client
 anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY)
 
@@ -104,6 +112,7 @@ try:
 except (ServerSelectionTimeoutError, OperationFailure, ConfigurationError) as err:
     logging.error(f"Error connecting to MongoDB Atlas: {err}")
     st.error(f"Error connecting to MongoDB Atlas: {err}")
+    sentry_sdk.capture_exception(err)
 
 def get_note_writer_instructions():
     user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
@@ -460,6 +469,7 @@ def initialize_text_indexes(collection_name):
             print(f"Text index created for collection: {collection_name}")
         except Exception as e:
             st.error(f"Error creating text index for collection {collection_name}: {str(e)}")
+            sentry_sdk.capture_exception(e)
     else:
         print(f"Text index already exists for collection: {collection_name}")
 
@@ -505,6 +515,7 @@ def save_messages(user_id, messages):
         print(f"Bulk write operation: {result.upserted_count} inserted, {result.modified_count} modified")
     except BulkWriteError as bwe:
         st.warning(f"Bulk write operation partially failed: {bwe.details}")
+        sentry_sdk.capture_exception(bwe)
 
 def save_user_message(user_id, sender, message):
     save_messages(user_id, [{
@@ -546,6 +557,7 @@ def save_case_details(user_id, doc_type, content=None):
             print("No changes made to the database.")
     except Exception as e:
         print(f"An error occurred: {str(e)}")
+        sentry_sdk.capture_exception(e)
 
 def save_note_details(user_id, message):
     chat_document = {
@@ -591,6 +603,7 @@ def conditional_upsert_test_result(user_id, test_name, result, sequence_number):
             print(f"New test result inserted for {test_name} with sequence number {sequence_number}.")
     except Exception as e:
         print(f"An error occurred while processing {test_name}: {str(e)}")
+        sentry_sdk.capture_exception(e)
 
 @st.cache_data(ttl=60)
 def list_user_sessions(username: str):
@@ -635,6 +648,7 @@ def list_user_sessions(username: str):
         except Exception as e:
             print(f"Error processing session {session_id}: {str(e)}")
             session_details.append({"collection_name": collection_name, "session_name": session_id})
+            sentry_sdk.capture_exception(e)
     
     return session_details
 
@@ -724,6 +738,7 @@ def load_chat_history(collection_name):
         # print(f"Loaded {len(st.session_state.chat_history)} messages and {len(st.session_state.differential_diagnosis)} diagnoses")
     except Exception as e:
         print(f"Error loading chat history: {e}")
+        sentry_sdk.capture_exception(e)
 
 def search_sessions(user_id, keywords):
     collections = db.list_collection_names()
@@ -759,6 +774,7 @@ def search_sessions(user_id, keywords):
             results.extend(collection_results)
         except Exception as e:
             st.error(f"Error searching collection {collection_name}: {str(e)}")
+            sentry_sdk.capture_exception(e)
     
     results.sort(key=lambda x: x['timestamp'], reverse=True)
     return results[:20]
@@ -796,6 +812,7 @@ def search_sessions_for_searchbox(search_term):
             results.extend(collection_results)
         except Exception as e:
             st.error(f"Error searching collection {collection_name}: {str(e)}")
+            sentry_sdk.capture_exception(e)
     
     results.sort(key=lambda x: x['score'], reverse=True)
     
@@ -1068,11 +1085,10 @@ def parse_json(chat_history):
                     conditional_upsert_test_result(st.session_state.username, test_name, test_result, sequence_number)
                     sequence_number += 1
 
-    except json.JSONDecodeError:
-        print("Failed to parse JSON data")
     except Exception as e:
         print(f"An unexpected error occurred: {str(e)}")
         print(f"Full error details: {repr(e)}")  # This will print more detailed error information
+        sentry_sdk.capture_exception(e)
 
 ####################################### UI #########################################
 def display_header():
@@ -1165,6 +1181,7 @@ def display_pt_headline():
         except KeyError as e:
             st.error(f"Missing key in patient data: {e}")
             st.title("EMMA")
+            sentry_sdk.capture_exception(e)
 
     elif st.session_state.pt_data == {} and st.session_state.patient_cc != "":
         try:
@@ -1195,6 +1212,7 @@ def display_pt_headline():
         except KeyError as e:
             st.error(f"Missing key in patient data: {e}")
             st.title("EMMA")
+            sentry_sdk.capture_exception(e)
 
 def display_sidebar():
     with st.sidebar:
@@ -2817,7 +2835,7 @@ def authenticated_user():
     
     try:
         logging.info("Entering authenticated_user function")
-
+        sentry_sdk.set_user({"email": st.session_state.email})
         
             
         if 'load_session' in st.session_state:
@@ -2884,6 +2902,7 @@ def authenticated_user():
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
         logging.error(f"Unhandled exception in authenticated_user: {str(e)}", exc_info=True)
+        sentry_sdk.capture_exception(e)
 
 def handle_feedback(container=None):
     if 'show_feedback' not in st.session_state:
@@ -3073,12 +3092,18 @@ def document_processing():
                 st.warning("Please paste a document to analyze.")
 
 def delete_message(index: int, message_type: str):
-    if 0 <= index < len(st.session_state.chat_history):
-        # Remove from chat history
-        deleted_message = st.session_state.chat_history.pop(index)
-        
-        # Remove from MongoDB
-        delete_message_from_mongodb(deleted_message, message_type)
+    #because this is called in a click handler, we need to catch any errors and send them to sentry
+    try:
+        if 0 <= index < len(st.session_state.chat_history):
+            # Remove from chat history
+            deleted_message = st.session_state.chat_history.pop(index)
+            
+            # Remove from MongoDB
+            delete_message_from_mongodb(deleted_message, message_type)
+    except Exception as e:
+        sentry_sdk.capture_exception(e)
+        raise e
+    
 
 def delete_message_from_mongodb(message, message_type: str):
     collection = db[st.session_state.collection_name]
@@ -3169,4 +3194,8 @@ def main():
             authenticator.login_page()
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        sentry_sdk.capture_exception(e)
+        raise e
