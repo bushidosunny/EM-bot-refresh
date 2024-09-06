@@ -2828,6 +2828,8 @@ def admin_mode():
         if st.sidebar.button("Enter Admin Mode"):
             admin.admin_dashboard()
             return  # Exit the function if admin dashboard is accessed
+        if st.sidebar.button("Throw an Error"):
+            raise Exception("This is a test error message")
 
 def authenticated_user():
     

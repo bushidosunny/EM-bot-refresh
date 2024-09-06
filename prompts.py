@@ -1966,13 +1966,13 @@ search_CDTs = """
     Identify and apply relevant Clinical Decision Tools (CDTs) and or Medical society guidelines to optimize diagnosis or treatment for the patient's condition. For each applicable tool or guideline:
 
     1. Name the tool/guideline and its primary treatment focus
-    2. List key patient factors influencing treatment decisions
-    3. Apply the tool/guideline using available patient data
+    2. If there are required input parameters, list them
+    3. Apply the tool/guideline using available patient data. Note any limitations or assumptions made. Note any missing data that would be needed for a more accurate application.
     4. Interpret the recommendations in the context of the patient's specific situation
     5. Outline the suggested treatment plan based on the tool/guideline
     6. Discuss any contraindications, alternatives, or modifications needed for this patient
     7. Highlight important monitoring parameters or follow-up considerations
-    8. One sentence summary.
+    8. One sentence summary of the results.
 
     Prioritize evidence-based tools and guidelines that are most likely to improve treatment outcomes for this patient's condition.
     Provide a final summary of the findings.
