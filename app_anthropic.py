@@ -11,6 +11,8 @@ sentry_sdk.init(
     profiles_sample_rate=1.0,
 )
 # print("Starting app")
+# import sentry_sdk
+
 
 # if "page_config_set" not in st.session_state:
 #     print("About to set page config")
@@ -2789,19 +2791,15 @@ def get_response(user_question: str) -> str:
             # Handle callable system_instructions (including NOTE_WRITER and Patient Educator)
             if callable(system_instructions):
                 system_instructions = system_instructions()
-                print(f'DEBUG get_response SYSTEM INSTRUCTIONS: {system_instructions}')
-            if specialist == NOTE_WRITER:
-                system_instructions = specialist_data[specialist]["system_instructions"]()
-                # print(f'DEBUG SYSTEM GET_RESPONSE if INSTRUCTIONS: {system_instructions}')
-            else:
-                system_instructions = specialist_data[specialist]["system_instructions"]
-                # print(f'DEBUG SYSTEM else INSTRUCTIONS: {system_instructions}')
-
+            
+            # Ensure system_instructions is a string
             if isinstance(system_instructions, list):
                 system_instructions = "\n".join(system_instructions)
+            elif not isinstance(system_instructions, str):
+                system_instructions = str(system_instructions)
 
-            # Only format if it's a string and contains placeholders
-            if isinstance(system_instructions, str) and ("{" in system_instructions and "}" in system_instructions):
+            # Only format if it contains placeholders
+            if "{" in system_instructions and "}" in system_instructions:
                 system_prompt = system_instructions.format(
                     REQUESTED_SECTIONS='ALL',
                     FILL_IN_EXPECTED_FINDINGS='fill in the normal healthy findings and include them in the note accordingly'
