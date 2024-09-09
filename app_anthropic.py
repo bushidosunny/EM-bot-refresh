@@ -1,4 +1,15 @@
 import streamlit as st
+
+def check_https():
+    if not st.session_state.get("https_redirect"):
+        proto = st.query_params.get("x-forwarded-proto")
+        if proto and proto[0] == "http":
+            st.query_params["x-forwarded-proto"] = ["https"]
+            st.session_state["https_redirect"] = True
+            st.rerun()
+
+check_https()
+
 from prompts import *
 import sentry_sdk
 import os
@@ -67,6 +78,11 @@ import requests
 # from streamlit_mic_recorder import mic_recorder
 from colorama import Fore, Style, init
 # Configure logging
+
+
+
+
+
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -115,6 +131,8 @@ except (ServerSelectionTimeoutError, OperationFailure, ConfigurationError) as er
     logging.error(f"Error connecting to MongoDB Atlas: {err}")
     st.error(f"Error connecting to MongoDB Atlas: {err}")
     sentry_sdk.capture_exception(err)
+
+
 
 def get_note_writer_instructions():
     user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
