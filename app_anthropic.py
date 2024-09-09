@@ -1,15 +1,4 @@
 import streamlit as st
-
-def check_https():
-    if not st.session_state.get("https_redirect"):
-        proto = st.query_params.get("x-forwarded-proto")
-        if proto and proto[0] == "http":
-            st.query_params["x-forwarded-proto"] = ["https"]
-            st.session_state["https_redirect"] = True
-            st.rerun()
-
-check_https()
-
 from prompts import *
 import sentry_sdk
 import os
