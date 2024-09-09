@@ -69,9 +69,8 @@ from colorama import Fore, Style, init
 
 
 headers = _get_websocket_headers()
-st.write(headers)
 
-if headers["X-Forwarded-Proto"] == "http":
+if headers.get("X-Forwarded-Proto") == "http":
     # Use JavaScript to redirect to an external URL
     st.markdown(f'<meta http-equiv="refresh" content="0;url={"https://emmahealth.ai"}">', unsafe_allow_html=True)
     st.stop()
