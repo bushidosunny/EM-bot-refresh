@@ -1,7 +1,8 @@
 import streamlit as st
 
-# Import the HTTPS redirect check
-exec(open('/app/.streamlit/https_redirect.py').read())
+from streamlit.web.server.websocket_headers import _get_websocket_headers
+
+
 
 from prompts import *
 import sentry_sdk
@@ -65,6 +66,13 @@ import requests
 # # temp
 # from streamlit_mic_recorder import mic_recorder
 from colorama import Fore, Style, init
+
+
+headers = _get_websocket_headers()
+st.write(headers)
+
+
+
 
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
