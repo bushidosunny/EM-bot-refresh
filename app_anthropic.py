@@ -1,4 +1,8 @@
 import streamlit as st
+
+# Import the HTTPS redirect check
+exec(open('/app/.streamlit/https_redirect.py').read())
+
 from prompts import *
 import sentry_sdk
 import os
