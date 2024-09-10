@@ -1244,11 +1244,7 @@ def display_sidebar():
         tab1, tab5 = st.tabs(["Functions", "Settings"])
         
         with tab1:
-            #display_pt_headline()
-            #display_ddx()
-            #display_critical_tasks()
-            #display_follow_up_tasks()
-            #st.divider()
+
             
             display_functions_tab()
             # Check if the specialty is Internal Medicine
@@ -1262,17 +1258,6 @@ def display_sidebar():
         with tab5:
             display_settings_tab()
 
-        # with tab4:
-        #     display_sessions_tab()
-        # if st.button('🔃New Patient Encounter', type="secondary", use_container_width=True, help=new_session_prompt):
-        #     st.session_state.new_session_clicked = True
-                    
-        # if st.session_state.new_session_clicked:
-        #     st.write("Are you sure you want to start a new encounter? This will reset all current data.")
-        #     if st.button("Yes, start new encounter", type="primary", use_container_width=True):
-        #         new_thread()
-        #     if st.button("No, cancel", type="secondary", use_container_width=True):
-        #         st.session_state.new_session_clicked = False
         st.divider()
         st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
         st.divider()
@@ -1386,22 +1371,16 @@ def display_functions_tab():
         col3, col4 = st.columns(2)
         with col3:
             if st.button('Complete Note', use_container_width=True, help=f"Writes a full {current_note_type} on this patient"):
-                st.session_state.specialist = NOTE_WRITER
-                consult_specialist_and_update_ddx("Full Medical Note", f"Write a {current_note_type} on this patient")
-                st.session_state.specialist = st.session_state.specialty
+                button_action(NOTE_WRITER, "Write a note on this patient.", "Full Medical Note")
             if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
                 button_action(NOTE_WRITER, create_hpi, "HPI only")
         
         with col4:
             if st.button('Focused Note', use_container_width=True, help="HPI, ROS, PE, A/P, then paste EMR smart data (meds, labs, imaging, etc)"):
-                st.session_state.specialist = NOTE_WRITER
-                consult_specialist_and_update_ddx("Full Note except EMR results", create_full_note_except_results)
-                st.session_state.specialist = "Emergency Medicine"
+                button_action(NOTE_WRITER, create_full_note_except_results, "Full Note except EMR results")
 
             if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
-                st.session_state.specialist = NOTE_WRITER
-                consult_specialist_and_update_ddx("A&P only", create_ap)
-                st.session_state.specialist = "Emergency Medicine"
+                button_action(NOTE_WRITER, create_ap, "A&P only")
         
 
     
