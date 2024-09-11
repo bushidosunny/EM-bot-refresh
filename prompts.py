@@ -332,6 +332,7 @@ note_writer_system = """I may ask general questions, If I do just answer those. 
     5. Include every disease mentioned under the differential diagnosis,  include the ones what were excluded early. the largest list of differential diagnosis the better.
     6. Write the note using standard medical terminology and abbreviations, and format it in a clear, organized manner consistent with emergency department documentation practices.
     7. Include the results of any decision making tools that were used.
+    8. If a transcription is provided, add a statement at the end of the note indicating that the patient consented to the use of AI transcription technology.
     Please generate the emergency medicine medical note based on the patient case we discussed, adhering to these instructions. place triple asterisks (***) in the location. structure the note based on the structure provided by triple backticks.
 
         ```
@@ -346,6 +347,18 @@ note_writer_system = """I may ask general questions, If I do just answer those. 
     LABORATORY RESULTS:
     IMAGING:
     CLINICAL DECISION TOOLS: [if any  Clinical Decision Tools were used, show the basic calculation and result here. Do not include a "CLINICAL DECISION TOOLS" section if no tools were used.]
+    MEDICAL DECISION MAKING:
+    [Summarize key findings from history, physical exam, and diagnostic studies]
+    [Explain clinical reasoning process]
+    [Discuss risk stratification for the patient's condition]
+    [Include differential diagnoses:]
+    - [List all diagnoses considered, from most to least likely, including those excluded early]
+    - [For each diagnosis, briefly state supporting and contradicting evidence from the patient's presentation]
+    - [Include probability estimates if discussed (very high, high, medium, low, or very low)]
+    - [Explain why certain diagnoses were ruled out or require further workup]
+    [Justify tests ordered, treatments given, and overall management plan]
+    [Address any uncertainties or complexities in the case and how they were approached]
+    [Explain how the differential informed the diagnostic and treatment plan]
     ASSESSMENT:
     [provide a summary statement of the patient and major problems]
     [Provide primary cause of chief complaint with reasoning]
@@ -368,6 +381,7 @@ note_writer_system_em = """I may ask general questions, If I do just answer thos
     5. Include every disease mentioned under the differential diagnosis,  include the ones what were excluded early. the largest list of differential diagnosis the better.
     6. Write the note using standard medical terminology and abbreviations, and format it in a clear, organized manner consistent with emergency department documentation practices.
     7. Include the results of any decision making tools that were used.
+    8. If a transcription is provided, add a statement at the end of the note indicating that the patient consented to the use of AI transcription technology.
     Please generate the emergency medicine medical note based on the patient case we discussed, adhering to these instructions. place triple asterisks (***) in the location. structure the note based on the structure provided by triple backticks.
 
         ```
@@ -657,6 +671,8 @@ note_writer_system_admission = """
     9. Write the note using standard medical terminology and abbreviations, and format it in a clear, organized manner consistent with internal medicine admission documentation practices.
 
     10. Include the results of any decision-making tools that were used.
+
+    11. If a transcription is provided, add a statement at the end of the note indicating that the patient consented to the use of AI transcription technology.
 
     Please generate the Internal Medicine admission note based on the patient case we discussed, adhering to these instructions. Place triple asterisks (***) where information is missing. Structure the note based on the following format:
 
