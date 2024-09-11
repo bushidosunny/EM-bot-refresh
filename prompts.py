@@ -965,7 +965,10 @@ note_writer_system_document_processing = """
 
     2. For requests to write a medical note, first analyze the provided information for inconsistencies, potential dangers, or areas of concern. Highlight these issues at the beginning of your response.
 
-    3. Then, based on the type of note requested, use the following templates:
+    3. Fill in expected negative and positive findings for any Review of Systems and Physical Exam findings not explicitly mentioned. 
+        Do not do this for vital signs or laboratory results. Do not make up numbers.
+    
+    4. Then, based on the type of note requested, use the following templates:
 
     For a Progress Note:
 

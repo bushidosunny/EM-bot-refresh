@@ -10,7 +10,7 @@ import json
 import time
 import logging
 import pandas as pd
-from datetime import datetime
+import datetime
 import extra_streamlit_components as stx
 from auth.MongoAuthenticator import MongoAuthenticator, User
 # # Set up logging
@@ -490,7 +490,12 @@ def list_sessions():
             doc_count = db[session].count_documents({})
             if min_docs <= doc_count <= max_docs:
                 latest_doc = db[session].find_one(sort=[("timestamp", -1)])
-                session_date = latest_doc.get("timestamp", "Unknown") if latest_doc else "Unknown"
+                session_date = latest_doc.get("timestamp", datetime.datetime.min) if latest_doc else datetime.datetime.min
+                if isinstance(session_date, str):
+                    try:
+                        session_date = datetime.datetime.strptime(session_date, "%Y-%m-%d %H:%M:%S")
+                    except ValueError:
+                        session_date = datetime.datetime.min
                 filtered_sessions.append((session, doc_count, session_date))
     
     # Sort sessions by date (newest first)
