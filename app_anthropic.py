@@ -2971,13 +2971,13 @@ def main():
     
     # Add a small delay to allow cookie to be read
     time.sleep(.3)
-    display_header()
+    
 
 
 
     # Check if user is already authenticated
     if authenticator.authenticate():
-        
+        display_header()
         authenticated_user()
         
     else:
