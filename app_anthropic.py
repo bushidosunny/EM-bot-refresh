@@ -1327,14 +1327,9 @@ def display_functions_tab():
     def clear_instructions():
         st.session_state.additional_instructions = ""
 
-    # General additional instructions input
-    additional_instructions = st.text_input("Additional Instructions (applied to all action buttons)", 
-                                            value=st.session_state.additional_instructions,
-                                            key="additional_instructions")
 
-    # Update session state when input changes
-    if additional_instructions != st.session_state.additional_instructions:
-        st.session_state.additional_instructions = additional_instructions
+
+    
 
     # Helper function for button actions
     def button_action(specialist, prompt_template, action_name):
@@ -1444,6 +1439,14 @@ def display_functions_tab():
 
         if st.button("🏈Sports/Gym", use_container_width=True, help="Writes a personalized patient Sports/Gym note"):
             button_action("Patient Educator", f"Write a patient Sports/Gym note for this patient in {st.session_state.patient_language}.", "Patient Sports/Gym Note")
+
+    # General additional instructions input
+    additional_instructions = st.text_input("Additional Instructions (applied to all action buttons)", 
+                                            value=st.session_state.additional_instructions,
+                                            key="additional_instructions")
+    # Update session state when input changes
+    if additional_instructions != st.session_state.additional_instructions:
+        st.session_state.additional_instructions = additional_instructions
 
 def display_specialist_tab():
     
