@@ -30,6 +30,9 @@ def record_audio(key=None, width=False, container_name=None):
     )
 
     # Handle recording start/stop
+    return handle_record_audio(audio, container_name)
+
+def handle_record_audio(audio, container_name):
     if audio is not None:
         if container_name:
             with container_name:
@@ -51,7 +54,8 @@ def record_audio(key=None, width=False, container_name=None):
             else:
                 prompt = transcript.replace("Speaker 0:", "").strip()
                 return prompt
-    return None  # Return None if no audio was recorded      
+    return None  # Return None i
+
 def transcribe_audio(audio_file):
     try:
         deepgram = DeepgramClient(DEEPGRAM_API_KEY)

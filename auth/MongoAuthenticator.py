@@ -457,7 +457,7 @@ class MongoAuthenticator:
 
     def logout(self):
         # Attempt to get the cookie value
-        cookie_value = self.cookie_manager.get(self.cookie_name)
+        cookie_value = self.cookie_manager.cookies.get(self.cookie_name)
         
         # If the cookie exists, delete it
         if cookie_value is not None:
@@ -476,10 +476,10 @@ class MongoAuthenticator:
         # Explicitly set authentication status to False
         st.session_state.authentication_status = False
         
-        print(f"Cookie {self.cookie_name} should be deleted. Current value: {self.cookie_manager.get(self.cookie_name)}")
+        print(f"Cookie {self.cookie_name} should be deleted. Current value: {self.cookie_manager.cookies.get(self.cookie_name)}")
 
     def is_authenticated(self):
-        return self.cookie_manager.get(self.cookie_name) is not None
+        return self.cookie_manager.cookies.get(self.cookie_name) is not None
 
     def register_user(self, username, name, password, email, specialty):
         if self.users.find_one({"$or": [{"username": username}, {"email": email}]}):
@@ -514,9 +514,9 @@ class MongoAuthenticator:
             return True
         else:
             logging.info(f"Checking for user_id in cookie: {self.cookie_name}")
-            logging.info(f"Cookie value: {self.cookie_manager.get(self.cookie_name)}")
+            logging.info(f"Cookie value: {self.cookie_manager.cookies.get(self.cookie_name)}")
             # time.sleep(1)
-            user_id = self.cookie_manager.get(self.cookie_name)
+            user_id = self.cookie_manager.cookies.get(self.cookie_name)
             logging.info(f"Retrieved user_id from cookie: {user_id}")
             if user_id and user_id != "":
                 try:

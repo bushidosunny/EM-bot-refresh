@@ -2,8 +2,6 @@ import streamlit as st
 
 from streamlit.web.server.websocket_headers import _get_websocket_headers
 
-
-
 from prompts import *
 import sentry_sdk
 import os
@@ -56,6 +54,7 @@ from streamlit.components.v1 import html
 from typing import List, Dict, Any, Optional
 import logging
 import secrets
+from user_agents import parse
 # import toml
 # import yaml
 # import bcrypt
@@ -66,6 +65,8 @@ import requests
 # # temp
 # from streamlit_mic_recorder import mic_recorder
 from colorama import Fore, Style, init
+from mobile import render_mobile
+
 
 
 headers = _get_websocket_headers()
@@ -2497,9 +2498,9 @@ def delete_template(user):
 
 ############################################# User input processing #############################################
 
-def process_user_question(user_question, specialist):
+def process_user_question(user_question, specialist, mobile=False):
     if user_question:
-        if not st.session_state.collection_name:
+        if not "collection_name" in st.session_state:
             create_new_session()
         
         # Save the completed tasks before clearing
@@ -2523,11 +2524,12 @@ def process_user_question(user_question, specialist):
         # Update chat history before getting response
         st.session_state.chat_history.append(HumanMessage(full_user_question, avatar=st.session_state.user_photo_url))
         
-        with st.chat_message("user", avatar=st.session_state.user_photo_url):
-            st.markdown(full_user_question)
+        if not mobile:
+            with st.chat_message("user", avatar=st.session_state.user_photo_url):
+                st.markdown(full_user_question)
         
         with st.chat_message("AI", avatar=specialist_avatar):
-            assistant_response = get_response(full_user_question)
+            assistant_response = get_response(full_user_question, mobile)
             st.session_state.assistant_response = assistant_response
         
         st.session_state.chat_history.append(AIMessage(st.session_state.assistant_response, avatar=specialist_avatar))
@@ -2543,8 +2545,12 @@ def process_user_question(user_question, specialist):
         # Debug output
         print("DEBUG: Session State after processing user question")
 
-def get_response(user_question: str) -> str:
-    with st.spinner("Waiting for EMMA's response..."):
+def get_response(user_question: str, mobile=False) -> str:
+    loading_message = "Waiting for EMMA's response..."
+    if mobile:
+        loading_message = "EMMA is thinking..."
+
+    with st.spinner(loading_message):
         response_placeholder = st.empty()
         
         if st.session_state.specialist == "Perplexity":
@@ -2591,7 +2597,10 @@ def get_response(user_question: str) -> str:
             response = anthropic_model.invoke(messages)
             response_text = response.content
 
-        response_placeholder.markdown(response_text)
+        if mobile:
+            response_placeholder.write("EMMA has analyzed this case please access the full differential diagnosis in the desktop app. You can add additional information to this case by hitting record or reload the page to start a new patient session.")
+        else:
+            response_placeholder.markdown(response_text)
         
         return response_text
 
@@ -2939,6 +2948,19 @@ def get_perplexity_response(user_question: str) -> str:
     data = response.json()
     return data['choices'][0]['message']['content']
 
+def is_mobile():
+    headers = _get_websocket_headers()
+    user_agent_string = headers.get("User-Agent")
+    if user_agent_string:
+        user_agent = parse(user_agent_string)
+        return user_agent.is_mobile
+    return False
+
+def mobile_user():
+    text = render_mobile()
+    if text is not None:
+        process_user_question(text, st.session_state.specialist, mobile=True)
+
 ############################################# Main Function #############################################
 
 def main():
@@ -2953,19 +2975,11 @@ def main():
 
     # Check if user is already authenticated
     if authenticator.authenticate():
-        
-        authenticated_user()
-        
-    else:
-        if st.session_state.show_registration:
-            authenticator.register_page()
-        elif st.session_state.show_forgot_username:
-            authenticator.forgot_username_page()
-        elif st.session_state.show_change_password:
-            authenticator.change_password_page()
+        if is_mobile():
+            mobile_user()
         else:
-            authenticator.login_page()
-
+            authenticated_user()
+        
 if __name__ == '__main__':
     try:
         main()
