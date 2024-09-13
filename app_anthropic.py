@@ -2604,11 +2604,30 @@ def admin_mode():
         if st.sidebar.button("Throw an Error"):
             raise Exception("This is a test error message")
 
+CSS_SELECTOR = 'section > [data-testid="stAppViewBlockContainer"] > [data-testid="stVerticalBlockBorderWrapper"]'
+
+def css_hack():
+    st.markdown(f"""
+    <style>
+    {CSS_SELECTOR} {{
+        max-height: calc(100vh - 260px);
+        overflow-y: auto;
+        padding: 15px;
+        border-radius: 5px;
+        overflow-x: hidden;
+    }}
+    pre code {{
+        white-space: pre-wrap !important;
+    }}
+    </style>
+""", unsafe_allow_html=True)
+
 def authenticated_user():
     
     try:
         logging.info("Entering authenticated_user function")
         sentry_sdk.set_user({"email": st.session_state.email})
+        css_hack()
         
             
         if 'load_session' in st.session_state:
