@@ -317,6 +317,9 @@ emma_system_conerns ="""Always respond using Markdown formatting. As an emergenc
     Provide interesting academic insights related to the differential diagnoses, such as mechanisms of action or practical medical nuances. Exclude basic educational points.
 """
 
+perplexity_clinical_decision_tools_system = """
+
+    """
 
 test_case3 = """3 yo f with chest pain and syncope while playing sooccer"""
 

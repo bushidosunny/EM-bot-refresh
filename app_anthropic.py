@@ -158,6 +158,12 @@ specialist_data = {
     "avatar": "https://play-lh.googleusercontent.com/6STp0lYx2ctvQ-JZpXA1LeAAZIlq6qN9gpy7swLPlRhmp-hfvZePcBxqwVkqN2BH1g",
     "system_instructions": perplixity_system
   },
+  "Clinical Decision Tools": {
+    "assistant_id": "asst_Pau6T5mMH3cZBnEePso5kFuJ",
+    "caption": "Most Common Clinical Decision Tools used in the ED",
+    "avatar": "https://cdn.pixabay.com/photo/2019/07/02/05/54/tool-4311573_1280.png",
+    "system_instructions": perplexity_clinical_decision_tools_system
+  },
   "Neurological": {
     "assistant_id": "asst_caM9P1caoAjFRvSAmT6Y6mIz",
     "caption": "🧠Neurology, Neurosurgery, Psychiatry",
@@ -259,11 +265,7 @@ specialist_data = {
     "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/33/carrot-148456_960_720.png",
     "system_instructions": critical_system
   },
-  "Clinical Decision Tools": {
-    "assistant_id": "asst_Pau6T5mMH3cZBnEePso5kFuJ",
-    "caption": "Most Common Clinical Decision Tools used in the ED",
-    "avatar": "https://cdn.pixabay.com/photo/2019/07/02/05/54/tool-4311573_1280.png"
-  },
+  
   "DDX Beta A": {
     "assistant_id": "asst_8Ib5ndZJivEOhwvfx4Gqzjc3",
     "caption": "EM - Beta testing",
@@ -1311,14 +1313,9 @@ def display_functions_tab():
     def clear_instructions():
         st.session_state.additional_instructions = ""
 
-    # General additional instructions input
-    additional_instructions = st.text_input("Additional Instructions (applied to all action buttons)", 
-                                            value=st.session_state.additional_instructions,
-                                            key="additional_instructions")
 
-    # Update session state when input changes
-    if additional_instructions != st.session_state.additional_instructions:
-        st.session_state.additional_instructions = additional_instructions
+
+    
 
     # Helper function for button actions
     def button_action(specialist, prompt_template, action_name):
@@ -1336,14 +1333,14 @@ def display_functions_tab():
     with col1:
         if st.button("🤔Challenge DDX", use_container_width=True, help="Use to broaden and critique the current DDX"):
             button_action("General Medicine", challenge_ddx, "Challenge the DDX")
-        if st.button("🌎Web Search", use_container_width=True, help="Perplexity web search."):
+        if st.button("🌎Web Search", use_container_width=True, help="Use Perplexity Web Search"):
             button_action("Perplexity", "", "Search the Web")
     with col2:
         if st.button("🧠Refine DDX", use_container_width=True, help="Use Bayesian Reasoning to refine and narrow the DDX"):
             button_action("Bayesian Reasoner", apply_bayesian_reasoning, "Critical Thinking w Bayesian Reasoning")
 
-        if st.button("🔍Search for CDTs/Guidelines", use_container_width=True, help="Applies relevant CDTs, guidelines, or algorithms to guide treatment decisions and management."):
-            button_action("Perplexity", search_CDTs, "Treatment Plan")
+        if st.button("🔍Search for CDTs/Guidelines", use_container_width=True, help="Apply Clinical Decision Tools or Known Guidelines"):
+            button_action("Clinical Decision Tools", search_CDTs, "Treatment Plan")
 
     # Check if the specialty is Internal Medicine
     if st.session_state.get('specialty') == "Internal Medicine":
@@ -1420,8 +1417,16 @@ def display_functions_tab():
         if st.button('💪Physical Therapy ', use_container_width=True, help="Writes a personalized Physical Therapy plan"):
             button_action("Musculoskeletal Systems", pt_plan, "Physical Therapy Plan")
 
-        if st.button("🏈Sports/Gym Note", use_container_width=True, help="Writes a personalized patient Sports/Gym note"):
+        if st.button("🏈Sports/Gym", use_container_width=True, help="Writes a personalized patient Sports/Gym note"):
             button_action("Patient Educator", f"Write a patient Sports/Gym note for this patient in {st.session_state.patient_language}.", "Patient Sports/Gym Note")
+
+    # General additional instructions input
+    additional_instructions = st.text_input("Additional Instructions (applied to all action buttons)", 
+                                            value=st.session_state.additional_instructions,
+                                            key="additional_instructions")
+    # Update session state when input changes
+    if additional_instructions != st.session_state.additional_instructions:
+        st.session_state.additional_instructions = additional_instructions
 
 def display_specialist_tab():
     
@@ -2553,7 +2558,7 @@ def get_response(user_question: str, mobile=False) -> str:
     with st.spinner(loading_message):
         response_placeholder = st.empty()
         
-        if st.session_state.specialist == "Perplexity":
+        if st.session_state.specialist == "Perplexity" or "Clinical Decision Tools":
             response_text = get_perplexity_response(user_question)
         else:
             # Prepare chat history for context
@@ -2613,11 +2618,30 @@ def admin_mode():
         if st.sidebar.button("Throw an Error"):
             raise Exception("This is a test error message")
 
+CSS_SELECTOR = 'section > [data-testid="stAppViewBlockContainer"] > [data-testid="stVerticalBlockBorderWrapper"]'
+
+def css_hack():
+    st.markdown(f"""
+    <style>
+    {CSS_SELECTOR} {{
+        max-height: calc(100vh - 260px);
+        overflow-y: auto;
+        padding: 15px;
+        border-radius: 5px;
+        overflow-x: hidden;
+    }}
+    pre code {{
+        white-space: pre-wrap !important;
+    }}
+    </style>
+""", unsafe_allow_html=True)
+
 def authenticated_user():
     
     try:
         logging.info("Entering authenticated_user function")
         sentry_sdk.set_user({"email": st.session_state.email})
+        css_hack()
         
             
         if 'load_session' in st.session_state:
@@ -2635,11 +2659,12 @@ def authenticated_user():
             col1, col2 = st.columns([2, 1])
             with col1:
                 with st.container():
-                    # display_header()
+                    display_header()
                     display_chat_history()
                     handle_user_input_container() 
             
             with col2:
+                
                 input_container = st.container()
                 input_container.float(float_css_helper(
                     shadow=1,
@@ -2659,7 +2684,7 @@ def authenticated_user():
                     st.divider()
                     display_follow_up_tasks()
         else:
-            # display_header()
+            display_header()
             display_chat_history()
             handle_user_input_container() 
             
@@ -2969,7 +2994,7 @@ def main():
     
     # Add a small delay to allow cookie to be read
     time.sleep(.3)
-
+    
 
 
 
