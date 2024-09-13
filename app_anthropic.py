@@ -2650,7 +2650,7 @@ def authenticated_user():
             col1, col2 = st.columns([2, 1])
             with col1:
                 with st.container():
-                    
+                    display_header()
                     display_chat_history()
                     handle_user_input_container() 
             
@@ -2675,7 +2675,7 @@ def authenticated_user():
                     st.divider()
                     display_follow_up_tasks()
         else:
-            # display_header()
+            display_header()
             display_chat_history()
             handle_user_input_container() 
             
@@ -2978,7 +2978,7 @@ def main():
 
     # Check if user is already authenticated
     if authenticator.authenticate():
-        display_header()
+        # display_header()
         authenticated_user()
         
     else:
