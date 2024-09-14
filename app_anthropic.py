@@ -29,7 +29,7 @@ else:
         'Report a bug': 'mailto:bushidosunny@gmail.com',
         'About': disclaimer})
         # st.session_state.page_config_set = True
-        # print("Page config set")
+        # # print("Page config set")
 import admin
 from streamlit_float import float_css_helper
 from streamlit_js_eval import streamlit_js_eval
@@ -137,8 +137,8 @@ def get_note_writer_instructions():
         template = next((t for t in user.get_note_templates() if t['id'] == preferred_template_id), None)
         if template:
             base_instructions = note_type_instructions.get(note_type, note_writer_system)
-            print(f"Using preferred custom template for {note_type}")
-            print(f"DEBUG Base Instructions: {base_instructions}\n\nAdditional Custom Instructions:\n{template['content']}")
+            # # print(f"Using preferred custom template for {note_type}")
+            # # print(f"DEBUG Base Instructions: {base_instructions}\n\nAdditional Custom Instructions:\n{template['content']}")
             return f"{base_instructions}\n\nYOU MUST FOLLOW THE USER'S CUSTOM INSTRUCTIONS BELOW:\n{template['content']}"
     
     # If no preferred custom template, use the default instructions
@@ -457,7 +457,7 @@ def create_new_session():
     session_id = ObjectId()
     st.session_state.session_id = str(session_id)
     collection_name = f'user_{username}_session_{session_id}'
-    print(f'CREATE_SESSION_COLLECTION COLLECTION_NAME:{collection_name}')
+    # # print(f'CREATE_SESSION_COLLECTION COLLECTION_NAME:{collection_name}')
     st.session_state.collection_name = collection_name
     
     with mongo_client.start_session() as session:
@@ -486,7 +486,7 @@ def initialize_text_indexes(collection_name):
                 ("sender", ASCENDING),
                 ("timestamp", DESCENDING)
             ], background=True, name="content_patient_cc_ddx_text_index")
-            print(f"Text index created for collection: {collection_name}")
+            # print(f"Text index created for collection: {collection_name}")
         except Exception as e:
             st.error(f"Error creating text index for collection {collection_name}: {str(e)}")
             sentry_sdk.capture_exception(e)
@@ -532,7 +532,7 @@ def save_messages(user_id, messages):
     
     try:
         result = collection.bulk_write(bulk_operations, ordered=False)
-        print(f"Bulk write operation: {result.upserted_count} inserted, {result.modified_count} modified")
+        # print(f"Bulk write operation: {result.upserted_count} inserted, {result.modified_count} modified")
     except BulkWriteError as bwe:
         st.warning(f"Bulk write operation partially failed: {bwe.details}")
         sentry_sdk.capture_exception(bwe)
@@ -607,7 +607,7 @@ def conditional_upsert_test_result(user_id, test_name, result, sequence_number):
                     "timestamp": datetime.datetime.now()
                 }
                 collection.insert_one(new_doc)
-                print(f"New test result inserted for {test_name} with sequence number {new_sequence_number}.")
+                # print(f"New test result inserted for {test_name} with sequence number {new_sequence_number}.")
             else:
                 print(f"Test result for {test_name} is unchanged. No update needed.")
         else:
@@ -620,7 +620,7 @@ def conditional_upsert_test_result(user_id, test_name, result, sequence_number):
                 "timestamp": datetime.datetime.now()
             }
             collection.insert_one(new_doc)
-            print(f"New test result inserted for {test_name} with sequence number {sequence_number}.")
+            # print(f"New test result inserted for {test_name} with sequence number {sequence_number}.")
     except Exception as e:
         print(f"An error occurred while processing {test_name}: {str(e)}")
         sentry_sdk.capture_exception(e)
@@ -666,7 +666,7 @@ def list_user_sessions(username: str):
             else:
                 session_details.append({"collection_name": collection_name, "session_name": session_id})
         except Exception as e:
-            print(f"Error processing session {session_id}: {str(e)}")
+            # print(f"Error processing session {session_id}: {str(e)}")
             session_details.append({"collection_name": collection_name, "session_name": session_id})
             sentry_sdk.capture_exception(e)
     
@@ -718,7 +718,7 @@ def save_feedback(feedback_type, feedback_text):
 
 ############################### Logic ###############################################################
 
-#         print(f"Error loading chat history: {e}")
+#         # print(f"Error loading chat history: {e}")
 
 def load_chat_history(collection_name):
     try:
@@ -755,9 +755,9 @@ def load_chat_history(collection_name):
         st.session_state.patient_cc = ddx_doc.get('patient_cc', '') if ddx_doc else ''
         st.session_state.specialist = 'Emergency Medicine'
 
-        # print(f"Loaded {len(st.session_state.chat_history)} messages and {len(st.session_state.differential_diagnosis)} diagnoses")
+        # # print(f"Loaded {len(st.session_state.chat_history)} messages and {len(st.session_state.differential_diagnosis)} diagnoses")
     except Exception as e:
-        print(f"Error loading chat history: {e}")
+        # print(f"Error loading chat history: {e}")
         sentry_sdk.capture_exception(e)
 
 def search_sessions(user_id, keywords):
@@ -950,28 +950,28 @@ def choose_specialist_radio():
 def match_specialty_to_specialist(user_specialty):
     for specialist, data in specialist_data.items():
         if user_specialty.lower() == specialist.lower():
-            print(f'DEBUG MATCH SPECIALTY TO SPECIALIST1: {specialist}')
+            # print(f'DEBUG MATCH SPECIALTY TO SPECIALIST1: {specialist}')
             return specialist
         if "subgroups" in data and user_specialty.lower() in [sg.lower() for sg in data["subgroups"]]:
-            print(f'DEBUG MATCH SPECIALTY TO SPECIALIST2: {specialist}')
+            # print(f'DEBUG MATCH SPECIALTY TO SPECIALIST2: {specialist}')
             return specialist
-    print(f'DEBUG MATCH SPECIALTY TO SPECIALIST3: {specialist}')
+    # print(f'DEBUG MATCH SPECIALTY TO SPECIALIST3: {specialist}')
     return "Emergency Medicine"  # Default to Emergency Medicine if no match found
 
 def button_input(specialist, prompt):
     st.session_state.assistant_id = specialist_data[specialist]["assistant_id"]
     st.session_state.system_instructions = specialist_data[specialist]["system_instructions"]
-    # print(f'DEBUG BUTTON INPUT SPECIALIST CHOSEN: {specialist}')
+    # # print(f'DEBUG BUTTON INPUT SPECIALIST CHOSEN: {specialist}')
     if specialist == NOTE_WRITER:
         st.session_state.system_instructions = get_note_writer_instructions()
     else:
         st.session_state.system_instructions = specialist_data[specialist]["system_instructions"]
-    # print(f'DEBUG BUTTON INPUT system_instructions: {st.session_state.system_instructions}')
+    # # print(f'DEBUG BUTTON INPUT system_instructions: {st.session_state.system_instructions}')
  
     user_question = prompt
     if user_question:
         st.session_state.specialist = specialist
-        print(f'DEBUG BUTTON INPUT SPECIALIST CHOSEN: {specialist}')
+        # print(f'DEBUG BUTTON INPUT SPECIALIST CHOSEN: {specialist}')
         specialist_avatar = specialist_data[st.session_state.specialist]["avatar"]
         st.session_state.specialist_avatar = specialist_avatar
         timezone = pytz.timezone("America/Los_Angeles")
@@ -987,7 +987,7 @@ def process_other_queries():
     if st.session_state.user_question_sidebar != "" and st.session_state.user_question_sidebar != st.session_state.old_user_question_sidebar:
         specialist_avatar = specialist_data[st.session_state.specialist]["avatar"]
         specialist = st.session_state.specialist
-        print(f'DEBUG PROCESS OTHER QUERIES SPECIALIST CHOSEN: {specialist}')
+        # print(f'DEBUG PROCESS OTHER QUERIES SPECIALIST CHOSEN: {specialist}')
         
         user_question = st.session_state.user_question_sidebar
         with st.chat_message("user", avatar=st.session_state.user_photo_url):
@@ -1025,7 +1025,7 @@ def additional_pt_note_instructions():
     note_instructions = st.text_input("Additional Note Instructions", value=st.session_state.additional_pt_note_input, autocomplete="on", label_visibility="visible", key="additional_pt_note_input")
     if note_instructions != st.session_state.additional_pt_note_input:
         st.session_state.additional_pt_note_input = note_instructions
-        print(f'DEBUG ADDITIONAL PT NOTE INSTRUCTIONS: {st.session_state.additional_pt_note_input}')
+        # print(f'DEBUG ADDITIONAL PT NOTE INSTRUCTIONS: {st.session_state.additional_pt_note_input}')
 
 def addiitional_clinic_note_instructions():
     note_instructions = st.text_input("Additional Note Instructions", value=st.session_state.additional_clinic_note_input, autocomplete="on", label_visibility="visible", key="additional_clinic_note_input")
@@ -1066,7 +1066,7 @@ def parse_json(chat_history):
     pt_json = pt_json_dirty.replace('```', '')
 
     if not pt_json or pt_json.strip() == '{}':
-        print("No data was extracted from the chat history.") 
+        # print("No data was extracted from the chat history.") 
         return
     try:
         data = json.loads(pt_json)
@@ -1093,10 +1093,10 @@ def parse_json(chat_history):
         if st.session_state.follow_up_steps is None:
             st.session_state.follow_up_steps = []
 
-        # print(f'DEBUG PARSE_JSON session_state.differential_diagnosis: {st.session_state.differential_diagnosis}')
-        # print(f'DEBUG PARSE_JSON st.session_state.critical_actionss: {st.session_state.critical_actions}')
-        # print(f'DEBUG PARSE_JSON st.session_state.follow_up_steps: {st.session_state.follow_up_steps}')
-        print(f'DEBUG PARSE_JSON st.session_state.patient_cc: {st.session_state.patient_cc}')
+        # # print(f'DEBUG PARSE_JSON session_state.differential_diagnosis: {st.session_state.differential_diagnosis}')
+        # # print(f'DEBUG PARSE_JSON st.session_state.critical_actionss: {st.session_state.critical_actions}')
+        # # print(f'DEBUG PARSE_JSON st.session_state.follow_up_steps: {st.session_state.follow_up_steps}')
+        # print(f'DEBUG PARSE_JSON st.session_state.patient_cc: {st.session_state.patient_cc}')
 
         # Only save case details if there's meaningful data
         if any([st.session_state.differential_diagnosis, 
@@ -1121,8 +1121,8 @@ def parse_json(chat_history):
                     sequence_number += 1
 
     except Exception as e:
-        print(f"An unexpected error occurred: {str(e)}")
-        print(f"Full error details: {repr(e)}")  # This will print more detailed error information
+        # print(f"An unexpected error occurred: {str(e)}")
+        # print(f"Full error details: {repr(e)}")  # This will # print more detailed error information
         sentry_sdk.capture_exception(e)
 
 ####################################### UI #########################################
@@ -1172,7 +1172,7 @@ def display_ddx():
 def display_pt_headline():
     if st.session_state.pt_data != {}:
         try:
-            #print(f'DEBUG DISPLAY HEADER ST.SESSION TATE.PT DATA: {st.session_state.pt_data}')
+            ## print(f'DEBUG DISPLAY HEADER ST.SESSION TATE.PT DATA: {st.session_state.pt_data}')
             cc = st.session_state.pt_data.get("chief_complaint_two_word", "")
             age = st.session_state.pt_data.get("age", "")
             age_units = st.session_state.pt_data.get("age_unit", "")
@@ -1187,7 +1187,7 @@ def display_pt_headline():
                 # Update patient_cc only if the new value is different and non-empty
                 if new_patient_cc != st.session_state.patient_cc:
                     st.session_state.patient_cc = new_patient_cc
-            print(f'DEBUG display_pt_headline st.session_state.patient_cc: {st.session_state.patient_cc}')
+            # print(f'DEBUG display_pt_headline st.session_state.patient_cc: {st.session_state.patient_cc}')
             st.markdown("""
             <style>
             .patient-cc {
@@ -1270,9 +1270,9 @@ def display_sidebar():
             
             display_functions_tab()
             # Check if the specialty is Internal Medicine
-            print(f'DEBUG DISPLAY SIDEBAR SPECIALTY: {st.session_state.specialty} ')
-            print(f'DEBUG DISPLAY SIDEBAR PREFERRED NOTE TYPE: {st.session_state.preferred_note_type}')
-            print(f'DEBUG DISPLAY SIDEBAR specialist: {st.session_state.specialist}')
+            # print(f'DEBUG DISPLAY SIDEBAR SPECIALTY: {st.session_state.specialty} ')
+            # print(f'DEBUG DISPLAY SIDEBAR PREFERRED NOTE TYPE: {st.session_state.preferred_note_type}')
+            # print(f'DEBUG DISPLAY SIDEBAR specialist: {st.session_state.specialist}')
             
             
         # with tab2:
@@ -1345,9 +1345,9 @@ def display_functions_tab():
         else:
             prompt = prompt_template
         consult_specialist_and_update_ddx(action_name, prompt)
-        print(f'DEBUG BUTTON ACTION SPECIALIST1: {st.session_state.specialist}')
+        # print(f'DEBUG BUTTON ACTION SPECIALIST1: {st.session_state.specialist}')
         # st.session_state.specialist = st.session_state.specialty
-        # print(f'DEBUG BUTTON ACTION SPECIALIST2: {st.session_state.specialist}')
+        # # print(f'DEBUG BUTTON ACTION SPECIALIST2: {st.session_state.specialist}')
         clear_instructions()
         st.rerun()
 
@@ -1728,7 +1728,7 @@ def display_delete_session_button(collection_name):
         col1, col2 = st.columns(2)
         with col1:
             if st.button(f"Yes, delete {collection_name} data", type='primary', use_container_width=True):
-                # print(f'DEBUG DELETE SESSION DATA COLLECTION NAME: {collection_name}')
+                # # print(f'DEBUG DELETE SESSION DATA COLLECTION NAME: {collection_name}')
                 delete_session_data(collection_name)
                 st.success(f"Patient Encounter data {collection_name} deleted successfully.")
                 st.session_state.delete_confirmation = False
@@ -2569,18 +2569,18 @@ def process_user_question(user_question, specialist):
         st.session_state.completed_tasks_str = ""
         
         # Debug output
-        print("DEBUG: Session State after processing user question")
+        # print("DEBUG: Session State after processing user question")
 
 def get_response(user_question: str) -> str:
     with st.spinner("Waiting for EMMA's response..."):
         response_placeholder = st.empty()
-        print(f"DEBUG get_response: specialist: {st.session_state.specialist}")
+        # print(f"DEBUG get_response: specialist: {st.session_state.specialist}")
         if st.session_state.specialist == "Perplexity" or st.session_state.specialist == "Clinical Decision Tools":
-            print(f"DEBUG get_response: Perplixity Specialist: {st.session_state.specialist}")
+            # print(f"DEBUG get_response: Perplixity Specialist: {st.session_state.specialist}")
             response_text = get_perplexity_response(user_question)
         else:
             # Prepare chat history for context
-            print(f"DEBUG get_response: else Specialist: {st.session_state.specialist}")
+            # print(f"DEBUG get_response: else Specialist: {st.session_state.specialist}")
 
             chat_context = ""
             for message in st.session_state.chat_history[-20:]:  # Include last 20 messages for context
@@ -2629,10 +2629,10 @@ def get_response(user_question: str) -> str:
             # LLM Model Response
             response = anthropic_model.invoke(messages)
             response_text = response.content
-            print(f"DEBUG get_response: system prompt: {system_prompt}")
-            print(f"DEBUG get_response: user question: {user_question}")
-            print(f"DEBUG get_response: SPECIALIST: {st.session_state.specialist}")
-            print(f"DEBUG get_response: preferred note type: {st.session_state.preferred_note_type}")
+            # print(f"DEBUG get_response: system prompt: {system_prompt}")
+            # print(f"DEBUG get_response: user question: {user_question}")
+            # print(f"DEBUG get_response: SPECIALIST: {st.session_state.specialist}")
+            # print(f"DEBUG get_response: preferred note type: {st.session_state.preferred_note_type}")
         response_placeholder.markdown(response_text)
         
         return response_text
@@ -2673,19 +2673,19 @@ def authenticated_user():
         
         # Match user's specialty to a specialist every time
         matched_specialist = match_specialty_to_specialist(st.session_state.specialty)
-        print(f"Matched Specialist: {matched_specialist}")
+        # print(f"Matched Specialist: {matched_specialist}")
         
         # Only update if the matched specialist is different from the current one
         if 'specialist' not in st.session_state or st.session_state.default_specialist == "":
-            print("Specialist not in session state or default specialist is empty")
+            # print("Specialist not in session state or default specialist is empty")
             st.session_state.specialist = matched_specialist
             st.session_state.default_specialist = matched_specialist
             st.session_state.assistant_id = specialist_data[matched_specialist]["assistant_id"]
             st.session_state.specialist_avatar = specialist_data[matched_specialist]["avatar"]
             st.session_state.system_instructions = specialist_data[matched_specialist]["system_instructions"]
 
-        print(f'Current specialist: {st.session_state.specialist}')
-        print(f'User specialty: {st.session_state.specialty}')
+        # print(f'Current specialist: {st.session_state.specialist}')
+        # print(f'User specialty: {st.session_state.specialty}')
             
         if 'load_session' in st.session_state:
             collection_name = st.session_state.load_session
@@ -2928,7 +2928,7 @@ def document_processing():
                 # Add the analysis request to the chat history
                 st.session_state.specialist = NOTE_WRITER
                 st.session_state.preferred_note_type = "All Purpose Notes"
-                # print(f'DEBUG DOCUMETN PROCESSING SPECIALIST: {st.session_state.specialist} and preferred_note_type: {st.session_state.preferred_note_type}')
+                # # print(f'DEBUG DOCUMETN PROCESSING SPECIALIST: {st.session_state.specialist} and preferred_note_type: {st.session_state.preferred_note_type}')
                 consult_specialist_and_update_ddx("Analyze Document", analysis_request)
                 
                 # Get the chatbot's response (you'll need to implement this part based on your chatbot setup)
