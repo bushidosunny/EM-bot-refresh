@@ -288,14 +288,17 @@ specialist_data = {
 
 note_type_instructions = {
     EM_NOTE: note_writer_system_em,
+    "Family Medicine Note": note_writer_system_family_medicine_clinic_note,
     "General Consultation Note": note_writer_system_consult,
     "General Progress Note": note_writer_system_progress,
     "IM Admission Note": note_writer_system_admission,
     "IM Discharge Note": note_writer_system_discharge,
     "IM Progress Note": note_writer_system_IM_progress,
+    "Pediatric Clinic Note": note_writer_system_pediatric_clinic_note,
     "Procedure Note": note_writer_system_procedure,
     "Transfer Note": note_writer_system_transfer,
-    "All Purpose Notes": note_writer_system_document_processing
+    "All Purpose Notes": note_writer_system_document_processing,
+    "Surgery Clinic Note": note_writer_system_surgery_clinic_note
 }
 
 ################################# Initialize Session State #####################################
@@ -340,12 +343,14 @@ def initialize_session_state():
         session_state.old_user_question_sidebar = ""
         session_state.new_session_clicked = False
         session_state.messages = []
-        session_state.system_instructions = emma_system
+        
         session_state.pt_title = ""
         session_state.patient_cc = ""
         session_state.chief_complaint_two_word = ""
         session_state.clean_chat_history = ""
         session_state.specialist = list(specialist_data.keys())[0]
+        session_state.default_specialist = ""
+        session_state.system_instructions = specialist_data[session_state.specialist]["system_instructions"]
         session_state.assistant_id = specialist_data[session_state.specialist]["assistant_id"]
         session_state.specialist_avatar = specialist_data[session_state.specialist]["avatar"]
         session_state.session_id = None
@@ -942,6 +947,17 @@ def choose_specialist_radio():
     # if hasattr(st.session_state, 'subgroup_specialty') and st.session_state.subgroup_specialty != st.session_state.specialist:
     #     st.write(f"Specific Specialty: **{st.session_state.subgroup_specialty}**")
 
+def match_specialty_to_specialist(user_specialty):
+    for specialist, data in specialist_data.items():
+        if user_specialty.lower() == specialist.lower():
+            print(f'DEBUG MATCH SPECIALTY TO SPECIALIST1: {specialist}')
+            return specialist
+        if "subgroups" in data and user_specialty.lower() in [sg.lower() for sg in data["subgroups"]]:
+            print(f'DEBUG MATCH SPECIALTY TO SPECIALIST2: {specialist}')
+            return specialist
+    print(f'DEBUG MATCH SPECIALTY TO SPECIALIST3: {specialist}')
+    return "Emergency Medicine"  # Default to Emergency Medicine if no match found
+
 def button_input(specialist, prompt):
     st.session_state.assistant_id = specialist_data[specialist]["assistant_id"]
     st.session_state.system_instructions = specialist_data[specialist]["system_instructions"]
@@ -965,12 +981,13 @@ def button_input(specialist, prompt):
 
         st.session_state.completed_tasks_str = ''
         st.session_state.critical_actions = []
-        st.rerun()
+        # st.rerun()
 
 def process_other_queries():
     if st.session_state.user_question_sidebar != "" and st.session_state.user_question_sidebar != st.session_state.old_user_question_sidebar:
         specialist_avatar = specialist_data[st.session_state.specialist]["avatar"]
         specialist = st.session_state.specialist
+        print(f'DEBUG PROCESS OTHER QUERIES SPECIALIST CHOSEN: {specialist}')
         
         user_question = st.session_state.user_question_sidebar
         with st.chat_message("user", avatar=st.session_state.user_photo_url):
@@ -994,6 +1011,9 @@ def process_other_queries():
 
         # Clear completed tasks
         st.session_state.completed_tasks_str = ""
+
+        #return to original specialist
+        st.session_state.specialist = st.session_state.default_specialist
         st.rerun()
 
 def update_patient_language():
@@ -1252,6 +1272,7 @@ def display_sidebar():
             # Check if the specialty is Internal Medicine
             print(f'DEBUG DISPLAY SIDEBAR SPECIALTY: {st.session_state.specialty} ')
             print(f'DEBUG DISPLAY SIDEBAR PREFERRED NOTE TYPE: {st.session_state.preferred_note_type}')
+            print(f'DEBUG DISPLAY SIDEBAR specialist: {st.session_state.specialist}')
             
             
         # with tab2:
@@ -1324,7 +1345,9 @@ def display_functions_tab():
         else:
             prompt = prompt_template
         consult_specialist_and_update_ddx(action_name, prompt)
-        st.session_state.specialist = st.session_state.specialty
+        print(f'DEBUG BUTTON ACTION SPECIALIST1: {st.session_state.specialist}')
+        # st.session_state.specialist = st.session_state.specialty
+        # print(f'DEBUG BUTTON ACTION SPECIALIST2: {st.session_state.specialist}')
         clear_instructions()
         st.rerun()
 
@@ -2551,11 +2574,14 @@ def process_user_question(user_question, specialist):
 def get_response(user_question: str) -> str:
     with st.spinner("Waiting for EMMA's response..."):
         response_placeholder = st.empty()
-        
-        if st.session_state.specialist == "Perplexity" or "Clinical Decision Tools":
+        print(f"DEBUG get_response: specialist: {st.session_state.specialist}")
+        if st.session_state.specialist == "Perplexity" or st.session_state.specialist == "Clinical Decision Tools":
+            print(f"DEBUG get_response: Perplixity Specialist: {st.session_state.specialist}")
             response_text = get_perplexity_response(user_question)
         else:
             # Prepare chat history for context
+            print(f"DEBUG get_response: else Specialist: {st.session_state.specialist}")
+
             chat_context = ""
             for message in st.session_state.chat_history[-20:]:  # Include last 20 messages for context
                 if isinstance(message, HumanMessage):
@@ -2583,7 +2609,15 @@ def get_response(user_question: str) -> str:
                     FILL_IN_EXPECTED_FINDINGS='fill in the normal healthy findings and include them in the note accordingly'
                 )
             else:
-                system_prompt = system_instructions
+                user_info = f"""
+                Date and time of visit: {datetime.datetime.now().strftime("%Y-%B-%d %I:%M:%S %p")}
+                User's name: {st.session_state.name} 
+                Specialty: {st.session_state.specialty}
+                Work: {st.session_state.hospital_name}
+                Contact info: {st.session_state.hospital_contact}
+                """
+
+                system_prompt = system_instructions + user_info
 
             system_message = SystemMessage(content=system_prompt)
             
@@ -2595,7 +2629,10 @@ def get_response(user_question: str) -> str:
             # LLM Model Response
             response = anthropic_model.invoke(messages)
             response_text = response.content
-
+            print(f"DEBUG get_response: system prompt: {system_prompt}")
+            print(f"DEBUG get_response: user question: {user_question}")
+            print(f"DEBUG get_response: SPECIALIST: {st.session_state.specialist}")
+            print(f"DEBUG get_response: preferred note type: {st.session_state.preferred_note_type}")
         response_placeholder.markdown(response_text)
         
         return response_text
@@ -2634,6 +2671,21 @@ def authenticated_user():
         sentry_sdk.set_user({"email": st.session_state.email})
         css_hack()
         
+        # Match user's specialty to a specialist every time
+        matched_specialist = match_specialty_to_specialist(st.session_state.specialty)
+        print(f"Matched Specialist: {matched_specialist}")
+        
+        # Only update if the matched specialist is different from the current one
+        if 'specialist' not in st.session_state or st.session_state.default_specialist == "":
+            print("Specialist not in session state or default specialist is empty")
+            st.session_state.specialist = matched_specialist
+            st.session_state.default_specialist = matched_specialist
+            st.session_state.assistant_id = specialist_data[matched_specialist]["assistant_id"]
+            st.session_state.specialist_avatar = specialist_data[matched_specialist]["avatar"]
+            st.session_state.system_instructions = specialist_data[matched_specialist]["system_instructions"]
+
+        print(f'Current specialist: {st.session_state.specialist}')
+        print(f'User specialty: {st.session_state.specialty}')
             
         if 'load_session' in st.session_state:
             collection_name = st.session_state.load_session

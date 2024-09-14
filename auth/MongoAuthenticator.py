@@ -117,6 +117,7 @@ class User:
             "name": self.name,
             "specialty": self.specialty,
             "preferred_templates": self.preferred_templates,
+            "preferred_note_type": self.preferred_note_type,
             "created_at": self.created_at,
             "last_login": self.last_login,
             "login_count": self.login_count,
@@ -144,6 +145,7 @@ class User:
         user.password = data.get("password")
         user.specialty=data.get("specialty", "Other")
         user.preferred_templates = data.get("preferred_templates", {})
+        user.preferred_note_type = data.get("preferred_note_type", EM_NOTE)
         user.created_at = data.get("created_at", user.created_at)
         user.last_login = data.get("last_login", user.last_login)
         user.login_count = data.get("login_count", 0)
@@ -364,6 +366,8 @@ class MongoAuthenticator:
             st.session_state.name = user['name']
             st.session_state.username = username
             st.session_state.email = user['email']
+            st.session_state.specialty = user.get('specialty', EMERGENCY_MEDICINE)
+            st.session_state.preferred_note_type = user.get('preferred_note_type', EM_NOTE)
 
             # Always increment login_count on manual login
             self.users.update_one(
@@ -505,6 +509,12 @@ class MongoAuthenticator:
             self.users.update_one({"username": username}, {"$set": {"password": hashed_password}})
             return username, user['email'], new_password
         return None, None, None
+    
+    def get_user_specialty(self, username):
+        user = self.users.find_one({"username": username})
+        if user:
+            return user.get('specialty', EMERGENCY_MEDICINE)
+        return EMERGENCY_MEDICINE
 
     def authenticate(self):
         logging.info("Authenticating user...")
@@ -514,8 +524,6 @@ class MongoAuthenticator:
             return True
         else:
             logging.info(f"Checking for user_id in cookie: {self.cookie_name}")
-            logging.info(f"Cookie value: {self.cookie_manager.get(self.cookie_name)}")
-            # time.sleep(1)
             user_id = self.cookie_manager.get(self.cookie_name)
             logging.info(f"Retrieved user_id from cookie: {user_id}")
             if user_id and user_id != "":
@@ -528,15 +536,14 @@ class MongoAuthenticator:
                         st.session_state.username = user['username']
                         st.session_state.user_id = str(user['_id'])
                         st.session_state.email = user['email']
-                        st.session_state.specialty = user.get('specialty', EMERGENCY_MEDICINE)  # Add this line
+                        st.session_state.specialty = user.get('specialty', EMERGENCY_MEDICINE)
                         st.session_state.preferred_note_type = user.get('preferred_note_type', EM_NOTE)
 
-                        print(f'authenticated user specialty: {st.session_state.specialty}')
-                        print(f'authenticated user preferred_note_type: {st.session_state.preferred_note_type}')
+                        print(f'Authenticated user specialty: {st.session_state.specialty}')
+                        print(f'Authenticated user preferred_note_type: {st.session_state.preferred_note_type}')
                         
                         # Update user metrics and check/update daily login
                         self.update_user_metrics(user_id)
-                  
                         
                         return True
                     else:
@@ -551,7 +558,7 @@ class MongoAuthenticator:
             else:
                 logging.info("No user_id found in cookie")
             return False
-
+    
     def change_password(self, username, current_password, new_password):
         user = self.users.find_one({"username": username})
         if user and bcrypt.checkpw(current_password.encode('utf-8'), user['password']):
