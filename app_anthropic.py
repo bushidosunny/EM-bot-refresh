@@ -3004,6 +3004,17 @@ def main():
             mobile_user()
         else:
             authenticated_user()
+
+    else:
+        if st.session_state.show_registration:
+            authenticator.register_page()
+        elif st.session_state.show_forgot_username:
+            authenticator.forgot_username_page()
+        elif st.session_state.show_change_password:
+            authenticator.change_password_page()
+        else:
+            authenticator.login_page()
+
         
 if __name__ == '__main__':
     try:
