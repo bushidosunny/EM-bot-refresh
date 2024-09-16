@@ -625,7 +625,7 @@ def conditional_upsert_test_result(user_id, test_name, result, sequence_number):
         print(f"An error occurred while processing {test_name}: {str(e)}")
         sentry_sdk.capture_exception(e)
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=30)
 def list_user_sessions(username: str):
     collections = db.list_collection_names()
     username = st.session_state.username
@@ -656,18 +656,36 @@ def list_user_sessions(username: str):
             result = list(db[collection_name].aggregate(pipeline))
             
             if result:
+                # Process ddx document
                 doc = result[0]
                 timestamp = doc.get("timestamp")
                 date_str = timestamp.strftime("%Y.%m.%d %H:%M") if timestamp else "Unknown Date"
                 patient_cc = doc.get("patient_cc", "Unknown CC")
-                disease_name = doc.get("disease", "Unknown Disease")
+                ddx = doc.get("ddx", [])
+                disease_name = ddx[0].get("disease", "Unknown Disease") if ddx else "Unknown Disease"
                 session_name = f"{date_str} - {patient_cc} - {disease_name}"
-                session_details.append({"collection_name": collection_name, "session_name": session_name})
             else:
-                session_details.append({"collection_name": collection_name, "session_name": session_id})
+                # No ddx document found, get the most recent document
+                latest_doc = db[collection_name].find_one(sort=[("timestamp", -1)])
+                
+                if latest_doc:
+                    timestamp = latest_doc.get("timestamp")
+                    date_str = timestamp.strftime("%Y.%m.%d %H:%M") if timestamp else "Unknown Date"
+                    session_name = f"{date_str} - No DDX - {latest_doc.get('type', 'Unknown Type')}"
+                else:
+                    # If no documents at all, use collection creation time
+                    collection_info = db.command("collstats", collection_name)
+                    creation_time = collection_info.get("creationTime", datetime.datetime.now())
+                    date_str = creation_time.strftime("%Y.%m.%d %H:%M")
+                    session_name = f"{date_str} - Empty Session"
+            
+            session_details.append({"collection_name": collection_name, "session_name": session_name})
         except Exception as e:
-            # print(f"Error processing session {session_id}: {str(e)}")
-            session_details.append({"collection_name": collection_name, "session_name": session_id})
+            print(f"Error processing session {session_id}: {str(e)}")
+            # Use current time if an error occurs
+            date_str = datetime.datetime.now().strftime("%Y.%m.%d %H:%M")
+            session_name = f"{date_str} - Error Processing Session"
+            session_details.append({"collection_name": collection_name, "session_name": session_name})
             sentry_sdk.capture_exception(e)
     
     return session_details
