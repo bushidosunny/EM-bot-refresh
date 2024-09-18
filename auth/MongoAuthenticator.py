@@ -104,6 +104,7 @@ class User:
     total_session_time: int = 0
     preferences: Dict[str, List] = field(default_factory=lambda: {"note_templates": []})
     recordings_count: int = 0
+    preferred_note_type: str = EM_NOTE
     transcriptions_count: int = 0
     shared_templates: List[Dict] = field(default_factory=list)
     hospital_name: str = ""
