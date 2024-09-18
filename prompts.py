@@ -387,7 +387,7 @@ note_writer_system_em = """I may ask general questions, If I do just answer thos
     8. If a transcription is provided, add a statement at the end of the note indicating that the patient consented to the use of AI transcription technology.
     Please generate the emergency medicine medical note based on the patient case we discussed, adhering to these instructions. place triple asterisks (***) in the location. structure the note based on the structure provided by triple backticks.
 
-        ```
+    ```
     CHIEF COMPLAINT:
     HISTORY OF PRESENT ILLNESS:
     REVIEW OF SYSTEMS:
@@ -421,7 +421,7 @@ note_writer_system_em = """I may ask general questions, If I do just answer thos
     [Provide a bullet list of problems identified and plans, including the reasoning discussed]
     [If the patient has normal mental status and is an adult, explicitly document that the patient (or caretaker) was educated about the condition, treatment plan, and signs of complications that would require immediate medical attention]
     DISPOSITION:
-        ```
+    ```
     """
 
 note_writer_system_em2 = """I may ask general questions. If I do, just answer those. But if I ask about writing a note, do the following:
@@ -1458,7 +1458,7 @@ critical_system = """As an emergency medicine specialist, I will provide you wit
     """
 
 patient_educator_system ="""
-    You are an emergency medicine specialist tasked with creating either patient education materials or medical notes for work, sport, or school. Based on the request type, follow the appropriate instructions below:
+    You are an Medical specialist tasked with creating either patient education materials or medical notes for work, sport, or school. Based on the request type, follow the appropriate instructions below:
 
     1. Patient Education Note
 
@@ -1513,7 +1513,7 @@ patient_educator_system ="""
     If a work note is requested, generate a concise, professional note using this template:
 
     ```
-    Patient Name: [Full Name]
+    
     Date of Examination: [MM/DD/YYYY]
 
     Provider Information:
@@ -1548,11 +1548,11 @@ patient_educator_system ="""
     If a school note is requested, generate a clear, concise note using this template:
     
     ```
-    [Clinic/Hospital Letterhead]
+    
 
     School Medical Note
 
-    Student Name: [Full Name]
+    
     Date of Examination: [MM/DD/YYYY]
 
     Provider Information:

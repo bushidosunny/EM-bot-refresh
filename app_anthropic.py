@@ -133,16 +133,17 @@ def get_note_writer_instructions():
     note_type = st.session_state.preferred_note_type
 
     # Check if there's a preferred custom template for this note type
-    preferred_template_id = user.get_preferred_template(note_type)
+    preferred_template_id = user.preferred_templates.get(note_type)
     if preferred_template_id:
         template = next((t for t in user.get_note_templates() if t['id'] == preferred_template_id), None)
         if template:
             base_instructions = note_type_instructions.get(note_type, note_writer_system)
-            # # print(f"Using preferred custom template for {note_type}")
-            # # print(f"DEBUG Base Instructions: {base_instructions}\n\nAdditional Custom Instructions:\n{template['content']}")
+            # print(f"Using preferred custom template for {note_type}")
+            # print(f"DEBUG Base Instructions: {base_instructions}\n\nAdditional Custom Instructions:\n{template['content']}")
             return f"{base_instructions}\n\nYOU MUST FOLLOW THE USER'S CUSTOM INSTRUCTIONS BELOW:\n{template['content']}"
     
     # If no preferred custom template, use the default instructions
+    # print(f"Using default instructions for {note_type}")
     return note_type_instructions.get(note_type, note_writer_system)
 
 specialist_data = {
@@ -251,7 +252,7 @@ specialist_data = {
     "assistant_id": "asst_twf42nzGoYLtrHAZeENLcI5d",
     "caption": "Pt education Note Writer",
     "avatar": "https://cdn.pixabay.com/photo/2012/04/25/00/26/writing-41354_960_720.png",
-    "system_instructions": lambda: f"User's name: Dr {st.session_state.name}. User's specialty: {st.session_state.specialty}Hospital/Clinic: {st.session_state.hospital_name}, Hospital Contact info: {st.session_state.hospital_contact}. Today's Date is {datetime.datetime.now().strftime('%m/%d/%Y')} \n {patient_educator_system}"
+    "system_instructions": patient_educator_system
   },
   "Dr. Longevity": {
     "assistant_id": "asst_sRjFUQFCD0dNOl7513qb4gGv",
@@ -323,6 +324,7 @@ def initialize_session_state():
         session_state.user_photo_url = "https://cdn.pixabay.com/photo/2016/12/21/07/36/profession-1922360_1280.png"
         session_state.collection_name = ""
         session_state.name = ""
+        session_state.timezone = 'America/Los_Angeles'
         session_state.chat_history = []
         session_state.user_question = ""
         session_state.legal_question = ""
@@ -344,7 +346,6 @@ def initialize_session_state():
         session_state.old_user_question_sidebar = ""
         session_state.new_session_clicked = False
         session_state.messages = []
-        
         session_state.pt_title = ""
         session_state.patient_cc = ""
         session_state.chief_complaint_two_word = ""
@@ -993,7 +994,7 @@ def button_input(specialist, prompt):
         # print(f'DEBUG BUTTON INPUT SPECIALIST CHOSEN: {specialist}')
         specialist_avatar = specialist_data[st.session_state.specialist]["avatar"]
         st.session_state.specialist_avatar = specialist_avatar
-        timezone = pytz.timezone("America/Los_Angeles")
+        timezone = pytz.timezone(st.session_state.timezone)    
         current_datetime = datetime.datetime.now(timezone).strftime("%H:%M:%S")
         user_question = f"{current_datetime}\n{user_question}\n{st.session_state.completed_tasks_str}"
         st.session_state.user_question_sidebar = user_question
@@ -1062,7 +1063,6 @@ def new_thread():
         </script>
     """)
     # st.rerun()
-
 
 
 def chat_history_string():
@@ -2634,14 +2634,16 @@ def get_response(user_question: str, mobile=False) -> str:
                 )
             else:
                 user_info = f"""
-                Date and time of visit: {datetime.datetime.now().strftime("%Y-%B-%d %I:%M:%S %p")}
+                REFERENCE INFORMATION:
+                Date and time of visit: {datetime.datetime.now(pytz.timezone(st.session_state.timezone)).strftime("%Y-%B-%d %I:%M:%S %p")}
                 User's name: {st.session_state.name} 
                 Specialty: {st.session_state.specialty}
                 Work: {st.session_state.hospital_name}
                 Contact info: {st.session_state.hospital_contact}
                 """
-
+                
                 system_prompt = system_instructions + user_info
+                print(f"Get_response System Prompt: {system_prompt}")
 
             system_message = SystemMessage(content=system_prompt)
             

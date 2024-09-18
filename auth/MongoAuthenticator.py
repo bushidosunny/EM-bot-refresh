@@ -232,6 +232,13 @@ class User:
         else:
             self.preferred_templates[note_type] = template_id
 
+         # Update the user document in MongoDB
+        # Update the user document in MongoDB
+        self.users.update_one(
+            {"username": self.username},
+            {"$set": {"preferred_templates": self.preferred_templates}}
+        )
+
     ########## User Template Methods ##########
     def delete_note_template(self, template_id: str) -> bool:
         initial_length = len(self.preferences.get("note_templates", []))
@@ -538,6 +545,8 @@ class MongoAuthenticator:
                         st.session_state.username = user['username']
                         st.session_state.user_id = str(user['_id'])
                         st.session_state.email = user['email']
+                        st.session_state.hospital_name = user.get('hospital_name', "")
+                        st.session_state.hospital_contact = user.get('hospital_contact', "")
                         st.session_state.specialty = user.get('specialty', EMERGENCY_MEDICINE)
                         st.session_state.preferred_note_type = user.get('preferred_note_type', EM_NOTE)
 
