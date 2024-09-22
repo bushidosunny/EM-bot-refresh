@@ -54,7 +54,8 @@ DISPOSITION:
 ```
 
 Begin writing the emergency medicine medical note based on these instructions and the provided patient information."""
-create_full_note_except_results = """Write a full note except: 'VITALS', 'LABORATORY RESULTS', 'IMAGING'. put one triple asterisk (***) where the 'LABORATORY RESULTS' would have been."""
+create_full_note_except_results = """Write the following items each in triple backticks: 1. HPI, ROS  2.Physical Exam 3.MDM, Asessement, Plan, and Disposition"""
+create_full_note_in_parts_IM = """Write the following items each in triple backticks: 1. HPI, ROS  2.Physical Exam 3.Asessement, Plan, and Disposition"""
 create_hpi = """Write only the CHIEF COMPLAINT, HISTORY OF PRESENT ILLNESS,REVIEW OF SYSTEM, SPAST MEDICAL HISTORY, PAST SOCIAL HISTORY, MEDICATIONS and PHYSICAL EXAMINATION"""
 create_ap = """Write only the MDM, assesment, plan and disposition"""
 challenge_ddx = "Consider the patient's case, the patient's timeline of events. Doubt the current differential diagnosis. How does one diagnose the disease considered and does this patient fit? Consider alternative explanations. Recreate the DDX"

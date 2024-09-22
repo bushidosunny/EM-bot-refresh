@@ -627,7 +627,7 @@ def conditional_upsert_test_result(user_id, test_name, result, sequence_number):
         print(f"An error occurred while processing {test_name}: {str(e)}")
         sentry_sdk.capture_exception(e)
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=60)
 def list_user_sessions(username: str):
     collections = db.list_collection_names()
     username = st.session_state.username
@@ -638,68 +638,71 @@ def list_user_sessions(username: str):
         session_id = session.split('_')[-1]
         collection_name = f'user_{username}_session_{session_id}'
         
-        pipeline = [
-            {"$match": {"type": "ddx"}},
-            {"$sort": {"timestamp": -1}},
-            {"$limit": 1},
-            {"$project": {
-                "timestamp": 1,
-                "patient_cc": 1,
-                "ddx": {"$ifNull": ["$ddx", []]}  # Ensure ddx is always an array
-            }},
-            {"$project": {
-                "timestamp": 1,
-                "patient_cc": 1,
-                "disease": {"$arrayElemAt": [{"$ifNull": ["$ddx.disease", []]}, 0]}  # Safely get first disease
-            }}
-        ]
+        # Get the original timestamp
+        original_timestamp = None
+        latest_doc = db[collection_name].find_one(sort=[("timestamp", -1)])
+        if latest_doc:
+            original_timestamp = latest_doc.get("timestamp")
+        else:
+            collection_info = db.command("collstats", collection_name)
+            original_timestamp = collection_info.get("creationTime", datetime.datetime.now())
         
-        try:
-            result = list(db[collection_name].aggregate(pipeline))
+        # Check for pt_encounter_name
+        pt_encounter_doc = db[collection_name].find_one({"type": "pt_encounter_name"})
+        if pt_encounter_doc and 'name' in pt_encounter_doc:
+            session_name = pt_encounter_doc['name']
+        else:
+            # Use the existing logic to generate a session name
+            pipeline = [
+                {"$match": {"type": "ddx"}},
+                {"$sort": {"timestamp": -1}},
+                {"$limit": 1},
+                {"$project": {
+                    "timestamp": 1,
+                    "patient_cc": 1,
+                    "ddx": {"$ifNull": ["$ddx", []]}
+                }},
+                {"$project": {
+                    "timestamp": 1,
+                    "patient_cc": 1,
+                    "disease": {"$arrayElemAt": [{"$ifNull": ["$ddx.disease", []]}, 0]}
+                }}
+            ]
             
-            if result:
-                # Process ddx document
-                doc = result[0]
-                timestamp = doc.get("timestamp")
-                date_str = timestamp.strftime("%Y.%m.%d %H:%M") if timestamp else "Unknown Date"
-                patient_cc = doc.get("patient_cc", "Unknown CC")
-                ddx = doc.get("ddx", [])
-                disease_name = ddx[0].get("disease", "Unknown Disease") if ddx else "Unknown Disease"
-                session_name = f"{date_str} - {patient_cc} - {disease_name}"
-            else:
-                # No ddx document found, get the most recent document
-                latest_doc = db[collection_name].find_one(sort=[("timestamp", -1)])
+            try:
+                result = list(db[collection_name].aggregate(pipeline))
                 
-                if latest_doc:
-                    timestamp = latest_doc.get("timestamp")
+                if result:
+                    doc = result[0]
+                    timestamp = doc.get("timestamp")
                     date_str = timestamp.strftime("%Y.%m.%d %H:%M") if timestamp else "Unknown Date"
-                    session_name = f"{date_str} - No DDX - {latest_doc.get('type', 'Unknown Type')}"
+                    patient_cc = doc.get("patient_cc", "Unknown CC")
+                    disease_name = doc.get("disease", "Unknown Disease")
+                    session_name = f"{date_str} - {patient_cc} - {disease_name}"
                 else:
-                    # If no documents at all, use collection creation time
-                    collection_info = db.command("collstats", collection_name)
-                    creation_time = collection_info.get("creationTime", datetime.datetime.now())
-                    date_str = creation_time.strftime("%Y.%m.%d %H:%M")
-                    session_name = f"{date_str} - Empty Session"
-            
-            session_details.append({"collection_name": collection_name, "session_name": session_name})
-        except Exception as e:
-            print(f"Error processing session {session_id}: {str(e)}")
-            # Use current time if an error occurs
-            date_str = datetime.datetime.now().strftime("%Y.%m.%d %H:%M")
-            session_name = f"{date_str} - Error Processing Session"
-            session_details.append({"collection_name": collection_name, "session_name": session_name})
-            sentry_sdk.capture_exception(e)
+                    if latest_doc:
+                        timestamp = latest_doc.get("timestamp")
+                        date_str = timestamp.strftime("%Y.%m.%d %H:%M") if timestamp else "Unknown Date"
+                        session_name = f"{date_str} - No DDX - {latest_doc.get('type', 'Unknown Type')}"
+                    else:
+                        date_str = original_timestamp.strftime("%Y.%m.%d %H:%M")
+                        session_name = f"{date_str} - Empty Session"
+            except Exception as e:
+                print(f"Error processing session {session_id}: {str(e)}")
+                date_str = datetime.datetime.now().strftime("%Y.%m.%d %H:%M")
+                session_name = f"{date_str} - Error Processing Session"
+        
+        session_details.append({
+            "collection_name": collection_name, 
+            "session_name": session_name,
+            "original_timestamp": original_timestamp
+        })
     
     return session_details
 
+
 def sort_user_sessions_by_time(sessions):
-    def parse_session_date(session):
-        try:
-            date_str = session['session_name'].split(' - ')[0]
-            return datetime.datetime.strptime(date_str, "%Y.%m.%d %H:%M")
-        except (ValueError, IndexError):
-            return datetime.datetime.min
-    return sorted(sessions, key=parse_session_date, reverse=True)
+    return sorted(sessions, key=lambda x: x['original_timestamp'], reverse=True)
 
 @st.cache_data(ttl=60)
 def load_session_data(collection_name):
@@ -1411,15 +1414,15 @@ def display_functions_tab():
         with col3:
             if st.button('Complete Note', use_container_width=True, help=f"Writes a full {current_note_type} on this patient"):
                 button_action(NOTE_WRITER, "Write a note on this patient.", "Full Medical Note")
-            if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
-                button_action(NOTE_WRITER, create_hpi, "HPI only")
+            # if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
+                # button_action(NOTE_WRITER, create_hpi, "HPI only")
         
         with col4:
-            if st.button('Focused Note', use_container_width=True, help="HPI, ROS, PE, A/P, then paste EMR smart data (meds, labs, imaging, etc)"):
-                button_action(NOTE_WRITER, create_full_note_except_results, "Full Note except EMR results")
+            if st.button('Note in Parts', use_container_width=True, help="HPI, ROS, PE, A/P in copy boxes"):
+                button_action(NOTE_WRITER, create_full_note_in_parts_IM, "Full Note except EMR results")
 
-            if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
-                button_action(NOTE_WRITER, create_ap, "A&P only")
+            # if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
+            #     button_action(NOTE_WRITER, create_ap, "A&P only")
         
 
     
@@ -1430,14 +1433,14 @@ def display_functions_tab():
         with col1:
             if st.button('Complete Note', use_container_width=True, help="Writes a full medical note on this patient"):
                 button_action(NOTE_WRITER, "Write a note on this patient.", "Full Medical Note")
-            if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
-                button_action(NOTE_WRITER, create_hpi, "HPI only")
+            # if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
+            #     button_action(NOTE_WRITER, create_hpi, "HPI only")
         
         with col2:
-            if st.button('Focused Note', use_container_width=True, help="HPI, ROS, PE, A/P, then paste EMR smart data (meds, labs, imaging, etc)"):
+            if st.button('Note in Parts', use_container_width=True, help="HPI, ROS, PE, A/P in copy boxes"):
                 button_action(NOTE_WRITER, create_full_note_except_results, "Full Note except EMR results")
-            if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
-                button_action(NOTE_WRITER, create_ap, "A&P only")
+            # if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
+            #     button_action(NOTE_WRITER, create_ap, "A&P only")
 
     st.subheader('📝Notes for Patients in specified language')
     
@@ -1615,40 +1618,63 @@ window.getMessage = function() {
 """, unsafe_allow_html=True)
 
 def display_sessions_tab():
-    user_id = st.session_state.user_id  # Use Google ID instead of username
-    # if st.button("Load Sessions"):
+    user_id = st.session_state.user_id
     user_sessions = list_user_sessions(user_id)
+    
+    if 'renaming_session' not in st.session_state:
+        st.session_state.renaming_session = None
+    if 'new_session_name' not in st.session_state:
+        st.session_state.new_session_name = ""
+
     if user_sessions:
         sorted_sessions = sort_user_sessions_by_time(user_sessions)
         session_options = {session['session_name']: session['collection_name'] for session in sorted_sessions}
         
-        session_name = st.selectbox("Select a recent session to load:", 
-                    options=["Select a session..."] + list(session_options.keys()),
-                    index=0,
-                    key="session_selectbox")
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            session_name = st.selectbox("Select a recent session to load:", 
+                        label_visibility="collapsed",
+                        options=["Select a patient encounter"] + list(session_options.keys()),
+                        index=0,
+                        key="session_selectbox")
+        with col2:
+            rename_button = st.button("Rename", key="rename_session_button")
         
-        # selected_session = st_searchbox(
-        #     search_sessions_for_searchbox,
-        #     key="session_searchbox",
-        #     label="Search sessions",
-        #     placeholder="Type to search for sessions...",
-        #     default_use_searchterm=False,
-        #     rerun_on_update=False
-        # )
-
-        # if selected_session:
-        #     session_name = load_session_from_search(selected_session)
-
-        
-        if session_name != "Select a session...":
+        if session_name != "Select a patient encounter":
             if session_name in session_options:
                 collection_name = session_options[session_name]
+                
+                if rename_button:
+                    st.session_state.renaming_session = collection_name
+                    st.session_state.new_session_name = session_name
+
+                if st.session_state.renaming_session == collection_name:
+                    new_name = st.text_input("Enter new name for the session:", value=st.session_state.new_session_name, key="new_session_name_input")
+                    if st.button("Save New Name", key="save_new_name_button"):
+                        # Save the new name to MongoDB
+                        db[collection_name].update_one(
+                            {"type": "pt_encounter_name"},
+                            {"$set": {"name": new_name}},
+                            upsert=True
+                        )
+                        st.success(f"Session renamed to '{new_name}'")
+                        st.session_state.renaming_session = None
+                        st.session_state.new_session_name = ""
+                        # Clear the cache to force a refresh of the session list
+                        list_user_sessions.clear()
+                        time.sleep(1)
+                        st.rerun()
+                    
+                    if st.button("Cancel", key="cancel_rename_button"):
+                        st.session_state.renaming_session = None
+                        st.session_state.new_session_name = ""
+                        st.rerun()
+                
                 col1, col2 = st.columns(2)
                 with col1:
                     if st.button("Load Selected Patient Encounter", type='primary'):
                         st.session_state.load_session = collection_name
                         st.session_state.show_load_success = True
-                        # st.success(f"Click 'Refresh' to load the chat history.")
                 with col2:
                     if st.button("Delete Selected Patient Encounter"):
                         if 'delete_confirmation' not in st.session_state:
@@ -1674,11 +1700,10 @@ def display_sessions_tab():
                             del st.session_state.delete_confirmation
                             del st.session_state.delete_session_name
                             del st.session_state.delete_collection_name
-                            html("""
-                                <script>
-                                    window.parent.location.reload();
-                                </script>
-                            """)
+                            # Clear the cache to force a refresh of the session list
+                            list_user_sessions.clear()
+                            time.sleep(1)
+                            st.rerun()
                     with col2:
                         if st.button("No, cancel"):
                             del st.session_state.delete_confirmation
@@ -1689,7 +1714,7 @@ def display_sessions_tab():
                 st.error(f"Session '{session_name}' not found in options.")
     else:
         st.write("No sessions found for this user.")
- 
+
 def display_session_data(collection_name):
     st.session_state.session_id = collection_name
     categorized_data = load_session_data(collection_name)
@@ -2634,7 +2659,7 @@ def get_response(user_question: str, mobile=False) -> str:
                 )
             else:
                 user_info = f"""
-                REFERENCE INFORMATION:
+                REFERENCE INFORMATION OF THE USER:
                 Date and time of visit: {datetime.datetime.now(pytz.timezone(st.session_state.timezone)).strftime("%Y-%B-%d %I:%M:%S %p")}
                 User's name: {st.session_state.name} 
                 Specialty: {st.session_state.specialty}
