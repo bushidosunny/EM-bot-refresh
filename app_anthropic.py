@@ -28,7 +28,7 @@ else:
         'About': disclaimer})
         # st.session_state.page_config_set = True
         # # print("Page config set")
-import admin
+# import admin
 from streamlit_float import float_css_helper
 from streamlit_js_eval import streamlit_js_eval
 from anthropic import Anthropic
@@ -332,6 +332,7 @@ def initialize_session_state():
         session_state.additional_pt_note_input = ""
         session_state.json_data = {}
         session_state.pt_data = {}
+        session_state.additional_instructions = ""
         session_state.differential_diagnosis = []
         session_state.danger_diag_list = {}
         session_state.critical_actions = {}
@@ -919,6 +920,29 @@ def consult_specialist_and_update_ddx(button_name, prompt):
     specialist = st.session_state.specialist
     button_input(specialist, prompt)
 
+def button_input(specialist, prompt):
+    st.session_state.assistant_id = specialist_data[specialist]["assistant_id"]
+    st.session_state.system_instructions = specialist_data[specialist]["system_instructions"]
+    
+    if specialist == NOTE_WRITER:
+        st.session_state.system_instructions = get_note_writer_instructions()
+    else:
+        st.session_state.system_instructions = specialist_data[specialist]["system_instructions"]
+ 
+    user_question = prompt
+    if user_question:
+        st.session_state.specialist = specialist
+        specialist_avatar = specialist_data[st.session_state.specialist]["avatar"]
+        st.session_state.specialist_avatar = specialist_avatar
+        timezone = pytz.timezone(st.session_state.timezone)    
+        current_datetime = datetime.datetime.now(timezone).strftime("%H:%M:%S")
+        user_question = f"{current_datetime}\n{user_question}\n{st.session_state.completed_tasks_str}"
+        st.session_state.user_question_sidebar = user_question
+
+        st.session_state.completed_tasks_str = ''
+        st.session_state.critical_actions = []
+
+
 def choose_specialist_radio():
     specialities = list(specialist_data.keys())
     captions = [specialist_data[speciality]["caption"] for speciality in specialities]
@@ -981,31 +1005,6 @@ def match_specialty_to_specialist(user_specialty):
     # print(f'DEBUG MATCH SPECIALTY TO SPECIALIST3: {specialist}')
     return "Emergency Medicine"  # Default to Emergency Medicine if no match found
 
-def button_input(specialist, prompt):
-    st.session_state.assistant_id = specialist_data[specialist]["assistant_id"]
-    st.session_state.system_instructions = specialist_data[specialist]["system_instructions"]
-    # # print(f'DEBUG BUTTON INPUT SPECIALIST CHOSEN: {specialist}')
-    if specialist == NOTE_WRITER:
-        st.session_state.system_instructions = get_note_writer_instructions()
-    else:
-        st.session_state.system_instructions = specialist_data[specialist]["system_instructions"]
-    # # print(f'DEBUG BUTTON INPUT system_instructions: {st.session_state.system_instructions}')
- 
-    user_question = prompt
-    if user_question:
-        st.session_state.specialist = specialist
-        # print(f'DEBUG BUTTON INPUT SPECIALIST CHOSEN: {specialist}')
-        specialist_avatar = specialist_data[st.session_state.specialist]["avatar"]
-        st.session_state.specialist_avatar = specialist_avatar
-        timezone = pytz.timezone(st.session_state.timezone)    
-        current_datetime = datetime.datetime.now(timezone).strftime("%H:%M:%S")
-        user_question = f"{current_datetime}\n{user_question}\n{st.session_state.completed_tasks_str}"
-        st.session_state.user_question_sidebar = user_question
-
-        st.session_state.completed_tasks_str = ''
-        st.session_state.critical_actions = []
-        # st.rerun()
-
 def process_other_queries():
     if st.session_state.user_question_sidebar != "" and st.session_state.user_question_sidebar != st.session_state.old_user_question_sidebar:
         specialist_avatar = specialist_data[st.session_state.specialist]["avatar"]
@@ -1039,8 +1038,10 @@ def process_other_queries():
         st.session_state.specialist = st.session_state.default_specialist
         st.rerun()
 
-def update_patient_language():
-    patient_language = st.text_input("Type patient language if not English", value=st.session_state.patient_language, autocomplete="on", label_visibility="collapsed")
+def update_patient_language(key):
+    patient_language = st.text_input("Type patient language if not English", value=st.session_state.patient_language, autocomplete="on", label_visibility="collapsed",
+        key=key # Add this unique key
+    )
     if patient_language != st.session_state.patient_language:
         st.session_state.patient_language = patient_language
 
@@ -1146,6 +1147,7 @@ def parse_json(chat_history):
         # print(f"An unexpected error occurred: {str(e)}")
         # print(f"Full error details: {repr(e)}")  # This will # print more detailed error information
         sentry_sdk.capture_exception(e)
+
 
 ####################################### UI #########################################
 def display_header():
@@ -1303,9 +1305,9 @@ def display_sidebar():
         with tab5:
             display_settings_tab()
 
+        
         st.divider()
-        st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
-        st.divider()
+        st.markdown("<br><br><br><br>", unsafe_allow_html=True)
                 
         container = st.container()
         # container.float(float_css_helper(bottom="10px", padding= "10px", background_color="#CED6E3", border_radius="10px"))
@@ -1342,36 +1344,53 @@ def display_sidebar():
                     st.rerun()
 
 def display_functions_tab():
+    # st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
     display_sessions_tab()
     
     st.divider()
-    st.subheader('🧰 Quick Action Buttons')
+    st.subheader('QUICK ACTION BUTTONS')
     
-    # Initialize session state for additional instructions if not exists
-    if 'additional_instructions' not in st.session_state:
-        st.session_state.additional_instructions = ""
+    additional_instructions = st.text_input(
+        "Additional Instructions (applied to all action buttons)", 
+        value=st.session_state.get('additional_instructions', ''),
+        key="additional_instructions_input"
+    )
+    if additional_instructions != st.session_state.get('additional_instructions', ''):
+        st.session_state.additional_instructions = additional_instructions
+
 
     # Function to clear instructions
     def clear_instructions():
-        st.session_state.additional_instructions = ""
+        if 'additional_instructions' in st.session_state:
+            del st.session_state.additional_instructions
 
 
+    def generate_selected_notes(note_types):
+        selected_notes = [note for note, selected in note_types.items() if selected]
+        
+        if not selected_notes:
+            st.warning("Please select at least one note type.")
+            return
 
-    
+        # Combine prompts for selected notes
+        combined_prompt = f"Generate the following notes for this patient in {st.session_state.patient_language}:\n"
+        for note in selected_notes:
+            combined_prompt += f"- {note}\n"
 
-    # Helper function for button actions
+        # Call the function to generate notes
+        button_action("Patient Educator", combined_prompt, "Combined Patient Notes")
+
     def button_action(specialist, prompt_template, action_name):
         st.session_state.specialist = specialist
-        if st.session_state.additional_instructions != "":
-            prompt = f"{prompt_template}\n\nAdditional Instructions: {st.session_state.additional_instructions}"
+        additional_instructions = st.session_state.get('additional_instructions', '')
+        if additional_instructions:
+            prompt = f"{prompt_template}\n\nAdditional Instructions: {additional_instructions}"
         else:
             prompt = prompt_template
         consult_specialist_and_update_ddx(action_name, prompt)
-        # print(f'DEBUG BUTTON ACTION SPECIALIST1: {st.session_state.specialist}')
-        # st.session_state.specialist = st.session_state.specialty
-        # # print(f'DEBUG BUTTON ACTION SPECIALIST2: {st.session_state.specialist}')
         clear_instructions()
         st.rerun()
+
 
     col1, col2 = st.columns(2)
     with col1:
@@ -1409,7 +1428,8 @@ def display_functions_tab():
                 custom_template = user.get_preferred_template(new_note_type)
                 # st.success(f"Preferred note type updated to {new_note_type} with style {custom_template}")
 
-            
+        st.empty()
+
         col3, col4 = st.columns(2)
         with col3:
             if st.button('Complete Note', use_container_width=True, help=f"Writes a full {current_note_type} on this patient"):
@@ -1428,6 +1448,7 @@ def display_functions_tab():
     
     # other specialties
     else:
+        st.markdown("<br>", unsafe_allow_html=True)
         st.subheader('📝Clinical Notes')
         col1, col2 = st.columns(2)
         with col1:
@@ -1442,35 +1463,47 @@ def display_functions_tab():
             # if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
             #     button_action(NOTE_WRITER, create_ap, "A&P only")
 
-    st.subheader('📝Notes for Patients in specified language')
+    # st.subheader('📝Notes for Patients in specified language')
     
+    
+    # col1, col2 = st.columns(2)
+    # with col1:
+    #     update_patient_language(key="patient_language_input1")
+    #     if st.button("🏢Work Note", use_container_width=True, help="Writes a personalized patient work note"):
+    #         button_action("Patient Educator", f"Write a patient work note for this patient in {st.session_state.patient_language}.", "Patient Work Note")
+
+    #     if st.button("🏫School Note", use_container_width=True, help="Writes a personalized patient school note"):
+    #         button_action("Patient Educator", f"Write a patient school note for this patient in {st.session_state.patient_language}.", "Patient School Note")
+        
+    # with col2:
+    #     if st.button("🙍Education Note", use_container_width=True, help="Writes a personalized patient education note"):
+    #         button_action("Patient Educator", f"Write a patient education note for this patient in {st.session_state.patient_language}.", "Patient Education Note")
+
+    #     if st.button('💪Physical Therapy ', use_container_width=True, help="Writes a personalized Physical Therapy plan"):
+    #         button_action("Musculoskeletal Systems", pt_plan, "Physical Therapy Plan")
+
+    #     if st.button("🏈Sports/Gym", use_container_width=True, help="Writes a personalized patient Sports/Gym note"):
+    #         button_action("Patient Educator", f"Write a patient Sports/Gym note for this patient in {st.session_state.patient_language}.", "Patient Sports/Gym Note")
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.subheader('📝Notes for Patients in specified language')
     
     col1, col2 = st.columns(2)
     with col1:
-        update_patient_language()
-        if st.button("🏢Work Note", use_container_width=True, help="Writes a personalized patient work note"):
-            button_action("Patient Educator", f"Write a patient work note for this patient in {st.session_state.patient_language}.", "Patient Work Note")
-
-        if st.button("🏫School Note", use_container_width=True, help="Writes a personalized patient school note"):
-            button_action("Patient Educator", f"Write a patient school note for this patient in {st.session_state.patient_language}.", "Patient School Note")
-        
+        # Create checkboxes for each note type
+        note_types = {
+            "Education Note": st.checkbox("🙍Education Note", key="education_note_checkbox"),
+            "Work Note": st.checkbox("🏢Work Note", key="work_note_checkbox"),
+            "Physical Therapy": st.checkbox("💪Physical Therapy", key="physical_therapy_checkbox"),
+            "School Note": st.checkbox("🏫School Note", key="school_note_checkbox"),
+            "Sports/Gym": st.checkbox("🏈Sports/Gym", key="sports_gym_checkbox")
+        }
+    
     with col2:
-        if st.button("🙍Education Note", use_container_width=True, help="Writes a personalized patient education note"):
-            button_action("Patient Educator", f"Write a patient education note for this patient in {st.session_state.patient_language}.", "Patient Education Note")
+        update_patient_language(key="patient_language_input2")
+        # Button to generate selected notes
+        if st.button("Generate Selected Notes", use_container_width=True):
+            generate_selected_notes(note_types)
 
-        if st.button('💪Physical Therapy ', use_container_width=True, help="Writes a personalized Physical Therapy plan"):
-            button_action("Musculoskeletal Systems", pt_plan, "Physical Therapy Plan")
-
-        if st.button("🏈Sports/Gym", use_container_width=True, help="Writes a personalized patient Sports/Gym note"):
-            button_action("Patient Educator", f"Write a patient Sports/Gym note for this patient in {st.session_state.patient_language}.", "Patient Sports/Gym Note")
-
-    # General additional instructions input
-    additional_instructions = st.text_input("Additional Instructions (applied to all action buttons)", 
-                                            value=st.session_state.additional_instructions,
-                                            key="additional_instructions")
-    # Update session state when input changes
-    if additional_instructions != st.session_state.additional_instructions:
-        st.session_state.additional_instructions = additional_instructions
 
 def display_specialist_tab():
     
@@ -1630,15 +1663,17 @@ def display_sessions_tab():
         sorted_sessions = sort_user_sessions_by_time(user_sessions)
         session_options = {session['session_name']: session['collection_name'] for session in sorted_sessions}
         
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            session_name = st.selectbox("Select a recent session to load:", 
+        session_name = st.selectbox("Select a recent session to load:", 
                         label_visibility="collapsed",
                         options=["Select a patient encounter"] + list(session_options.keys()),
                         index=0,
                         key="session_selectbox")
+        
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            rename_button = st.button("Rename", key="rename_session_button", use_container_width=True)
         with col2:
-            rename_button = st.button("Rename", key="rename_session_button")
+            st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
         
         if session_name != "Select a patient encounter":
             if session_name in session_options:
@@ -2668,7 +2703,7 @@ def get_response(user_question: str, mobile=False) -> str:
                 """
                 
                 system_prompt = system_instructions + user_info
-                print(f"Get_response System Prompt: {system_prompt}")
+                # print(f"Get_response System Prompt: {system_prompt}")
 
             system_message = SystemMessage(content=system_prompt)
             
