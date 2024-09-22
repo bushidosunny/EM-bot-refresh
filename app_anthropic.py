@@ -1039,7 +1039,7 @@ def process_other_queries():
         st.rerun()
 
 def update_patient_language(key):
-    patient_language = st.text_input("Type patient language if not English", value=st.session_state.patient_language, autocomplete="on", label_visibility="collapsed",
+    patient_language = st.text_input("Desired Language", value=st.session_state.patient_language, autocomplete="on", label_visibility="visible",
         key=key # Add this unique key
     )
     if patient_language != st.session_state.patient_language:
@@ -1391,19 +1391,19 @@ def display_functions_tab():
         clear_instructions()
         st.rerun()
 
+    with st.sidebar.expander("Diagnostic/Treatment Tools"):
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🤔Challenge DDX", use_container_width=True, help="Use to broaden and critique the current DDX"):
+                button_action("General Medicine", challenge_ddx, "Challenge the DDX")
+            if st.button("🌎Web Search", use_container_width=True, help="Use Perplexity Web Search"):
+                button_action("Perplexity", "", "Search the Web")
+        with col2:
+            if st.button("🧠Refine DDX", use_container_width=True, help="Use Bayesian Reasoning to refine and narrow the DDX"):
+                button_action("Bayesian Reasoner", apply_bayesian_reasoning, "Critical Thinking w Bayesian Reasoning")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("🤔Challenge DDX", use_container_width=True, help="Use to broaden and critique the current DDX"):
-            button_action("General Medicine", challenge_ddx, "Challenge the DDX")
-        if st.button("🌎Web Search", use_container_width=True, help="Use Perplexity Web Search"):
-            button_action("Perplexity", "", "Search the Web")
-    with col2:
-        if st.button("🧠Refine DDX", use_container_width=True, help="Use Bayesian Reasoning to refine and narrow the DDX"):
-            button_action("Bayesian Reasoner", apply_bayesian_reasoning, "Critical Thinking w Bayesian Reasoning")
-
-        if st.button("🔍Search for CDTs/Guidelines", use_container_width=True, help="Apply Clinical Decision Tools or Known Guidelines"):
-            button_action("Clinical Decision Tools", search_CDTs, "Treatment Plan")
+            if st.button("🔍Search for CDTs/Guidelines", use_container_width=True, help="Apply Clinical Decision Tools or Known Guidelines"):
+                button_action("Clinical Decision Tools", search_CDTs, "Treatment Plan")
 
     # Check if the specialty is Internal Medicine
     if st.session_state.get('specialty') == "Internal Medicine":
@@ -1448,20 +1448,21 @@ def display_functions_tab():
     
     # other specialties
     else:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.subheader('📝Clinical Notes')
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button('Complete Note', use_container_width=True, help="Writes a full medical note on this patient"):
-                button_action(NOTE_WRITER, "Write a note on this patient.", "Full Medical Note")
-            # if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
-            #     button_action(NOTE_WRITER, create_hpi, "HPI only")
-        
-        with col2:
-            if st.button('Note in Parts', use_container_width=True, help="HPI, ROS, PE, A/P in copy boxes"):
-                button_action(NOTE_WRITER, create_full_note_except_results, "Full Note except EMR results")
-            # if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
-            #     button_action(NOTE_WRITER, create_ap, "A&P only")
+        # st.markdown("<br>", unsafe_allow_html=True)
+        # st.subheader('📝Clinical Notes')
+        with st.sidebar.expander("Clinical Notes"):
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button('Complete Note', use_container_width=True, help="Writes a full medical note on this patient"):
+                    button_action(NOTE_WRITER, "Write a note on this patient.", "Full Medical Note")
+                # if st.button('HPI only', use_container_width=True, help="Writes only the HPI"):
+                #     button_action(NOTE_WRITER, create_hpi, "HPI only")
+            
+            with col2:
+                if st.button('Note in Parts', use_container_width=True, help="HPI, ROS, PE, A/P in copy boxes"):
+                    button_action(NOTE_WRITER, create_full_note_except_results, "Full Note except EMR results")
+                # if st.button('A&P only', use_container_width=True, help="Writes only the Assessment and Plan"):
+                #     button_action(NOTE_WRITER, create_ap, "A&P only")
 
     # st.subheader('📝Notes for Patients in specified language')
     
@@ -1484,25 +1485,26 @@ def display_functions_tab():
 
     #     if st.button("🏈Sports/Gym", use_container_width=True, help="Writes a personalized patient Sports/Gym note"):
     #         button_action("Patient Educator", f"Write a patient Sports/Gym note for this patient in {st.session_state.patient_language}.", "Patient Sports/Gym Note")
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.subheader('📝Notes for Patients in specified language')
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        # Create checkboxes for each note type
-        note_types = {
-            "Education Note": st.checkbox("🙍Education Note", key="education_note_checkbox"),
-            "Work Note": st.checkbox("🏢Work Note", key="work_note_checkbox"),
-            "Physical Therapy": st.checkbox("💪Physical Therapy", key="physical_therapy_checkbox"),
-            "School Note": st.checkbox("🏫School Note", key="school_note_checkbox"),
-            "Sports/Gym": st.checkbox("🏈Sports/Gym", key="sports_gym_checkbox")
-        }
-    
-    with col2:
-        update_patient_language(key="patient_language_input2")
-        # Button to generate selected notes
-        if st.button("Generate Selected Notes", use_container_width=True):
-            generate_selected_notes(note_types)
+    # st.markdown("<br>", unsafe_allow_html=True)
+    with st.sidebar.expander("📝Notes for Patients"):
+        # st.subheader('📝Notes for Patients')
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            # Create checkboxes for each note type
+            note_types = {
+                "Education Note": st.checkbox("🙍Education Note", key="education_note_checkbox"),
+                "Work Note": st.checkbox("🏢Work Note", key="work_note_checkbox"),
+                "Physical Therapy": st.checkbox("💪Physical Therapy", key="physical_therapy_checkbox"),
+                "School Note": st.checkbox("🏫School Note", key="school_note_checkbox"),
+                "Sports/Gym": st.checkbox("🏈Sports/Gym", key="sports_gym_checkbox")
+            }
+        
+        with col2:
+            update_patient_language(key="patient_language_input2")
+            # Button to generate selected notes
+            if st.button("Generate Selected Notes", use_container_width=True):
+                generate_selected_notes(note_types)
 
 
 def display_specialist_tab():
@@ -1555,43 +1557,43 @@ def display_settings_tab():
                                  key="settings_preferred_note_type")  # Changed key here
 
     # Note Templates Management
-    st.subheader("Note Templates")
-    template_management_option = st.radio(
-        "Choose an action:",
-        ["View Templates", "Create Template from Example", "Edit Template"]
-    )
+    # st.subheader("Note Templates")
+    # template_management_option = st.radio(
+    #     "Choose an action:",
+    #     ["View Templates", "Create Template from Example", "Edit Template"]
+    # )
 
-    if template_management_option == "View Templates":
-        display_templates(user)
-    elif template_management_option == "Create Template from Example":
-        create_template_from_example(user)
-    elif template_management_option == "Edit Template":
-        edit_template(user)
+    # if template_management_option == "View Templates":
+    #     display_templates(user)
+    # elif template_management_option == "Create Template from Example":
+    #     create_template_from_example(user)
+    # elif template_management_option == "Edit Template":
+    #     edit_template(user)
 
-    if st.button("Save Settings"):
+    # if st.button("Save Settings"):
         # Update user object
-        user.name = new_name
-        user.hospital_name = new_hospital_name
-        user.hospital_contact = new_hospital_contact
-        user.specialty = new_specialty
-        user.preferred_note_type = new_note_type
+        # user.name = new_name
+        # user.hospital_name = new_hospital_name
+        # user.hospital_contact = new_hospital_contact
+        # user.specialty = new_specialty
+        # user.preferred_note_type = new_note_type
 
-        # Update session state
-        st.session_state.name = new_name
-        st.session_state.hospital_name = new_hospital_name
-        st.session_state.hospital_contact = new_hospital_contact
-        st.session_state.specialty = new_specialty
-        st.session_state.preferred_note_type = new_note_type
+        # # Update session state
+        # st.session_state.name = new_name
+        # st.session_state.hospital_name = new_hospital_name
+        # st.session_state.hospital_contact = new_hospital_contact
+        # st.session_state.specialty = new_specialty
+        # st.session_state.preferred_note_type = new_note_type
 
-        # Save to database
-        users_collection.update_one(
-            {"username": st.session_state.username},
-            {"$set": user.to_dict()}
-        )
+        # # Save to database
+        # users_collection.update_one(
+        #     {"username": st.session_state.username},
+        #     {"$set": user.to_dict()}
+        # )
 
-        st.success("Settings saved successfully!")
-        time.sleep(1)
-        st.rerun()  # Rerun the app to apply changes
+        # st.success("Settings saved successfully!")
+        # time.sleep(1)
+        # st.rerun()  # Rerun the app to apply changes
 
 def display_chat_history():
     for i, message in enumerate(st.session_state.chat_history):
