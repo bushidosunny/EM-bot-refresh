@@ -1675,7 +1675,7 @@ def display_sessions_tab():
         with col1:
             rename_button = st.button("Rename", key="rename_session_button", use_container_width=True)
         with col2:
-            st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
+            st.link_button("🔃New Pt Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
         
         if session_name != "Select a patient encounter":
             if session_name in session_options:
