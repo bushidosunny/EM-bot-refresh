@@ -28,7 +28,7 @@ else:
         'About': disclaimer})
         # st.session_state.page_config_set = True
         # # print("Page config set")
-# import admin
+
 from streamlit_float import float_css_helper
 from streamlit_js_eval import streamlit_js_eval
 from anthropic import Anthropic
@@ -37,17 +37,13 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 import io
 import time
 from dotenv import load_dotenv
-# from dataclasses import dataclass, field
-
 from extract_json import *
 import json
-# from datetime import datetime, timedelta
 import datetime
 import pytz
 from pymongo import MongoClient, ASCENDING, TEXT, DESCENDING, UpdateOne
 from pymongo.errors import BulkWriteError, ServerSelectionTimeoutError, OperationFailure, ConfigurationError
 from bson import ObjectId
-# from streamlit_mic_recorder import mic_recorder
 from util.recorder import record_audio
 from deepgram import DeepgramClient, PrerecordedOptions
 from streamlit.components.v1 import html
@@ -55,15 +51,9 @@ from typing import List, Dict, Any, Optional
 import logging
 import secrets
 from user_agents import parse
-# import toml
-# import yaml
-# import bcrypt
-# from yaml.loader import SafeLoader
 from auth.MongoAuthenticator import *
 import extra_streamlit_components as stx
 import requests
-# # temp
-# from streamlit_mic_recorder import mic_recorder
 from colorama import Fore, Style, init
 from mobile import render_mobile
 
