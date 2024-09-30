@@ -36,7 +36,7 @@ def render_mobile():
         """, 
         unsafe_allow_html=True)
 
-    st.write("Start a new patient session")
+    # st.write("Start a new patient session")
     text = record_audio_mobile()
     return text
 

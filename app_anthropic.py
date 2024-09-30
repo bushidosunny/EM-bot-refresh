@@ -56,8 +56,7 @@ import extra_streamlit_components as stx
 import requests
 # from colorama import Fore, Style, init
 from mobile import render_mobile
-from admin import admin_dashboard, list_sessions
-
+from admin import admin_dashboard, user_management, list_sessions, database_operations, feedback_management
 
 
 headers = _get_websocket_headers()
@@ -2736,7 +2735,10 @@ def get_response(user_question: str, mobile=False) -> str:
             response_text = response.content
 
         if mobile:
-            response_placeholder.write("EMMA has analyzed this case please access the full differential diagnosis in the desktop app. You can add additional information to this case by hitting record or reload the page to start a new patient session.")
+            response_placeholder.write("EMMA has analyzed this Pt encounter. You may record more information for this encounter by hitting record again. To start an additional Pt encounter reload the page or hit the button below.")
+            # response_placeholder.write("To refresh the page, swipe down and release.")
+            st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
+            
         else:
             response_placeholder.markdown(response_text)
         
