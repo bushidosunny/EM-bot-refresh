@@ -1290,27 +1290,18 @@ def display_sidebar():
         tab1, tab5 = st.tabs(["Functions", "Settings"])
         
         with tab1:
-
-            
             display_functions_tab()
-            # Check if the specialty is Internal Medicine
-            # print(f'DEBUG DISPLAY SIDEBAR SPECIALTY: {st.session_state.specialty} ')
-            # print(f'DEBUG DISPLAY SIDEBAR PREFERRED NOTE TYPE: {st.session_state.preferred_note_type}')
-            # print(f'DEBUG DISPLAY SIDEBAR specialist: {st.session_state.specialist}')
-            
-            
-        # with tab2:
-        #     display_specialist_tab()
-        
+
         with tab5:
             display_settings_tab()
-
-        
+            st.divider()
+            st.markdown("<br><br><br><br>", unsafe_allow_html=True)
+            handle_feedback()  
+   
         st.divider()
         st.markdown("<br><br><br><br>", unsafe_allow_html=True)
-                
+        # handle_feedback()        
         container = st.container()
-        # container.float(float_css_helper(bottom="10px", padding= "10px", background_color="#CED6E3", border_radius="10px"))
         with container:
              
             
@@ -1319,29 +1310,18 @@ def display_sidebar():
             with c1:
                 st.markdown(f'Welcome {st.session_state.name}!')
             with c2:
-                handle_feedback(container=feedback_container)
                 
-            # with c2:
-            #     if st.button('🔃New Session', type="secondary", use_container_width=True, help=new_session_prompt):
-            #         st.session_state.new_session_clicked = True
-                    
-            # if st.session_state.new_session_clicked:
-            #     st.write("Are you sure you want to start a new encounter? This will reset all current data.")
-            #     if st.button("Yes, start new encounter", type="primary", use_container_width=True):
-            #         new_thread()
-            #     if st.button("No, cancel", type="secondary", use_container_width=True):
-            #         st.session_state.new_session_clicked = False
-                
-                
-            c3, c4 = st.columns([1,1])
-            # with c3:
-            #     st.markdown(f'Welcome {st.session_state.name}!')
-            with c4:
                 if st.button("Logout", key="logout_button", use_container_width=True):
                     authenticator.logout()
                     st.success("You have been logged out successfully.")
                     time.sleep(1)  # Give user time to see the message
                     st.rerun()
+                
+            # c3, c4 = st.columns([1,1])
+            # # with c3:
+            # #     st.markdown(f'Welcome {st.session_state.name}!')
+            # with c4:
+                
 
 def display_functions_tab():
     # st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
@@ -1391,7 +1371,7 @@ def display_functions_tab():
         clear_instructions()
         st.rerun()
 
-    with st.sidebar.expander("Diagnostic/Treatment Tools"):
+    with st.expander("Diagnostic/Treatment Tools"):
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🤔Challenge DDX", use_container_width=True, help="Use to broaden and critique the current DDX"):
@@ -1450,7 +1430,7 @@ def display_functions_tab():
     else:
         # st.markdown("<br>", unsafe_allow_html=True)
         # st.subheader('📝Clinical Notes')
-        with st.sidebar.expander("Clinical Notes"):
+        with st.expander("Clinical Notes"):
             col1, col2 = st.columns(2)
             with col1:
                 if st.button('Complete Note', use_container_width=True, help="Writes a full medical note on this patient"):
@@ -1486,7 +1466,7 @@ def display_functions_tab():
     #     if st.button("🏈Sports/Gym", use_container_width=True, help="Writes a personalized patient Sports/Gym note"):
     #         button_action("Patient Educator", f"Write a patient Sports/Gym note for this patient in {st.session_state.patient_language}.", "Patient Sports/Gym Note")
     # st.markdown("<br>", unsafe_allow_html=True)
-    with st.sidebar.expander("📝Notes for Patients"):
+    with st.expander("📝Notes for Patients"):
         # st.subheader('📝Notes for Patients')
         
         col1, col2 = st.columns(2)
@@ -1529,9 +1509,55 @@ def display_specialist_tab():
     st.text("")
 
 def display_settings_tab():
-    st.header("User Settings")
+    st.header("Help Section")
     st.markdown("[View EMMA Help Guide](https://veil-cry-a60.notion.site/EMMA-Help-Page-e681bf1c061041719b6666376cc88386)", unsafe_allow_html=True)
+
+    # Create the embeddable link
+    embed_link = f"https://drive.google.com/file/d/19Zi9WqmX_2A2XkMNVwWHIglJOkNFA3gD/view"
+
+    # Display the video in Streamlit
+
+    # Read the base64 string from the file
+    with open("video_screenshot_encoded", "r") as file:
+        encoded_image = file.read()
+
+    # Create the data URI for the image
+    data_uri = f"data:image/png;base64,{encoded_image}"
+
+    # # Create the HTML for the clickable image
+    # html_code = f'''
+    # <a href="{embed_link}" target="_blank">
+    #     <img src="{data_uri}" alt="Video Thumbnail" width="400" style="cursor: pointer;">
+    # </a>
+    # '''
     
+
+    html_code = f'''
+    <div style="text-align: center;">
+        <div style="position: relative; display: inline-block;">
+            <a href="{embed_link}" target="_blank">
+                <img src="{data_uri}" alt="Quick How-To Video" width="400" style="cursor: pointer;">
+                <div style="
+                    position: absolute;
+                    bottom: 10px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    color: white;
+                    background-color: rgba(0, 0, 0, 0.6);
+                    padding: 5px;
+                    font-size: 16px;
+                    border-radius: 3px;
+                ">
+                    Click to Watch Video
+                </div>
+            </a>
+        </div>
+        <p style="font-size:16px;"><em>Need help? Watch our Quick How-To Video.</em></p>
+    </div>
+    '''
+    # Render the HTML in Streamlit
+    st.markdown(html_code, unsafe_allow_html=True)
+    st.divider()
     # Load current user settings
     user = User.from_dict(users_collection.find_one({"username": st.session_state.username}))
 

@@ -1,6 +1,10 @@
-import streamlit as st
-from streamlit.web.server.websocket_headers import _get_websocket_headers
+import base64
 
-headers = _get_websocket_headers()
-print(headers)
-st.write(headers)
+# Read the image file in binary mode and encode it
+with open("video_screenshot.png", "rb") as img_file:
+    encoded_string = base64.b64encode(img_file.read()).decode()
+
+# Save the encoded string to a file
+with open("video_screenshot_encoded", "w") as text_file:
+    text_file.write(encoded_string)
+
