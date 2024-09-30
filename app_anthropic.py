@@ -54,8 +54,9 @@ from user_agents import parse
 from auth.MongoAuthenticator import *
 import extra_streamlit_components as stx
 import requests
-from colorama import Fore, Style, init
+# from colorama import Fore, Style, init
 from mobile import render_mobile
+from admin import admin_dashboard, list_sessions
 
 
 
@@ -2744,11 +2745,13 @@ def get_response(user_question: str, mobile=False) -> str:
 def admin_mode():
     # New power-up check for admins
     if st.session_state.username == "sunny":
-        if st.sidebar.button("Enter Admin Mode"):
-            admin.admin_dashboard()
-            return  # Exit the function if admin dashboard is accessed
-        if st.sidebar.button("Throw an Error"):
-            raise Exception("This is a test error message")
+        if st.sidebar.button("User Dashboard"):
+            admin_dashboard()
+        # if st.sidebar.button("List Sessions"):
+        #     list_sessions()
+            # return  # Exit the function if admin dashboard is accessed
+        # if st.sidebar.button("Throw an Error"):
+            # raise Exception("This is a test error message")
 
 CSS_SELECTOR = 'section > [data-testid="stAppViewBlockContainer"] > [data-testid="stVerticalBlockBorderWrapper"]'
 
