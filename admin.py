@@ -10,12 +10,10 @@ import json
 import time
 import logging
 import pandas as pd
-from datetime import datetime, timedelta
+import datetime
 import extra_streamlit_components as stx
 from auth.MongoAuthenticator import MongoAuthenticator, User
-# # Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+
 
 # Load environment variables
 load_dotenv()
@@ -157,7 +155,7 @@ def list_users():
     user_data = []
     for user in users:
         last_active = user.get('last_active', 'Never')
-        if isinstance(last_active, datetime):
+        if isinstance(last_active, datetime.datetime):
             last_active = last_active.strftime('%Y-%m-%d %H:%M:%S')
         
         user_data.append({
@@ -352,7 +350,7 @@ def list_sessions():
 
 
 def delete_old_sessions(weeks=2):
-    two_weeks_ago = datetime.now() - timedelta(weeks=weeks) 
+    two_weeks_ago = datetime.datetime.now() - datetime.timedelta(weeks=weeks) 
     deleted_sessions = []
     failed_deletions = []
     
@@ -598,7 +596,7 @@ def feedback_management():
             timestamp = feedback.get('timestamp', 'Unknown Date')
             user_id = feedback.get('user_id', 'Unknown User')
             
-            if isinstance(timestamp, datetime):
+            if isinstance(timestamp, datetime.datetime):
                 timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
             else:
                 timestamp_str = str(timestamp)

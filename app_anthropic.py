@@ -1,6 +1,8 @@
 import streamlit as st
 
 from streamlit.web.server.websocket_headers import _get_websocket_headers
+# from admin import admin_dashboard, user_management, list_sessions, database_operations, feedback_management
+
 
 from prompts import *
 import sentry_sdk
@@ -56,8 +58,6 @@ import extra_streamlit_components as stx
 import requests
 # from colorama import Fore, Style, init
 from mobile import render_mobile
-from admin import admin_dashboard, user_management, list_sessions, database_operations, feedback_management
-
 
 headers = _get_websocket_headers()
 
@@ -1517,7 +1517,7 @@ def display_settings_tab():
     # # Create the HTML for the clickable image
     # html_code = f'''
     # <a href="{embed_link}" target="_blank">
-    #     <img src="{data_uri}" alt="Video Thumbnail" width="400" style="cursor: pointer;">
+    #     <img src="{data_uri}" alt="Video Thumbnail" width="250" style="cursor: pointer;">
     # </a>
     # '''
     
@@ -1526,7 +1526,7 @@ def display_settings_tab():
     <div style="text-align: center;">
         <div style="position: relative; display: inline-block;">
             <a href="{embed_link}" target="_blank">
-                <img src="{data_uri}" alt="Quick How-To Video" width="400" style="cursor: pointer;">
+                <img src="{data_uri}" alt="Quick How-To Video" width="250" style="cursor: pointer;">
                 <div style="
                     position: absolute;
                     bottom: 10px;
@@ -2854,7 +2854,7 @@ def authenticated_user():
 
         process_other_queries() 
         display_sidebar()
-        admin_mode()
+        # admin_mode()
         # Periodically archive old sessions
         archive_old_sessions(st.session_state.username)
 
