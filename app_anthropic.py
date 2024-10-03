@@ -618,7 +618,7 @@ def conditional_upsert_test_result(user_id, test_name, result, sequence_number):
         print(f"An error occurred while processing {test_name}: {str(e)}")
         sentry_sdk.capture_exception(e)
 
-@st.cache_data(ttl=500)
+@st.cache_data(ttl=60)
 def list_user_sessions(username: str):
     collections = db.list_collection_names()
     username = st.session_state.username
@@ -695,7 +695,7 @@ def list_user_sessions(username: str):
 def sort_user_sessions_by_time(sessions):
     return sorted(sessions, key=lambda x: x['original_timestamp'], reverse=True)
 
-@st.cache_data(ttl=500)
+@st.cache_data(ttl=60)
 def load_session_data(collection_name):
     documents = list(db[collection_name].find({}).sort("timestamp", ASCENDING))
     categorized_data = {
