@@ -274,6 +274,12 @@ specialist_data = {
     "caption": "Cardiologis in Clinic - Beta testing",
     "avatar": "https://cdn.pixabay.com/photo/2017/02/15/20/58/ekg-2069872_1280.png",
     "system_instructions": cardiology_clinic_system
+  },
+  "Veterinary Medicine": {
+    "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
+    "caption": "👨‍⚕️EM, Peds EM, ☠️Toxicology, Wilderness",
+    "avatar": "https://i.postimg.cc/1R6K0vYF/OIG4.jpg",
+    "system_instructions": eva_system,
   }
   
 }
@@ -290,7 +296,8 @@ note_type_instructions = {
     "Procedure Note": note_writer_system_procedure,
     "Transfer Note": note_writer_system_transfer,
     "All Purpose Notes": note_writer_system_document_processing,
-    "Surgery Clinic Note": note_writer_system_surgery_clinic_note
+    "Surgery Clinic Note": note_writer_system_surgery_clinic_note,
+    "Veterinary Medicine Note": note_writer_vet_system,
 }
 
 ################################# Initialize Session State #####################################
@@ -1586,30 +1593,30 @@ def display_settings_tab():
     # elif template_management_option == "Edit Template":
     #     edit_template(user)
 
-    # if st.button("Save Settings"):
+    if st.button("Save Settings"):
         # Update user object
-        # user.name = new_name
-        # user.hospital_name = new_hospital_name
-        # user.hospital_contact = new_hospital_contact
-        # user.specialty = new_specialty
-        # user.preferred_note_type = new_note_type
+        user.name = new_name
+        user.hospital_name = new_hospital_name
+        user.hospital_contact = new_hospital_contact
+        user.specialty = new_specialty
+        user.preferred_note_type = new_note_type
 
-        # # Update session state
-        # st.session_state.name = new_name
-        # st.session_state.hospital_name = new_hospital_name
-        # st.session_state.hospital_contact = new_hospital_contact
-        # st.session_state.specialty = new_specialty
-        # st.session_state.preferred_note_type = new_note_type
+        # Update session state
+        st.session_state.name = new_name
+        st.session_state.hospital_name = new_hospital_name
+        st.session_state.hospital_contact = new_hospital_contact
+        st.session_state.specialty = new_specialty
+        st.session_state.preferred_note_type = new_note_type
 
-        # # Save to database
-        # users_collection.update_one(
-        #     {"username": st.session_state.username},
-        #     {"$set": user.to_dict()}
-        # )
+        # Save to database
+        users_collection.update_one(
+            {"username": st.session_state.username},
+            {"$set": user.to_dict()}
+        )
 
-        # st.success("Settings saved successfully!")
-        # time.sleep(1)
-        # st.rerun()  # Rerun the app to apply changes
+        st.success("Settings saved successfully!")
+        time.sleep(1)
+        st.rerun()  # Rerun the app to apply changes
 
 def display_chat_history():
     for i, message in enumerate(st.session_state.chat_history):

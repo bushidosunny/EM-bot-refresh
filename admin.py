@@ -14,6 +14,9 @@ import datetime
 import extra_streamlit_components as stx
 from auth.MongoAuthenticator import MongoAuthenticator, User
 
+# Configure logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -349,7 +352,7 @@ def list_sessions():
                 st.rerun()
 
 
-def delete_old_sessions(weeks=2):
+def delete_old_sessions(weeks=1):
     two_weeks_ago = datetime.datetime.now() - datetime.timedelta(weeks=weeks) 
     deleted_sessions = []
     failed_deletions = []
@@ -365,6 +368,8 @@ def delete_old_sessions(weeks=2):
                         db.drop_collection(collection_name)
                         deleted_sessions.append(collection_name)
                         logger.info(f"Deleted old session: {collection_name}")
+                        st.subheader(f"Deleted old session")
+                        time.sleep(3)
             except Exception as e:
                 failed_deletions.append(collection_name)
                 logger.error(f"Failed to delete old session {collection_name}: {str(e)}")
