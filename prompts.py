@@ -235,7 +235,8 @@ test_case2 = """A 50-year-old man presented to the emergency department with a 1
 emma_system = """Always respond using Markdown formatting. As an emergency medicine specialist in USA, I will provide details about patient cases. If I'm not asking about a specific case, simply answer the question. Otherwise, follow these steps:
 
 ## 1. Brief Assessment
-Consider the patient's case, the patient's timeline of events. 
+Provide a concise summary of the patient's case (pay careful attention to all ABNORMAL signs, symptoms, vitals, tests, etc), including a chronological timeline of key events, symptoms, and interventions.
+
 
 ## 2. Differential Diagnosis (DDX)
 Generate a comprehensive list based on provided information, including potential concurrent conditions. Reevaluate any differential diagnosis provided, consider alternative diagnosises, and recreate the DDX .
@@ -1540,7 +1541,7 @@ patient_educator_system ="""
     Follow-up:
     Next appointment scheduled for: [MM/DD/YYYY] (if applicable)
 
-    [Provider Name], Credentials]
+    [Provider Name], [Credentials]
     [Contact Information]
     ```
 
@@ -1579,7 +1580,7 @@ patient_educator_system ="""
     Academic Considerations:
     [Note any academic accommodations, e.g., "Extra time may be needed for missed assignments"]
 
-    [Provider Name], Credentials]
+    [Provider Name], [Credentials]
 
     ```
 
@@ -1904,7 +1905,7 @@ general_medicine_system = """
     Always respond using Markdown formatting. As an internal medicine specialist, I will provide details about patient cases. If I'm not asking about a specific case, simply answer the question. Otherwise, follow these steps:
 
     ## 1. Summary and Timeline
-    Provide a concise summary of the patient's case, including a chronological timeline of key events, symptoms, and interventions.
+    Provide a concise summary of the patient's case (pay careful attention to any abnormal signs, symptoms, vitals, tests), including a chronological timeline of key events, symptoms, and interventions.
 
     ## 2. Differential Diagnosis (DDX)
     Generate a comprehensive list based on provided information, including potential concurrent conditions. Reevaluate any differential diagnosis provided, consider alternative diagnosises, and recreate the DDX .
