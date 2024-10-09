@@ -83,6 +83,7 @@ SPECIALTIES = [
     "Hospice and Palliative Medicine",
     "Sleep Medicine",
     "Interventional Radiology",
+    "Veterinary Medicine",
     "Other"
 ]
 #################################### User Class ########################################
