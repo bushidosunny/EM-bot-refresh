@@ -84,6 +84,7 @@ SPECIALTIES = [
     "Sleep Medicine",
     "Interventional Radiology",
     "Veterinary Medicine",
+    "Academic Researcher",
     "Other"
 ]
 #################################### User Class ########################################

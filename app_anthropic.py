@@ -277,10 +277,17 @@ specialist_data = {
   },
   "Veterinary Medicine": {
     "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
-    "caption": "👨‍⚕️EM, Peds EM, ☠️Toxicology, Wilderness",
+    "caption": "VM, ☠️Toxicology",
     "avatar": "https://i.postimg.cc/1R6K0vYF/OIG4.jpg",
-    "system_instructions": eva_system,
+    "system_instructions": eva_system
+  },
+  "Academic Researcher": {
+    "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
+    "caption": "Hypothesis creater and tester",
+    "avatar": "https://i.kym-cdn.com/photos/images/original/000/692/544/280.png",
+    "system_instructions": hypothesis_system
   }
+  
   
 }
 
