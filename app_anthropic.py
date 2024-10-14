@@ -3246,9 +3246,11 @@ def is_mobile():
 
 def mobile_user():
     text = render_mobile()
+    loading_message = "EMMA is creating follow up Questions and Examinations..."
     if text is not None:
         process_user_question(text, st.session_state.specialist, mobile=True)
-        display_mobile_ddx_follow_up()
+        with st.spinner(loading_message):
+            display_mobile_ddx_follow_up()
 
 ############################################# Main Function #############################################
 
