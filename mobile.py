@@ -24,18 +24,18 @@ def render_mobile():
         </style>
     """, unsafe_allow_html=True)
 
-    # Existing header code
-    st.markdown(
-        f"""
-        <div style="text-align: center;">
-            <h1>
-                <span style="color:deepskyblue;"> </span>                    
-                <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:50px;height:50px;border-radius:20%;">
-                EMMA
-            </h1>
-        </div>
-        """, 
-        unsafe_allow_html=True)
+    # # Existing header code
+    # st.markdown(
+    #     f"""
+    #     <div style="text-align: center;">
+    #         <h1>
+    #             <span style="color:deepskyblue;"> </span>                    
+    #             <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:50px;height:50px;border-radius:20%;">
+    #             EMMA
+    #         </h1>
+    #     </div>
+    #     """, 
+    #     unsafe_allow_html=True)
 
     # st.write("Start a new patient session")
     input_container = st.container()

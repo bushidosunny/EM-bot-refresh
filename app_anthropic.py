@@ -363,6 +363,8 @@ def initialize_session_state():
         session_state.assistant_id = specialist_data[session_state.specialist]["assistant_id"]
         session_state.specialist_avatar = specialist_data[session_state.specialist]["avatar"]
         session_state.session_id = None
+        session_state.load_session = ""
+        session_state.collection_name = ""
         logging.info(f'Initializing Session state with initialize_session_state')
 
 ################################## AUTHENTICATION #############################################
@@ -570,6 +572,12 @@ def save_case_details(user_id, doc_type, content=None):
         "content": content,
         "patient_cc": st.session_state.patient_cc,
         "timestamp": datetime.datetime.now(),
+        "follow_up_questions": st.session_state.follow_up_questions,
+        "physical_exam_suggestions": st.session_state.physical_exam_suggestions,
+        "lab_tests": st.session_state.lab_tests,
+        "imaging_studies": st.session_state.imaging_studies,
+        "clinical_decision_tools": st.session_state.clinical_decision_tools,
+        "medications": st.session_state.medications
     }
     query = {
         "type": doc_type,
@@ -711,7 +719,7 @@ def list_user_sessions(username: str):
 def sort_user_sessions_by_time(sessions):
     return sorted(sessions, key=lambda x: x['original_timestamp'], reverse=True)
 
-@st.cache_data(ttl=60)
+# @st.cache_data(ttl=60)
 def load_session_data(collection_name):
     documents = list(db[collection_name].find({}).sort("timestamp", ASCENDING))
     categorized_data = {
@@ -749,14 +757,14 @@ def save_feedback(feedback_type, feedback_text):
 ############################### Logic ###############################################################
 
 #         # print(f"Error loading chat history: {e}")
-
-def load_chat_history(collection_name):
+def mobile_load_session_history(collection_name):
     try:
         # Clear existing data
         st.session_state.chat_history = []
         st.session_state.differential_diagnosis = []
         st.session_state.critical_actions = []
         st.session_state.pt_data = {}
+    
 
         # Fetch chat documents, sorted oldest to newest
         chat_documents = db[collection_name].find({"type": {"$in": ["user_input", "ai_input"]}}).sort("timestamp", 1)
@@ -780,6 +788,60 @@ def load_chat_history(collection_name):
         if ddx_doc:
             st.session_state.differential_diagnosis = ddx_doc.get('ddx', [])
             st.session_state.critical_actions = ddx_doc.get('critical_actions', [])
+            st.session_state.follow_up_questions = ddx_doc.get('follow_up_questions', [])
+            st.session_state.physical_exam_suggestions = ddx_doc.get('physical_exam_suggestions', [])
+            st.session_state.lab_tests = ddx_doc.get('lab_tests', [])
+            st.session_state.imaging_studies = ddx_doc.get('imaging_studies', [])
+            st.session_state.clinical_decision_tools = ddx_doc.get('clinical_decision_tools', [])
+            st.session_state.medications = ddx_doc.get('medications', [])
+
+        # Set other session state variables
+        st.session_state.patient_cc = ddx_doc.get('patient_cc', '') if ddx_doc else ''
+        st.session_state.specialist = 'Emergency Medicine'
+
+        # # print(f"Loaded {len(st.session_state.chat_history)} messages and {len(st.session_state.differential_diagnosis)} diagnoses")
+    except Exception as e:
+        # print(f"Error loading chat history: {e}")
+        sentry_sdk.capture_exception(e)
+
+
+def load_chat_history(collection_name):
+    try:
+        # Clear existing data
+        st.session_state.chat_history = []
+        st.session_state.differential_diagnosis = []
+        st.session_state.critical_actions = []
+        st.session_state.pt_data = {}
+    
+
+        # Fetch chat documents, sorted oldest to newest
+        chat_documents = db[collection_name].find({"type": {"$in": ["user_input", "ai_input"]}}).sort("timestamp", 1)
+        
+        # Create message objects and add to chat history
+        for doc in chat_documents:
+            content = doc.get('message', '')
+            if doc['type'] == 'user_input':
+                message = HumanMessage(content=content, avatar=st.session_state.user_photo_url)
+            else:
+                specialist = doc.get('specialist', 'Emergency Medicine')
+                avatar = specialist_data[specialist]["avatar"]
+                message = AIMessage(content=content, avatar=avatar)
+            
+            st.session_state.chat_history.append(message)
+
+        
+
+        # Load most recent differential diagnosis
+        ddx_doc = db[collection_name].find_one({"type": "ddx"}, sort=[("timestamp", -1)])
+        if ddx_doc:
+            st.session_state.differential_diagnosis = ddx_doc.get('ddx', [])
+            st.session_state.critical_actions = ddx_doc.get('critical_actions', [])
+            st.session_state.follow_up_questions = ddx_doc.get('follow_up_questions', [])
+            st.session_state.physical_exam_suggestions = ddx_doc.get('physical_exam_suggestions', [])
+            st.session_state.lab_tests = ddx_doc.get('lab_tests', [])
+            st.session_state.imaging_studies = ddx_doc.get('imaging_studies', [])
+            st.session_state.clinical_decision_tools = ddx_doc.get('clinical_decision_tools', [])
+            st.session_state.medications = ddx_doc.get('medications', [])
 
         # Set other session state variables
         st.session_state.patient_cc = ddx_doc.get('patient_cc', '') if ddx_doc else ''
@@ -1780,6 +1842,41 @@ window.getMessage = function() {
 </script>
 """, unsafe_allow_html=True)
 
+def display_sessions_mobile():
+    user_id = st.session_state.user_id
+    user_sessions = list_user_sessions(user_id)
+
+    if user_sessions:
+        sorted_sessions = sort_user_sessions_by_time(user_sessions)
+        session_options = {session['session_name']: session['collection_name'] for session in sorted_sessions}
+        
+        session_name = st.selectbox("Select a recent session to load:", 
+                        label_visibility="collapsed",
+                        options=["Select a patient encounter"] + list(session_options.keys()),
+                        index=0,
+                        key="session_selectbox")
+        
+        if session_name != "Select a patient encounter":
+            if session_name in session_options:
+                collection_name = session_options[session_name]
+                
+                if st.button("Load Selected Patient Encounter", type='primary', use_container_width=True):
+                    st.session_state.load_session = collection_name
+                    st.session_state.show_load_success = True
+
+                # Display success message outside of columns
+                if st.session_state.get('show_load_success', False):
+                    st.success(f"{session_name}' loaded!")
+                    st.session_state.show_load_success = False  # Reset the flag
+                    time.sleep(1)  # Give user time to see the message
+                    st.rerun()
+                    return
+
+            else:
+                st.error(f"Session '{session_name}' not found in options.")
+    else:
+        st.write("No sessions found for this user.")
+
 def display_sessions_tab():
     user_id = st.session_state.user_id
     user_sessions = list_user_sessions(user_id)
@@ -1809,10 +1906,12 @@ def display_sessions_tab():
             if session_name in session_options:
                 collection_name = session_options[session_name]
                 
+                # renaming session name
                 if rename_button:
                     st.session_state.renaming_session = collection_name
                     st.session_state.new_session_name = session_name
 
+  
                 if st.session_state.renaming_session == collection_name:
                     new_name = st.text_input("Enter new name for the session:", value=st.session_state.new_session_name, key="new_session_name_input")
                     if st.button("Save New Name", key="save_new_name_button"):
@@ -2847,7 +2946,7 @@ def get_response(user_question: str, mobile=False) -> str:
             response_text = response.content
 
         if mobile:
-            response_placeholder.write("EMMA has analyzed this Pt encounter. You may update more information for this encounter by hitting record again. To start an additional Pt encounter hit the button below.")
+            response_placeholder.write("EMMA has analyzed this Pt encounter. You may update more information for this encounter by hitting record again, or wait for suggested follow up Questions. To start an additional Pt encounter hit the button below.")
             # response_placeholder.write("To refresh the page, swipe down and release.")
             st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
             
@@ -3245,10 +3344,36 @@ def is_mobile():
     return False
 
 def mobile_user():
+    # Existing header code
+    st.markdown(
+        f"""
+        <div style="text-align: center;">
+            <h1>
+                <span style="color:deepskyblue;"> </span>                    
+                <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:50px;height:50px;border-radius:20%;">
+                EMMA
+            </h1>
+        </div>
+        """, 
+        unsafe_allow_html=True)
+    display_sessions_mobile()
+    if st.session_state.load_session:
+        print(f'DEBUG MOBILE USER: {st.session_state.load_session}')
+
+
+    # Check if load_session exists and is not empty
+    if 'load_session' in st.session_state and st.session_state.load_session:
+        print(f'DEBUG MOBILE USER: {st.session_state.load_session}')
+        st.session_state.collection_name = st.session_state.load_session
+        mobile_load_session_history(st.session_state.collection_name)
+        st.session_state.load_session = ""  # Clear the flag after loading
+
+    display_mobile_ddx_follow_up()
     text = render_mobile()
     if text is not None:
         process_user_question(text, st.session_state.specialist, mobile=True)
-        display_mobile_ddx_follow_up()
+    
+    
 
 ############################################# Main Function #############################################
 
