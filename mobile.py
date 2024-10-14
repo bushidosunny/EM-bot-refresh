@@ -85,7 +85,7 @@ def handle_record_audio_mobile(audio):
             transcript = raw_transcript['results']['channels'][0]['alternatives'][0]['paragraphs']['transcript']
             specialist = 'Emergency Medicine'
             st.session_state.specialist = specialist
-            st.success("Audio transcribed successfully!")
+            st.toast("Audio transcribed successfully!")
 
             if "Speaker 1" in transcript:
                 prompt = f"{transcript_prompt} '''{transcript}'''"
