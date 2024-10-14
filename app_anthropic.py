@@ -2847,7 +2847,7 @@ def get_response(user_question: str, mobile=False) -> str:
             response_text = response.content
 
         if mobile:
-            response_placeholder.write("EMMA has analyzed this Pt encounter. You may record more information for this encounter by hitting record again. To start an additional Pt encounter reload the page or hit the button below.")
+            response_placeholder.write("EMMA has analyzed this Pt encounter. You may update more information for this encounter by hitting record again. To start an additional Pt encounter hit the button below.")
             # response_placeholder.write("To refresh the page, swipe down and release.")
             st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
             

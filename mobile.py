@@ -1,5 +1,6 @@
 import io
 import streamlit as st
+from streamlit_float import float_css_helper
 from util.recorder import transcribe_audio
 from streamlit_mic_recorder import mic_recorder
 from prompts import transcript_prompt
@@ -37,7 +38,19 @@ def render_mobile():
         unsafe_allow_html=True)
 
     # st.write("Start a new patient session")
-    text = record_audio_mobile()
+    input_container = st.container()
+    input_container.float(float_css_helper(
+                    bottom="50px",
+                    shadow=1,
+                    border="1px #262730",
+                    border_radius="10px",  # Rounded edges
+                    height=None,  # Adjust the height as needed
+                    overflow_y=None,  # Enable vertical scrolling
+                    padding="20px",  # Add some padding for better appearance))
+                    background="inherit"  
+        ))
+    with input_container:
+        text = record_audio_mobile()
     return text
 
 def record_audio_mobile():
