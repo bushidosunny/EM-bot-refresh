@@ -280,8 +280,13 @@ specialist_data = {
     "caption": "👨‍⚕️EM, Peds EM, ☠️Toxicology, Wilderness",
     "avatar": "https://i.postimg.cc/1R6K0vYF/OIG4.jpg",
     "system_instructions": eva_system,
+  },
+  "emma_system_DDX": {
+    "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
+    "caption": "👨‍⚕️EM, Peds EM, ☠️Toxicology, Wilderness",
+    "avatar": "https://i.ibb.co/LnrQp8p/Designer-17.jpg",
+    "system_instructions": emma_system_DDX,
   }
-  
 }
 
 note_type_instructions = {
@@ -331,9 +336,14 @@ def initialize_session_state():
         session_state.pt_data = {}
         session_state.additional_instructions = ""
         session_state.differential_diagnosis = []
-        session_state.danger_diag_list = {}
+        session_state.danger_diag_list = []
         session_state.critical_actions = {}
-        session_state.follow_up_steps = {}
+        session_state.follow_up_questions = []
+        session_state.physical_exam_suggestions = []
+        session_state.lab_tests = []
+        session_state.imaging_studies = []
+        session_state.clinical_decision_tools = []
+        session_state.medications = []
         session_state.completed_tasks_str = ""
         session_state.sidebar_state = 1
         session_state.assistant_response = ""
@@ -1092,6 +1102,8 @@ def parse_json(chat_history):
         data = json.loads(pt_json)
         patient_data = data.get('patient', {})
 
+        # print(f'DEBUG PARSE_JSON patient_data: {patient_data}') 
+        # print(f'DEBUG PARSE_JSON data: {data}')
         # Update session state
         st.session_state.pt_data = patient_data
 
@@ -1100,7 +1112,7 @@ def parse_json(chat_history):
         # if new_patient_cc:
         #     st.session_state.patient_cc = new_patient_cc
         
-        # Ensure differential_diagnosis, critical_actions, and follow_up_steps are not None
+        # Ensure differential_diagnosis, critical_actions, and follow_up_questions are not None
         st.session_state.differential_diagnosis = patient_data.get('differential_diagnosis', [])
         if st.session_state.differential_diagnosis is None:
             st.session_state.differential_diagnosis = []
@@ -1109,19 +1121,39 @@ def parse_json(chat_history):
         if st.session_state.critical_actions is None:
             st.session_state.critical_actions = []
 
-        st.session_state.follow_up_steps = patient_data.get('follow_up_steps', [])
-        if st.session_state.follow_up_steps is None:
-            st.session_state.follow_up_steps = []
+        st.session_state.follow_up_questions = patient_data.get('follow_up_questions', [])
+        if st.session_state.follow_up_questions is None:
+            st.session_state.follow_up_questions = []
+
+        st.session_state.physical_exam_suggestions = patient_data.get('physical_exam_suggestions', [])
+        if st.session_state.physical_exam_suggestions is None:
+            st.session_state.physical_exam_suggestions = []
+
+        st.session_state.lab_tests = patient_data.get('lab_tests', [])
+        if st.session_state.lab_tests is None:
+            st.session_state.lab_tests = []
+        
+        st.session_state.imaging_studies = patient_data.get('imaging_studies', [])
+        if st.session_state.imaging_studies is None:
+            st.session_state.imaging_studies = []
+
+        st.session_state.clinical_decision_tools = patient_data.get('clinical_decision_tools', [])
+        if st.session_state.clinical_decision_tools is None:
+            st.session_state.clinical_decision_tools = []
+        
+        st.session_state.medications = patient_data.get('medications', [])
+        if st.session_state.medications is None:
+            st.session_state.medications = []
 
         # # print(f'DEBUG PARSE_JSON session_state.differential_diagnosis: {st.session_state.differential_diagnosis}')
         # # print(f'DEBUG PARSE_JSON st.session_state.critical_actionss: {st.session_state.critical_actions}')
-        # # print(f'DEBUG PARSE_JSON st.session_state.follow_up_steps: {st.session_state.follow_up_steps}')
+        # # print(f'DEBUG PARSE_JSON st.session_state.follow_up_questions: {st.session_state.follow_up_questions}')
         # print(f'DEBUG PARSE_JSON st.session_state.patient_cc: {st.session_state.patient_cc}')
 
         # Only save case details if there's meaningful data
         if any([st.session_state.differential_diagnosis, 
                 st.session_state.critical_actions, 
-                st.session_state.follow_up_steps]):
+                st.session_state.follow_up_questions]):
             save_case_details(st.session_state.username, "ddx")
         
         # Ensure lab_results and imaging_results are not None
@@ -1172,15 +1204,70 @@ def display_critical_tasks():
                     st.session_state.completed_tasks_str += f"Completed: {task}. "
 
 def display_follow_up_tasks():
-    if st.session_state.follow_up_steps:
-        st.markdown(f"<h5>Possible Follow-Up Steps</h5>", unsafe_allow_html=True)
-        tasks = st.session_state.follow_up_steps.keys() if isinstance(st.session_state.follow_up_steps, dict) else st.session_state.follow_up_steps
+    if st.session_state.follow_up_questions:
+        st.markdown(f"<h5>Possible Follow Questions</h5>", unsafe_allow_html=True)
+        for i, task in enumerate(st.session_state.follow_up_questions):
+            key = f"followupQ_{i}"
+            if st.checkbox(f"{task}", key=key):
+                if task not in st.session_state.completed_tasks_str:
+                    st.session_state.completed_tasks_str += f"Completed: {task}. "
+    
+    # print(f'DEBUG DISPLAY FOLLOW UP QUESTIONS: {st.session_state.follow_up_questions}')
+
+
+    exam_container = st.empty()
+    with exam_container.container():
+        if st.session_state.physical_exam_suggestions:
+            st.markdown("<h5>Physical Exam Suggestions</h5>", unsafe_allow_html=True)
+            for i, exam in enumerate(st.session_state.physical_exam_suggestions, 1):
+                key = f"exam{i}"
+                if st.checkbox(f"**{exam['system']}** - {exam['physical_exam_suggestion']}"):
+                    if exam['physical_exam_suggestion'] not in st.session_state.completed_tasks_str:
+                        st.session_state.completed_tasks_str += f"Completed: {exam['physical_exam_suggestion']}. "
+    
+    # print(f'DEBUG DISPLAY physical_exam_suggestion: {st.session_state.physical_exam_suggestions}')
+    
+
+    if st.session_state.lab_tests:
+        st.markdown(f"<h5>Lab Tests</h5>", unsafe_allow_html=True)
+        tasks = st.session_state.lab_tests.keys() if isinstance(st.session_state.lab_tests, dict) else st.session_state.lab_tests
         
         for task in tasks:
             key = f"follow_up_{task}"
             if st.checkbox(f"- :yellow[{task}]", key=key):
                 if task not in st.session_state.completed_tasks_str:
                     st.session_state.completed_tasks_str += f"Followed up: {task}. "
+    
+    if st.session_state.imaging_studies:
+        st.markdown(f"<h5>Imaging Tests</h5>", unsafe_allow_html=True)
+        tasks = st.session_state.imaging_studies.keys() if isinstance(st.session_state.imaging_studies, dict) else st.session_state.imaging_studies
+        
+        for task in tasks:
+            key = f"follow_up_{task}"
+            if st.checkbox(f"- :yellow[{task}]", key=key):
+                if task not in st.session_state.completed_tasks_str:
+                    st.session_state.completed_tasks_str += f"Followed up: {task}. "
+
+    if st.session_state.clinical_decision_tools:
+        st.markdown(f"<h5>Clinical Decision Tools</h5>", unsafe_allow_html=True)
+        tasks = st.session_state.clinical_decision_tools.keys() if isinstance(st.session_state.clinical_decision_tools, dict) else st.session_state.clinical_decision_tools
+        
+        for task in tasks:
+            key = f"follow_up_{task}"
+            if st.checkbox(f"- :yellow[{task}]", key=key):
+                if task not in st.session_state.completed_tasks_str:
+                    st.session_state.completed_tasks_str += f"Followed up: {task}. "
+
+    if st.session_state.medications:
+        st.markdown(f"<h5>Medications</h5>", unsafe_allow_html=True)
+        tasks = st.session_state.medications.keys() if isinstance(st.session_state.medications, dict) else st.session_state.medications
+        
+        for task in tasks:
+            key = f"follow_up_{task}"
+            if st.checkbox(f"- :yellow[{task}]", key=key):
+                if task not in st.session_state.completed_tasks_str:
+                    st.session_state.completed_tasks_str += f"Followed up: {task}. "
+    
 
 def display_ddx():
     ddx_container = st.empty()
@@ -1189,6 +1276,29 @@ def display_ddx():
             st.markdown("### Differential Diagnosis")
             for i, diagnosis in enumerate(st.session_state.differential_diagnosis, 1):
                 st.markdown(f"**{i}.** **{diagnosis['disease']}** - {diagnosis['probability']}%")  
+
+def display_mobile_ddx_follow_up():
+    display_ddx()
+    if st.session_state.follow_up_questions:
+        st.markdown(f"<h5>Possible Follow Questions</h5>", unsafe_allow_html=True)
+        for i, task in enumerate(st.session_state.follow_up_questions):
+            key = f"mob_followupQ_{i}"
+            if st.checkbox(f"{task}", key=key):
+                if task not in st.session_state.completed_tasks_str:
+                    st.session_state.completed_tasks_str += f"Completed: {task}. "
+    
+    # print(f'DEBUG DISPLAY FOLLOW UP QUESTIONS: {st.session_state.follow_up_questions}')
+
+
+    exam_container = st.empty()
+    with exam_container.container():
+        if st.session_state.physical_exam_suggestions:
+            st.markdown("<h5>Physical Exam Suggestions</h5>", unsafe_allow_html=True)
+            for i, exam in enumerate(st.session_state.physical_exam_suggestions, 1):
+                key = f"mob_exam{i}"
+                if st.checkbox(f"**{exam['system']}** - {exam['physical_exam_suggestion']}"):
+                    if exam['physical_exam_suggestion'] not in st.session_state.completed_tasks_str:
+                        st.session_state.completed_tasks_str += f"Completed: {exam['physical_exam_suggestion']}. "
 
 def display_pt_headline():
     if st.session_state.pt_data != {}:
@@ -2838,8 +2948,6 @@ def authenticated_user():
                     display_pt_headline()
                     st.divider()
                     display_ddx()
-                    st.divider()
-                    display_critical_tasks()
                     st.divider()
                     display_follow_up_tasks()
         else:

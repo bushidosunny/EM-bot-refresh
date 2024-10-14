@@ -1,0 +1,73 @@
+{
+    "patient": {
+      "name": "Patient's full name (string)",
+      "age": 43,
+      "age_unit": "Y",
+      "sex": "F",
+      "chief_complaint": "Intermittent 'funny feeling' in chest",
+      "chief_complaint_two_word": "Chest thump",
+      "lab_results": null,
+      "imaging_results": null,
+      "differential_diagnosis": [
+        { "disease": "Premature Ventricular Contractions (PVCs)", "probability": 70 },
+        { "disease": "Gastroesophageal Reflux Disease (GERD)", "probability": 60 },
+        { "disease": "Anxiety or Panic Disorder", "probability": 50 },
+        { "disease": "Atrial Fibrillation or Atrial Flutter", "probability": 40 },
+        { "disease": "Myocarditis", "probability": 30 },
+        { "disease": "Coronary Artery Disease (CAD)", "probability": 20 },
+        { "disease": "Thyroid Dysfunction (Hyperthyroidism)", "probability": 20 },
+        { "disease": "Electrolyte Imbalance", "probability": 15 },
+        { "disease": "Medication Side Effect", "probability": 10 },
+        { "disease": "Costochondritis", "probability": 5 }
+      ],
+      "follow_up_questions": [
+        "Any family history of heart disease?",
+        "Any caffeine or alcohol consumption?",
+        "Any heartburn or regurgitation?",
+        "Does antacid provide relief?",
+        "Any recent stressors?",
+        "History of anxiety or panic attacks?",
+        "Any recent viral illnesses?",
+        "Fever?",
+        "Any risk factors for CAD?",
+        "Any weight changes, heat intolerance, or tremors?",
+        "Any changes in diet or fluid intake?",
+        "Any new medications or changes in dosage?",
+        "Any chest wall tenderness or pain with movement?"
+      ],
+      "physical_exam_suggestions": [
+        "Listen for irregular heart rhythm or extra beats.",
+        "Abdominal examination for epigastric tenderness.",
+        "Assess for signs of anxiety or hyperventilation.",
+        "Check for signs of heart failure or pericardial friction rub.",
+        "Cardiovascular examination.",
+        "Check for thyroid enlargement, tremors, and tachycardia.",
+        "Check for signs of dehydration or edema.",
+        "Based on potential side effects of specific medications.",
+        "Check for chest wall tenderness."
+      ],
+      "lab_tests": [
+        "Electrolytes, especially potassium and magnesium.",
+        "Thyroid function tests to rule out hyperthyroidism.",
+        "Lipid profile, HbA1c.",
+        "Comprehensive metabolic panel, including electrolytes."
+      ],
+      "imaging_studies": [
+        "Echocardiogram to assess heart structure and function.",
+        "Upper GI series if symptoms persist.",
+        "Echocardiogram if ECG suggests arrhythmia.",
+        "Chest X-ray to rule out other causes."
+      ],
+      "clinical_decision_tools": [
+        "HEART Score.",
+        "CHA2DS2-VASc Score.",
+        "GERD Questionnaire.",
+        "GAD-7 or PHQ-9 for anxiety and depression screening."
+      ],
+      "medications": null,
+      "critical_actions": [
+        "Obtain immediate ECG to rule out acute cardiac events.",
+        "Ensure patient understands signs and symptoms that should prompt emergency evaluation."
+      ]
+    }
+  }
