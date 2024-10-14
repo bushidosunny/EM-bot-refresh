@@ -3360,6 +3360,7 @@ def mobile_user():
     if st.session_state.load_session:
         print(f'DEBUG MOBILE USER: {st.session_state.load_session}')
 
+    st.toast("Load a previous pt encounter or start a new one by hitting record")
 
     # Check if load_session exists and is not empty
     if 'load_session' in st.session_state and st.session_state.load_session:
@@ -3372,6 +3373,8 @@ def mobile_user():
     text = render_mobile()
     if text is not None:
         process_user_question(text, st.session_state.specialist, mobile=True)
+        text = None
+        st.rerun()
     
     
 
