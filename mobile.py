@@ -41,9 +41,9 @@ def render_mobile():
     input_container = st.container()
     input_container.float(float_css_helper(
                     bottom="20px",
-                    shadow=1,
+                    shadow=0,
                     border="1px #262730",
-                    border_radius="20px",  # Rounded edges
+                    border_radius="5px",  # Rounded edges
                     height=None,  # Adjust the height as needed
                     overflow_y=None,  # Enable vertical scrolling
                     padding="0px",  # Add some padding for better appearance))
