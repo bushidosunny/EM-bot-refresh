@@ -93,7 +93,7 @@ def handle_record_audio_mobile(audio):
             else:
                 prompt = transcript.replace("Speaker 0:", "").strip()
                 return prompt
-        st.rerun()
+        # st.rerun()
     else:
         processing_message.empty()
 
