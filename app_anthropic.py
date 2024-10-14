@@ -2881,24 +2881,41 @@ def process_user_question(user_question, specialist, mobile=False):
         # print("DEBUG: Session State after processing user question")
 
 def get_response(user_question: str, mobile=False) -> str:
-    loading_message = "Waiting for EMMA's response..." if not mobile else "EMMA is thinking..."
+    loading_message = "Waiting for EMMA's response..."
+    if mobile:
+        loading_message = "EMMA is thinking..."
+
     with st.spinner(loading_message):
         response_placeholder = st.empty()
-        
+        # print(f"DEBUG get_response: specialist: {st.session_state.specialist}")
         if st.session_state.specialist == "Perplexity" or st.session_state.specialist == "Clinical Decision Tools":
+            # print(f"DEBUG get_response: Perplixity Specialist: {st.session_state.specialist}")
             response_text = get_perplexity_response(user_question)
         else:
+            # Prepare chat history for context
+            # print(f"DEBUG get_response: else Specialist: {st.session_state.specialist}")
+
+            chat_context = ""
+            for message in st.session_state.chat_history[-20:]:  # Include last 20 messages for context
+                if isinstance(message, HumanMessage):
+                    chat_context += f"Human: {message.content}\n"
+                else:
+                    chat_context += f"AI: {message.content}\n"
+            
             specialist = st.session_state.specialist
             system_instructions = specialist_data[specialist]["system_instructions"]
             
+            # Handle callable system_instructions (including NOTE_WRITER and Patient Educator)
             if callable(system_instructions):
                 system_instructions = system_instructions()
             
+            # Ensure system_instructions is a string
             if isinstance(system_instructions, list):
                 system_instructions = "\n".join(system_instructions)
             elif not isinstance(system_instructions, str):
                 system_instructions = str(system_instructions)
 
+            # Only format if it contains placeholders
             if "{" in system_instructions and "}" in system_instructions:
                 system_prompt = system_instructions.format(
                     REQUESTED_SECTIONS='ALL',
@@ -2915,32 +2932,29 @@ def get_response(user_question: str, mobile=False) -> str:
                 """
                 
                 system_prompt = system_instructions + user_info
+                # print(f"Get_response System Prompt: {system_prompt}")
 
             system_message = SystemMessage(content=system_prompt)
-            user_message = HumanMessage(content=user_question)
+            
+            user_content = f"Chat History:\n{chat_context}\n\nUser: {user_question}"
+            user_message = HumanMessage(content=user_content)
             
             messages = [system_message, user_message]
 
-            # Debug logging
-            logging.info(f"System prompt length: {len(system_prompt)}")
-            logging.info(f"User question length: {len(user_question)}")
-            logging.info(f"Total message count: {len(messages)}")
-
-            try:
-                response = anthropic_model.invoke(messages)
-                response_text = response.content
-            except:
-                logging.error(f"Anthropic API error: {str(e)}")
-                raise e
+            # LLM Model Response
+            response = anthropic_model.invoke(messages)
+            response_text = response.content
 
         if mobile:
             response_placeholder.write("EMMA has analyzed this Pt encounter. You may update more information for this encounter by hitting record again, or wait for suggested follow up Questions. To start an additional Pt encounter hit the button below.")
+            # response_placeholder.write("To refresh the page, swipe down and release.")
             st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
+            
+            
         else:
             response_placeholder.markdown(response_text)
         
         return response_text
-
 def admin_mode():
     # New power-up check for admins
     if st.session_state.username == "sunny":
