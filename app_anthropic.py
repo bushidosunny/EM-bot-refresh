@@ -3364,7 +3364,7 @@ def mobile_user():
         st.session_state.collection_name = st.session_state.load_session
         mobile_load_session_history(st.session_state.collection_name)
         st.session_state.load_session = ""  # Clear the flag after loading
-        st.rerun()  # Rerun to update the display after loading a session
+        # st.rerun()  # Rerun to update the display after loading a session
     
     st.toast("Load a previous pt encounter or start a new one by hitting record")
 
