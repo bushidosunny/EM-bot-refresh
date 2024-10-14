@@ -24,34 +24,27 @@ def render_mobile():
         </style>
     """, unsafe_allow_html=True)
 
-    # # Existing header code
-    # st.markdown(
-    #     f"""
-    #     <div style="text-align: center;">
-    #         <h1>
-    #             <span style="color:deepskyblue;"> </span>                    
-    #             <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:50px;height:50px;border-radius:20%;">
-    #             EMMA
-    #         </h1>
-    #     </div>
-    #     """, 
-    #     unsafe_allow_html=True)
-
-    # st.write("Start a new patient session")
     input_container = st.container()
     input_container.float(float_css_helper(
                     bottom="20px",
                     shadow=0,
                     border="1px #262730",
-                    border_radius="5px",  # Rounded edges
-                    height=None,  # Adjust the height as needed
-                    overflow_y=None,  # Enable vertical scrolling
-                    padding="0px",  # Add some padding for better appearance))
+                    border_radius="5px",
+                    height=None,
+                    overflow_y=None,
+                    padding="0px",
                     background="inherit"  
         ))
     with input_container:
-        text = record_audio_mobile()
-    return text
+        audio = mic_recorder(
+            start_prompt="🎙️ REC",
+            stop_prompt="🔴 Stop",
+            just_once=False,
+            callback=None,
+            use_container_width=True, 
+        )
+    
+    return audio
 
 def record_audio_mobile():
     

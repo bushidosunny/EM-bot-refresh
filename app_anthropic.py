@@ -3370,9 +3370,7 @@ def mobile_user():
 
     display_mobile_ddx_follow_up()
     
-    # Use a placeholder for user input
-    input_placeholder = st.empty()
-    
+
     # Render mobile input
     text = render_mobile()
     
@@ -3380,12 +3378,9 @@ def mobile_user():
     if text is not None:
         with st.spinner("Processing..."):
             process_user_question(text, st.session_state.specialist, mobile=True)
-        
-        # Clear the input
-        input_placeholder.empty()
-        
-        # Update the display
-        st.rerun()
+
+            # Update the display
+            st.rerun()
     
     
 
