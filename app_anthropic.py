@@ -2849,7 +2849,6 @@ def get_response(user_question: str, mobile=False) -> str:
         if mobile:
             response_placeholder.write("EMMA has analyzed this Pt encounter. You may record more information for this encounter by hitting record again. To start an additional Pt encounter reload the page or hit the button below.")
             # response_placeholder.write("To refresh the page, swipe down and release.")
-            display_mobile_ddx_follow_up()
             st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
             
             
@@ -3249,6 +3248,7 @@ def mobile_user():
     text = render_mobile()
     if text is not None:
         process_user_question(text, st.session_state.specialist, mobile=True)
+        display_mobile_ddx_follow_up()
 
 ############################################# Main Function #############################################
 
