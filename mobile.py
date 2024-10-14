@@ -14,7 +14,7 @@ def render_mobile():
             padding: 1rem;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: left;
         }
         .stApp > * {
             max-width: 100%;
@@ -40,13 +40,13 @@ def render_mobile():
     # st.write("Start a new patient session")
     input_container = st.container()
     input_container.float(float_css_helper(
-                    bottom="50px",
+                    bottom="20px",
                     shadow=1,
                     border="1px #262730",
-                    border_radius="10px",  # Rounded edges
+                    border_radius="20px",  # Rounded edges
                     height=None,  # Adjust the height as needed
                     overflow_y=None,  # Enable vertical scrolling
-                    padding="20px",  # Add some padding for better appearance))
+                    padding="0px",  # Add some padding for better appearance))
                     background="inherit"  
         ))
     with input_container:
