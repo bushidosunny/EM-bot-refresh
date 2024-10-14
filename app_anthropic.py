@@ -1281,10 +1281,8 @@ def display_mobile_ddx_follow_up():
     if st.session_state.follow_up_questions:
         st.markdown(f"<h5>Possible Follow Questions</h5>", unsafe_allow_html=True)
         for i, task in enumerate(st.session_state.follow_up_questions):
-            key = f"mob_followupQ_{i}"
-            if st.checkbox(f"{task}", key=key):
-                if task not in st.session_state.completed_tasks_str:
-                    st.session_state.completed_tasks_str += f"Completed: {task}. "
+            st.markdown(f"{task}")
+
     
     # print(f'DEBUG DISPLAY FOLLOW UP QUESTIONS: {st.session_state.follow_up_questions}')
 
@@ -1294,12 +1292,10 @@ def display_mobile_ddx_follow_up():
         if st.session_state.physical_exam_suggestions:
             st.markdown("<h5>Physical Exam Suggestions</h5>", unsafe_allow_html=True)
             for i, exam in enumerate(st.session_state.physical_exam_suggestions, 1):
-                key = f"mob_exam{i}"
-                if st.checkbox(f"**{exam['system']}** - {exam['physical_exam_suggestion']}"):
-                    if exam['physical_exam_suggestion'] not in st.session_state.completed_tasks_str:
-                        st.session_state.completed_tasks_str += f"Completed: {exam['physical_exam_suggestion']}. "
-
+                st.markdown(f"**{exam['system']}** - {exam['physical_exam_suggestion']}")
+               
 def display_pt_headline():
+    
     if st.session_state.pt_data != {}:
         try:
             ## print(f'DEBUG DISPLAY HEADER ST.SESSION TATE.PT DATA: {st.session_state.pt_data}')
@@ -2853,8 +2849,9 @@ def get_response(user_question: str, mobile=False) -> str:
         if mobile:
             response_placeholder.write("EMMA has analyzed this Pt encounter. You may record more information for this encounter by hitting record again. To start an additional Pt encounter reload the page or hit the button below.")
             # response_placeholder.write("To refresh the page, swipe down and release.")
-            st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
             display_mobile_ddx_follow_up()
+            st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
+            
             
         else:
             response_placeholder.markdown(response_text)
