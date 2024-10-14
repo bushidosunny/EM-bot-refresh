@@ -141,7 +141,7 @@ specialist_data = {
     "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
     "caption": "👨‍⚕️EM, Peds EM, ☠️Toxicology, Wilderness",
     "avatar": "https://i.ibb.co/LnrQp8p/Designer-17.jpg",
-    "system_instructions": emma_system,
+    "system_instructions": emma_system_DDX,
   },
   "Perplexity": {
     "assistant_id": "perplexity_api",
