@@ -50,8 +50,12 @@ def render_mobile():
                     background="inherit"  
         ))
     with input_container:
-        text = record_audio_mobile()
-    return text
+        audio = record_audio_mobile()
+        if audio is not None and audio != st.session_state.get('last_processed_audio'):
+            text = handle_record_audio_mobile(audio)
+            return text
+    
+    return None
 
 def record_audio_mobile():
     
@@ -70,7 +74,7 @@ def record_audio_mobile():
 
 def handle_record_audio_mobile(audio):
     processing_message = st.empty()
-    if audio is not None:
+    if audio is not None and 'bytes' in audio:  # Check if audio is new
         # Create a placeholder for the processing message
         processing_message.success("Audio recorded successfully! Transcribing..")
         
@@ -89,15 +93,16 @@ def handle_record_audio_mobile(audio):
 
             if "Speaker 1" in transcript:
                 prompt = f"{transcript_prompt} '''{transcript}'''"
-                return prompt
             else:
                 prompt = transcript.replace("Speaker 0:", "").strip()
-                return prompt
-        # st.rerun()
+            
+            # Clear the audio data to prevent reprocessing
+            st.session_state.last_processed_audio = audio
+            return prompt
     else:
         processing_message.empty()
 
-    return None  # Return None i
+    return None  # Return None if no new audio
 
 
 
