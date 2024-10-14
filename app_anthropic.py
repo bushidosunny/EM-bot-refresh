@@ -3373,8 +3373,8 @@ def mobile_user():
     text = render_mobile()
     if text is not None:
         process_user_question(text, st.session_state.specialist, mobile=True)
-        text = None
-        st.rerun()
+        # text = None
+        # st.rerun()
     
     
 
