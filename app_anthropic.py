@@ -256,7 +256,6 @@ specialist_data = {
     "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/33/carrot-148456_960_720.png",
     "system_instructions": critical_system
   },
-  
   "DDX Beta A": {
     "assistant_id": "asst_8Ib5ndZJivEOhwvfx4Gqzjc3",
     "caption": "EM - Beta testing",
@@ -2855,6 +2854,7 @@ def get_response(user_question: str, mobile=False) -> str:
             response_placeholder.write("EMMA has analyzed this Pt encounter. You may record more information for this encounter by hitting record again. To start an additional Pt encounter reload the page or hit the button below.")
             # response_placeholder.write("To refresh the page, swipe down and release.")
             st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
+            display_mobile_ddx_follow_up()
             
         else:
             response_placeholder.markdown(response_text)
