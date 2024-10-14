@@ -19,7 +19,7 @@ def render_mobile():
         .stApp > * {
             max-width: 100%;
             width: 100%;
-            text-align: center;
+            text-align: left;
         }
         </style>
     """, unsafe_allow_html=True)
