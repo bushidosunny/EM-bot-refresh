@@ -3356,25 +3356,36 @@ def mobile_user():
         </div>
         """, 
         unsafe_allow_html=True)
+    
     display_sessions_mobile()
-    if st.session_state.load_session:
-        print(f'DEBUG MOBILE USER: {st.session_state.load_session}')
-
-    st.toast("Load a previous pt encounter or start a new one by hitting record")
-
-    # Check if load_session exists and is not empty
+    
     if 'load_session' in st.session_state and st.session_state.load_session:
         print(f'DEBUG MOBILE USER: {st.session_state.load_session}')
         st.session_state.collection_name = st.session_state.load_session
         mobile_load_session_history(st.session_state.collection_name)
         st.session_state.load_session = ""  # Clear the flag after loading
+        st.rerun()  # Rerun to update the display after loading a session
+    
+    st.toast("Load a previous pt encounter or start a new one by hitting record")
 
     display_mobile_ddx_follow_up()
+    
+    # Use a placeholder for user input
+    input_placeholder = st.empty()
+    
+    # Render mobile input
     text = render_mobile()
+    
+    # Process user input if available
     if text is not None:
-        process_user_question(text, st.session_state.specialist, mobile=True)
-        # text = None
-        # st.rerun()
+        with st.spinner("Processing..."):
+            process_user_question(text, st.session_state.specialist, mobile=True)
+        
+        # Clear the input
+        input_placeholder.empty()
+        
+        # Update the display
+        st.rerun()
     
     
 
