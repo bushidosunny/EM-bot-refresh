@@ -3380,11 +3380,10 @@ def mobile_user():
     
     # Process user input if available
     if text is not None:
-        with st.spinner("Processing..."):
-            process_user_question(text, st.session_state.specialist, mobile=True)
+        process_user_question(text, st.session_state.specialist, mobile=True)
 
-            # Update the display
-            st.rerun()
+        # Update the display
+        # st.rerun()
     
     
 
