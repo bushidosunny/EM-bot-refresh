@@ -3372,18 +3372,11 @@ def mobile_user():
 
     # Render mobile input
     text = render_mobile()
-
-    print(f"Chat history length: {len(st.session_state.chat_history)}")
-    for i, msg in enumerate(st.session_state.chat_history):
-        print(f"Message {i}: Type={type(msg).__name__}, Content={msg.content[:50]}...")
-
-    
     # Process user input if available
     if text is not None:
+        print(f'DEBUG MOBILE USER text: {text}')
         process_user_question(text, st.session_state.specialist, mobile=True)
 
-        # Update the display
-        # st.rerun()
     
     
 

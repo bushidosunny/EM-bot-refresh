@@ -98,6 +98,7 @@ def handle_record_audio_mobile(audio):
             
             # Clear the audio data to prevent reprocessing
             st.session_state.last_processed_audio = audio
+            print(f"DEBUG Transcript prompt: {prompt}")
             return prompt
     else:
         processing_message.empty()
