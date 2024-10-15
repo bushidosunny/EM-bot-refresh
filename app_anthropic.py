@@ -3367,7 +3367,7 @@ def mobile_user():
     
     st.toast("Load a previous pt encounter or start a new one by hitting record")
 
-    display_mobile_ddx_follow_up()
+    
     
 
     # Render mobile input
@@ -3378,7 +3378,7 @@ def mobile_user():
         print(f'DEBUG MOBILE USER after if text is not NONE: {text}')
         process_user_question(text, st.session_state.specialist, mobile=True)
 
-    
+    display_mobile_ddx_follow_up()
     
 
 ############################################# Main Function #############################################
