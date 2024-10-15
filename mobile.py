@@ -56,9 +56,9 @@ def render_mobile():
         audio = record_audio_mobile()
         print(f"DEBUG render_mobile audio: {audio}")
         if audio is not None:
-            text = handle_record_audio_mobile(audio)
-            print(f"DEBUG render_mobile text: {text}")
-            return text
+            # text = handle_record_audio_mobile(audio)
+            # print(f"DEBUG render_mobile text: {text}")
+            return audio
     
     return None
 
