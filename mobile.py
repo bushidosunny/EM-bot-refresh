@@ -5,6 +5,9 @@ from util.recorder import transcribe_audio
 from streamlit_mic_recorder import mic_recorder
 from prompts import transcript_prompt
 
+if st.session_state.get('last_processed_audio') is None:
+    st.session_state.last_processed_audio = ""
+
 def render_mobile():
     # Add custom CSS to center all content
     st.markdown("""
