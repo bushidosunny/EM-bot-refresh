@@ -55,7 +55,7 @@ def render_mobile():
     with input_container:
         audio = record_audio_mobile()
         print(f"DEBUG render_mobile audio: {audio}")
-        if audio is not None and audio != st.session_state.get('last_processed_audio'):
+        if audio is not None:
             text = handle_record_audio_mobile(audio)
             print(f"DEBUG render_mobile text: {text}")
             return text
@@ -102,7 +102,7 @@ def handle_record_audio_mobile(audio):
                 prompt = transcript.replace("Speaker 0:", "").strip()
             
             # Clear the audio data to prevent reprocessing
-            st.session_state.last_processed_audio = audio
+            # st.session_state.last_processed_audio = audio
             print(f"DEBUG Transcript prompt: {prompt}")
             return prompt
     else:
