@@ -53,6 +53,7 @@ def render_mobile():
         audio = record_audio_mobile()
         if audio is not None and audio != st.session_state.get('last_processed_audio'):
             text = handle_record_audio_mobile(audio)
+            print(f"DEBUG render_mobile text: {text}")
             return text
     
     return None

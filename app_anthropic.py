@@ -3372,9 +3372,10 @@ def mobile_user():
 
     # Render mobile input
     text = render_mobile()
+    print(f'DEBUG MOBILE USER text: {text}')
     # Process user input if available
     if text is not None:
-        print(f'DEBUG MOBILE USER text: {text}')
+        print(f'DEBUG MOBILE USER after if text is not NONE: {text}')
         process_user_question(text, st.session_state.specialist, mobile=True)
 
     
