@@ -1,5 +1,5 @@
 import streamlit as st
-# st.set_page_config(page_title="Admin Dashboard", layout="wide")
+st.set_page_config(page_title="Admin Dashboard", layout="wide")
 import os
 from pymongo import MongoClient
 from dotenv import load_dotenv
@@ -353,68 +353,78 @@ def list_sessions():
 
 
 def delete_old_sessions(weeks=1):
-    two_weeks_ago = datetime.datetime.now() - datetime.timedelta(weeks=weeks) 
-    deleted_sessions = []
-    failed_deletions = []
+    two_weeks_ago = datetime.datetime.now() - datetime.timedelta(weeks=weeks)
+    eligible_sessions = []
     
     collections = db.list_collection_names()
     for collection_name in collections:
         if collection_name.startswith('user_'):
-            try:
-                # Get the latest document in the collection
-                latest_doc = db[collection_name].find_one(sort=[("timestamp", -1)])
-                if latest_doc and 'timestamp' in latest_doc:
-                    if latest_doc['timestamp'] < two_weeks_ago:
-                        db.drop_collection(collection_name)
-                        deleted_sessions.append(collection_name)
-                        logger.info(f"Deleted old session: {collection_name}")
-                        st.subheader(f"Deleted old session")
-                        time.sleep(3)
-            except Exception as e:
-                failed_deletions.append(collection_name)
-                logger.error(f"Failed to delete old session {collection_name}: {str(e)}")
+            latest_doc = db[collection_name].find_one(sort=[("timestamp", -1)])
+            if latest_doc and 'timestamp' in latest_doc:
+                if latest_doc['timestamp'] < two_weeks_ago:
+                    eligible_sessions.append(collection_name)
     
-    if deleted_sessions:
-        st.success(f"Successfully deleted {len(deleted_sessions)} old sessions.")
-    
-    if failed_deletions:
-        st.error(f"Failed to delete {len(failed_deletions)} old sessions.")
-    
-    # Rerun the app to refresh the session list
-    time.sleep(3)  # Give user time to see the message
-    st.rerun()
+    if eligible_sessions:
+        st.warning(f"The following sessions are eligible for deletion: {', '.join(eligible_sessions)}")
+        if st.button("Confirm Delete Old Sessions"):
+            deleted_sessions = []
+            failed_deletions = []
+            for collection_name in eligible_sessions:
+                try:
+                    db.drop_collection(collection_name)
+                    deleted_sessions.append(collection_name)
+                    logger.info(f"Deleted old session: {collection_name}")
+                except Exception as e:
+                    failed_deletions.append(collection_name)
+                    logger.error(f"Failed to delete old session {collection_name}: {str(e)}")
+            
+            if deleted_sessions:
+                st.success(f"Successfully deleted {len(deleted_sessions)} old sessions.")
+            if failed_deletions:
+                st.error(f"Failed to delete {len(failed_deletions)} old sessions.")
+            
+            st.rerun()
+    else:
+        st.info("No sessions eligible for deletion.")
 
-def delete_old_sessions(weeks=1):
-    two_weeks_ago = datetime.datetime.now() - datetime.timedelta(weeks=weeks) 
-    deleted_sessions = []
-    failed_deletions = []
+def delete_small_old_sessions(days=5, min_docs=5):
+    cutoff_date = datetime.datetime.now() - datetime.timedelta(days=days)
+    eligible_sessions = []
     
     collections = db.list_collection_names()
     for collection_name in collections:
         if collection_name.startswith('user_'):
-            try:
-                # Get the latest document in the collection
-                latest_doc = db[collection_name].find_one(sort=[("timestamp", -1)])
-                if latest_doc and 'timestamp' in latest_doc:
-                    if latest_doc['timestamp'] < two_weeks_ago:
-                        db.drop_collection(collection_name)
-                        deleted_sessions.append(collection_name)
-                        logger.info(f"Deleted old session: {collection_name}")
-                        st.subheader(f"Deleted old session")
-                        time.sleep(3)
-            except Exception as e:
-                failed_deletions.append(collection_name)
-                logger.error(f"Failed to delete old session {collection_name}: {str(e)}")
+            latest_doc = db[collection_name].find_one(sort=[("timestamp", -1)])
+            doc_count = db[collection_name].count_documents({})
+            if latest_doc and 'timestamp' in latest_doc:
+                if latest_doc['timestamp'] < cutoff_date and doc_count < min_docs:
+                    eligible_sessions.append((collection_name, doc_count, latest_doc['timestamp']))
     
-    if deleted_sessions:
-        st.success(f"Successfully deleted {len(deleted_sessions)} old sessions.")
-    
-    if failed_deletions:
-        st.error(f"Failed to delete {len(failed_deletions)} old sessions.")
-    
-    # Rerun the app to refresh the session list
-    time.sleep(3)  # Give user time to see the message
-    st.rerun()
+    if eligible_sessions:
+        st.warning("The following sessions are eligible for deletion:")
+        for session, doc_count, last_active in eligible_sessions:
+            st.write(f"Session: {session}, Documents: {doc_count}, Last Active: {last_active}")
+        
+        if st.button("Confirm Delete Small Old Sessions"):
+            deleted_sessions = []
+            failed_deletions = []
+            for session, _, _ in eligible_sessions:
+                try:
+                    db.drop_collection(session)
+                    deleted_sessions.append(session)
+                    logger.info(f"Deleted old session: {session}")
+                except Exception as e:
+                    failed_deletions.append(session)
+                    logger.error(f"Failed to delete old session {session}: {str(e)}")
+            
+            if deleted_sessions:
+                st.success(f"Successfully deleted {len(deleted_sessions)} old sessions.")
+            if failed_deletions:
+                st.error(f"Failed to delete {len(failed_deletions)} old sessions.")
+            
+            st.rerun()
+    else:
+        st.info("No sessions eligible for deletion.")
 
 
 def view_session(session_name):
@@ -741,3 +751,8 @@ if __name__ == "__main__":
     # if st.sidebar.button("Exit Admin Mode"):
     #     st.rerun()  # This will refresh the page and exit admin mode
     admin_dashboard()
+    # delete_old_sessions(weeks=1)
+    delete_small_old_sessions(days=5, min_docs=3)
+
+
+
