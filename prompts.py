@@ -890,7 +890,7 @@ note_writer_system_em2 = """I may ask general questions. If I do, just answer th
     [Explain how the differential informed the diagnostic and treatment plan]
 
     ASSESSMENT:
-    [Provide a concise summary of the patient's primary problem(s) and working diagnosis]
+    [Provide a concise summary of the patient's primary `problem`(s) and working diagnosis]
 
     PLAN:
     [Provide a bullet list of problems identified and plans, including the reasoning discussed]
@@ -2628,21 +2628,6 @@ search_CDTs = """
     Prioritize evidence-based tools and guidelines that are most likely to improve treatment outcomes for this patient's condition.
     Provide a final summary of the findings.
     """
-
-# search_CDTs = """
-#     Identify and apply relevant Clinical Decision Tools (CDTs) to enhance diagnostic accuracy for the patient's condition. For each applicable CDT:
-
-#     1. Name the tool and its primary diagnostic purpose
-#     2. List required input parameters
-#     3. Calculate the score/result using available patient data
-#     4. Interpret the output in context of the patient's presentation
-#     5. Explain how this impacts the diagnostic process
-#     6. Highlight any limitations or caveats for this specific case
-#     7. 1-2 sentence summary.
-
-#     Prioritize CDTs that are widely validated and most likely to influence the diagnostic approach for this patient.
-#     """
-
 
 
 

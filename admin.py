@@ -381,8 +381,41 @@ def delete_old_sessions(weeks=1):
         st.error(f"Failed to delete {len(failed_deletions)} old sessions.")
     
     # Rerun the app to refresh the session list
-    time.sleep(1)  # Give user time to see the message
+    time.sleep(3)  # Give user time to see the message
     st.rerun()
+
+def delete_old_sessions(weeks=1):
+    two_weeks_ago = datetime.datetime.now() - datetime.timedelta(weeks=weeks) 
+    deleted_sessions = []
+    failed_deletions = []
+    
+    collections = db.list_collection_names()
+    for collection_name in collections:
+        if collection_name.startswith('user_'):
+            try:
+                # Get the latest document in the collection
+                latest_doc = db[collection_name].find_one(sort=[("timestamp", -1)])
+                if latest_doc and 'timestamp' in latest_doc:
+                    if latest_doc['timestamp'] < two_weeks_ago:
+                        db.drop_collection(collection_name)
+                        deleted_sessions.append(collection_name)
+                        logger.info(f"Deleted old session: {collection_name}")
+                        st.subheader(f"Deleted old session")
+                        time.sleep(3)
+            except Exception as e:
+                failed_deletions.append(collection_name)
+                logger.error(f"Failed to delete old session {collection_name}: {str(e)}")
+    
+    if deleted_sessions:
+        st.success(f"Successfully deleted {len(deleted_sessions)} old sessions.")
+    
+    if failed_deletions:
+        st.error(f"Failed to delete {len(failed_deletions)} old sessions.")
+    
+    # Rerun the app to refresh the session list
+    time.sleep(3)  # Give user time to see the message
+    st.rerun()
+
 
 def view_session(session_name):
     st.subheader(f"Session Details: {session_name}")
