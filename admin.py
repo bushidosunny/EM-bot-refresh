@@ -716,8 +716,11 @@ def export_feedback_to_csv(feedback_data):
     )
 
 def main():
+    # Check if the function has been run today
+    if 'last_cleanup' not in st.session_state or st.session_state.last_cleanup.date() < datetime.datetime.now().date():
+        delete_small_old_sessions(days=5, min_docs=3)
+        st.session_state.last_cleanup = datetime.datetime.now()
 
-    
     if not authenticator.is_authenticated():
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
@@ -752,7 +755,4 @@ if __name__ == "__main__":
     #     st.rerun()  # This will refresh the page and exit admin mode
     admin_dashboard()
     # delete_old_sessions(weeks=1)
-    delete_small_old_sessions(days=5, min_docs=3)
-
-
-
+    main()
