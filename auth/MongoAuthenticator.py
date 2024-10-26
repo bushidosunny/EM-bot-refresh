@@ -85,6 +85,7 @@ SPECIALTIES = [
     "Interventional Radiology",
     "Veterinary Medicine",
     "emma_system_DDX",
+    "Academic Researcher",
     "Other"
 ]
 #################################### User Class ########################################
