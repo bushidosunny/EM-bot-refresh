@@ -85,6 +85,7 @@ SPECIALTIES = [
     "Interventional Radiology",
     "Veterinary Medicine",
     "Academic Researcher",
+    "Emergency Medicine DDX",
     "Other"
 ]
 #################################### User Class ########################################

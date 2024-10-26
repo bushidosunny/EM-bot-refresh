@@ -286,7 +286,13 @@ specialist_data = {
     "caption": "Hypothesis creater and tester",
     "avatar": "https://i.kym-cdn.com/photos/images/original/000/692/544/280.png",
     "system_instructions": hypothesis_system
-  }
+  },
+  "Emergency Medicine DDX": {
+    "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
+    "caption": "EM, Peds EM, ☠️Toxicology, Wilderness",
+    "avatar": "https://i.ibb.co/LnrQp8p/Designer-17.jpg",
+    "system_instructions": emma_system_DDX
+  },
   
   
 }
