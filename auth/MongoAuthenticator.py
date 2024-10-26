@@ -84,6 +84,7 @@ SPECIALTIES = [
     "Sleep Medicine",
     "Interventional Radiology",
     "Veterinary Medicine",
+    "emma_system_DDX",
     "Academic Researcher",
     "Emergency Medicine DDX",
     "Other"

@@ -78,7 +78,6 @@ def transcribe_audio(audio_file):
         return None
 
 
-
 # free google speech to text
 def record_audio_and_transcribe():
     print("Recording audio from record_uadio_and_transcribe...")

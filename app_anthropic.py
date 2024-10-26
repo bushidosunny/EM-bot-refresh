@@ -141,7 +141,7 @@ specialist_data = {
     "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
     "caption": "👨‍⚕️EM, Peds EM, ☠️Toxicology, Wilderness",
     "avatar": "https://i.ibb.co/LnrQp8p/Designer-17.jpg",
-    "system_instructions": emma_system,
+    "system_instructions": emma_system_DDX,
   },
   "Perplexity": {
     "assistant_id": "perplexity_api",
@@ -256,7 +256,6 @@ specialist_data = {
     "avatar": "https://cdn.pixabay.com/photo/2013/07/12/14/33/carrot-148456_960_720.png",
     "system_instructions": critical_system
   },
-  
   "DDX Beta A": {
     "assistant_id": "asst_8Ib5ndZJivEOhwvfx4Gqzjc3",
     "caption": "EM - Beta testing",
@@ -279,7 +278,13 @@ specialist_data = {
     "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
     "caption": "VM, ☠️Toxicology",
     "avatar": "https://i.postimg.cc/1R6K0vYF/OIG4.jpg",
-    "system_instructions": eva_system
+    "system_instructions": eva_system,
+  },
+  "emma_system_DDX": {
+    "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
+    "caption": "👨‍⚕️EM, Peds EM, ☠️Toxicology, Wilderness",
+    "avatar": "https://i.ibb.co/LnrQp8p/Designer-17.jpg",
+    "system_instructions": emma_system_DDX,
   },
   "Academic Researcher": {
     "assistant_id": "asst_na7TnRA4wkDbflTYKzo9kmca",
@@ -344,9 +349,14 @@ def initialize_session_state():
         session_state.pt_data = {}
         session_state.additional_instructions = ""
         session_state.differential_diagnosis = []
-        session_state.danger_diag_list = {}
+        session_state.danger_diag_list = []
         session_state.critical_actions = {}
-        session_state.follow_up_steps = {}
+        session_state.follow_up_questions = []
+        session_state.physical_exam_suggestions = []
+        session_state.lab_tests = []
+        session_state.imaging_studies = []
+        session_state.clinical_decision_tools = []
+        session_state.medications = []
         session_state.completed_tasks_str = ""
         session_state.sidebar_state = 1
         session_state.assistant_response = ""
@@ -367,6 +377,8 @@ def initialize_session_state():
         session_state.assistant_id = specialist_data[session_state.specialist]["assistant_id"]
         session_state.specialist_avatar = specialist_data[session_state.specialist]["avatar"]
         session_state.session_id = None
+        session_state.load_session = ""
+        session_state.collection_name = ""
         logging.info(f'Initializing Session state with initialize_session_state')
 
 ################################## AUTHENTICATION #############################################
@@ -574,6 +586,12 @@ def save_case_details(user_id, doc_type, content=None):
         "content": content,
         "patient_cc": st.session_state.patient_cc,
         "timestamp": datetime.datetime.now(),
+        "follow_up_questions": st.session_state.follow_up_questions,
+        "physical_exam_suggestions": st.session_state.physical_exam_suggestions,
+        "lab_tests": st.session_state.lab_tests,
+        "imaging_studies": st.session_state.imaging_studies,
+        "clinical_decision_tools": st.session_state.clinical_decision_tools,
+        "medications": st.session_state.medications
     }
     query = {
         "type": doc_type,
@@ -715,7 +733,7 @@ def list_user_sessions(username: str):
 def sort_user_sessions_by_time(sessions):
     return sorted(sessions, key=lambda x: x['original_timestamp'], reverse=True)
 
-@st.cache_data(ttl=60)
+# @st.cache_data(ttl=60)
 def load_session_data(collection_name):
     documents = list(db[collection_name].find({}).sort("timestamp", ASCENDING))
     categorized_data = {
@@ -753,14 +771,14 @@ def save_feedback(feedback_type, feedback_text):
 ############################### Logic ###############################################################
 
 #         # print(f"Error loading chat history: {e}")
-
-def load_chat_history(collection_name):
+def mobile_load_session_history(collection_name):
     try:
         # Clear existing data
         st.session_state.chat_history = []
         st.session_state.differential_diagnosis = []
         st.session_state.critical_actions = []
         st.session_state.pt_data = {}
+    
 
         # Fetch chat documents, sorted oldest to newest
         chat_documents = db[collection_name].find({"type": {"$in": ["user_input", "ai_input"]}}).sort("timestamp", 1)
@@ -784,6 +802,60 @@ def load_chat_history(collection_name):
         if ddx_doc:
             st.session_state.differential_diagnosis = ddx_doc.get('ddx', [])
             st.session_state.critical_actions = ddx_doc.get('critical_actions', [])
+            st.session_state.follow_up_questions = ddx_doc.get('follow_up_questions', [])
+            st.session_state.physical_exam_suggestions = ddx_doc.get('physical_exam_suggestions', [])
+            st.session_state.lab_tests = ddx_doc.get('lab_tests', [])
+            st.session_state.imaging_studies = ddx_doc.get('imaging_studies', [])
+            st.session_state.clinical_decision_tools = ddx_doc.get('clinical_decision_tools', [])
+            st.session_state.medications = ddx_doc.get('medications', [])
+
+        # Set other session state variables
+        st.session_state.patient_cc = ddx_doc.get('patient_cc', '') if ddx_doc else ''
+        st.session_state.specialist = 'Emergency Medicine'
+
+        # # print(f"Loaded {len(st.session_state.chat_history)} messages and {len(st.session_state.differential_diagnosis)} diagnoses")
+    except Exception as e:
+        # print(f"Error loading chat history: {e}")
+        sentry_sdk.capture_exception(e)
+
+
+def load_chat_history(collection_name):
+    try:
+        # Clear existing data
+        st.session_state.chat_history = []
+        st.session_state.differential_diagnosis = []
+        st.session_state.critical_actions = []
+        st.session_state.pt_data = {}
+    
+
+        # Fetch chat documents, sorted oldest to newest
+        chat_documents = db[collection_name].find({"type": {"$in": ["user_input", "ai_input"]}}).sort("timestamp", 1)
+        
+        # Create message objects and add to chat history
+        for doc in chat_documents:
+            content = doc.get('message', '')
+            if doc['type'] == 'user_input':
+                message = HumanMessage(content=content, avatar=st.session_state.user_photo_url)
+            else:
+                specialist = doc.get('specialist', 'Emergency Medicine')
+                avatar = specialist_data[specialist]["avatar"]
+                message = AIMessage(content=content, avatar=avatar)
+            
+            st.session_state.chat_history.append(message)
+
+        
+
+        # Load most recent differential diagnosis
+        ddx_doc = db[collection_name].find_one({"type": "ddx"}, sort=[("timestamp", -1)])
+        if ddx_doc:
+            st.session_state.differential_diagnosis = ddx_doc.get('ddx', [])
+            st.session_state.critical_actions = ddx_doc.get('critical_actions', [])
+            st.session_state.follow_up_questions = ddx_doc.get('follow_up_questions', [])
+            st.session_state.physical_exam_suggestions = ddx_doc.get('physical_exam_suggestions', [])
+            st.session_state.lab_tests = ddx_doc.get('lab_tests', [])
+            st.session_state.imaging_studies = ddx_doc.get('imaging_studies', [])
+            st.session_state.clinical_decision_tools = ddx_doc.get('clinical_decision_tools', [])
+            st.session_state.medications = ddx_doc.get('medications', [])
 
         # Set other session state variables
         st.session_state.patient_cc = ddx_doc.get('patient_cc', '') if ddx_doc else ''
@@ -1105,6 +1177,8 @@ def parse_json(chat_history):
         data = json.loads(pt_json)
         patient_data = data.get('patient', {})
 
+        # print(f'DEBUG PARSE_JSON patient_data: {patient_data}') 
+        # print(f'DEBUG PARSE_JSON data: {data}')
         # Update session state
         st.session_state.pt_data = patient_data
 
@@ -1113,7 +1187,7 @@ def parse_json(chat_history):
         # if new_patient_cc:
         #     st.session_state.patient_cc = new_patient_cc
         
-        # Ensure differential_diagnosis, critical_actions, and follow_up_steps are not None
+        # Ensure differential_diagnosis, critical_actions, and follow_up_questions are not None
         st.session_state.differential_diagnosis = patient_data.get('differential_diagnosis', [])
         if st.session_state.differential_diagnosis is None:
             st.session_state.differential_diagnosis = []
@@ -1122,19 +1196,39 @@ def parse_json(chat_history):
         if st.session_state.critical_actions is None:
             st.session_state.critical_actions = []
 
-        st.session_state.follow_up_steps = patient_data.get('follow_up_steps', [])
-        if st.session_state.follow_up_steps is None:
-            st.session_state.follow_up_steps = []
+        st.session_state.follow_up_questions = patient_data.get('follow_up_questions', [])
+        if st.session_state.follow_up_questions is None:
+            st.session_state.follow_up_questions = []
+
+        st.session_state.physical_exam_suggestions = patient_data.get('physical_exam_suggestions', [])
+        if st.session_state.physical_exam_suggestions is None:
+            st.session_state.physical_exam_suggestions = []
+
+        st.session_state.lab_tests = patient_data.get('lab_tests', [])
+        if st.session_state.lab_tests is None:
+            st.session_state.lab_tests = []
+        
+        st.session_state.imaging_studies = patient_data.get('imaging_studies', [])
+        if st.session_state.imaging_studies is None:
+            st.session_state.imaging_studies = []
+
+        st.session_state.clinical_decision_tools = patient_data.get('clinical_decision_tools', [])
+        if st.session_state.clinical_decision_tools is None:
+            st.session_state.clinical_decision_tools = []
+        
+        st.session_state.medications = patient_data.get('medications', [])
+        if st.session_state.medications is None:
+            st.session_state.medications = []
 
         # # print(f'DEBUG PARSE_JSON session_state.differential_diagnosis: {st.session_state.differential_diagnosis}')
         # # print(f'DEBUG PARSE_JSON st.session_state.critical_actionss: {st.session_state.critical_actions}')
-        # # print(f'DEBUG PARSE_JSON st.session_state.follow_up_steps: {st.session_state.follow_up_steps}')
+        # # print(f'DEBUG PARSE_JSON st.session_state.follow_up_questions: {st.session_state.follow_up_questions}')
         # print(f'DEBUG PARSE_JSON st.session_state.patient_cc: {st.session_state.patient_cc}')
 
         # Only save case details if there's meaningful data
         if any([st.session_state.differential_diagnosis, 
                 st.session_state.critical_actions, 
-                st.session_state.follow_up_steps]):
+                st.session_state.follow_up_questions]):
             save_case_details(st.session_state.username, "ddx")
         
         # Ensure lab_results and imaging_results are not None
@@ -1185,15 +1279,70 @@ def display_critical_tasks():
                     st.session_state.completed_tasks_str += f"Completed: {task}. "
 
 def display_follow_up_tasks():
-    if st.session_state.follow_up_steps:
-        st.markdown(f"<h5>Possible Follow-Up Steps</h5>", unsafe_allow_html=True)
-        tasks = st.session_state.follow_up_steps.keys() if isinstance(st.session_state.follow_up_steps, dict) else st.session_state.follow_up_steps
+    if st.session_state.follow_up_questions:
+        st.markdown(f"<h5>Possible Follow Questions</h5>", unsafe_allow_html=True)
+        for i, task in enumerate(st.session_state.follow_up_questions):
+            key = f"followupQ_{i}"
+            if st.checkbox(f"{task}", key=key):
+                if task not in st.session_state.completed_tasks_str:
+                    st.session_state.completed_tasks_str += f"Completed: {task}. "
+    
+    # print(f'DEBUG DISPLAY FOLLOW UP QUESTIONS: {st.session_state.follow_up_questions}')
+
+
+    exam_container = st.empty()
+    with exam_container.container():
+        if st.session_state.physical_exam_suggestions:
+            st.markdown("<h5>Physical Exam Suggestions</h5>", unsafe_allow_html=True)
+            for i, exam in enumerate(st.session_state.physical_exam_suggestions, 1):
+                key = f"exam{i}"
+                if st.checkbox(f"**{exam['system']}** - {exam['physical_exam_suggestion']}"):
+                    if exam['physical_exam_suggestion'] not in st.session_state.completed_tasks_str:
+                        st.session_state.completed_tasks_str += f"Completed: {exam['physical_exam_suggestion']}. "
+    
+    # print(f'DEBUG DISPLAY physical_exam_suggestion: {st.session_state.physical_exam_suggestions}')
+    
+
+    if st.session_state.lab_tests:
+        st.markdown(f"<h5>Lab Tests</h5>", unsafe_allow_html=True)
+        tasks = st.session_state.lab_tests.keys() if isinstance(st.session_state.lab_tests, dict) else st.session_state.lab_tests
         
         for task in tasks:
             key = f"follow_up_{task}"
             if st.checkbox(f"- :yellow[{task}]", key=key):
                 if task not in st.session_state.completed_tasks_str:
                     st.session_state.completed_tasks_str += f"Followed up: {task}. "
+    
+    if st.session_state.imaging_studies:
+        st.markdown(f"<h5>Imaging Tests</h5>", unsafe_allow_html=True)
+        tasks = st.session_state.imaging_studies.keys() if isinstance(st.session_state.imaging_studies, dict) else st.session_state.imaging_studies
+        
+        for task in tasks:
+            key = f"follow_up_{task}"
+            if st.checkbox(f"- :yellow[{task}]", key=key):
+                if task not in st.session_state.completed_tasks_str:
+                    st.session_state.completed_tasks_str += f"Followed up: {task}. "
+
+    if st.session_state.clinical_decision_tools:
+        st.markdown(f"<h5>Clinical Decision Tools</h5>", unsafe_allow_html=True)
+        tasks = st.session_state.clinical_decision_tools.keys() if isinstance(st.session_state.clinical_decision_tools, dict) else st.session_state.clinical_decision_tools
+        
+        for task in tasks:
+            key = f"follow_up_{task}"
+            if st.checkbox(f"- :yellow[{task}]", key=key):
+                if task not in st.session_state.completed_tasks_str:
+                    st.session_state.completed_tasks_str += f"Followed up: {task}. "
+
+    if st.session_state.medications:
+        st.markdown(f"<h5>Medications</h5>", unsafe_allow_html=True)
+        tasks = st.session_state.medications.keys() if isinstance(st.session_state.medications, dict) else st.session_state.medications
+        
+        for task in tasks:
+            key = f"follow_up_{task}"
+            if st.checkbox(f"- :yellow[{task}]", key=key):
+                if task not in st.session_state.completed_tasks_str:
+                    st.session_state.completed_tasks_str += f"Followed up: {task}. "
+    
 
 def display_ddx():
     ddx_container = st.empty()
@@ -1203,7 +1352,26 @@ def display_ddx():
             for i, diagnosis in enumerate(st.session_state.differential_diagnosis, 1):
                 st.markdown(f"**{i}.** **{diagnosis['disease']}** - {diagnosis['probability']}%")  
 
+def display_mobile_ddx_follow_up():
+    display_ddx()
+    if st.session_state.follow_up_questions:
+        st.markdown(f"<h5>Possible Follow Questions</h5>", unsafe_allow_html=True)
+        for i, task in enumerate(st.session_state.follow_up_questions):
+            st.markdown(f"{task}")
+
+    
+    # print(f'DEBUG DISPLAY FOLLOW UP QUESTIONS: {st.session_state.follow_up_questions}')
+
+
+    exam_container = st.empty()
+    with exam_container.container():
+        if st.session_state.physical_exam_suggestions:
+            st.markdown("<h5>Physical Exam Suggestions</h5>", unsafe_allow_html=True)
+            for i, exam in enumerate(st.session_state.physical_exam_suggestions, 1):
+                st.markdown(f"**{exam['system']}** - {exam['physical_exam_suggestion']}")
+               
 def display_pt_headline():
+    
     if st.session_state.pt_data != {}:
         try:
             ## print(f'DEBUG DISPLAY HEADER ST.SESSION TATE.PT DATA: {st.session_state.pt_data}')
@@ -1688,6 +1856,41 @@ window.getMessage = function() {
 </script>
 """, unsafe_allow_html=True)
 
+def display_sessions_mobile():
+    user_id = st.session_state.user_id
+    user_sessions = list_user_sessions(user_id)
+
+    if user_sessions:
+        sorted_sessions = sort_user_sessions_by_time(user_sessions)
+        session_options = {session['session_name']: session['collection_name'] for session in sorted_sessions}
+        
+        session_name = st.selectbox("Select a recent session to load:", 
+                        label_visibility="collapsed",
+                        options=["Select a patient encounter"] + list(session_options.keys()),
+                        index=0,
+                        key="session_selectbox")
+        
+        if session_name != "Select a patient encounter":
+            if session_name in session_options:
+                collection_name = session_options[session_name]
+                
+                if st.button("Load Selected Patient Encounter", type='primary', use_container_width=True):
+                    st.session_state.load_session = collection_name
+                    st.session_state.show_load_success = True
+
+                # Display success message outside of columns
+                if st.session_state.get('show_load_success', False):
+                    st.success(f"{session_name}' loaded!")
+                    st.session_state.show_load_success = False  # Reset the flag
+                    time.sleep(1)  # Give user time to see the message
+                    st.rerun()
+                    return
+
+            else:
+                st.error(f"Session '{session_name}' not found in options.")
+    else:
+        st.write("No sessions found for this user.")
+
 def display_sessions_tab():
     user_id = st.session_state.user_id
     user_sessions = list_user_sessions(user_id)
@@ -1717,10 +1920,12 @@ def display_sessions_tab():
             if session_name in session_options:
                 collection_name = session_options[session_name]
                 
+                # renaming session name
                 if rename_button:
                     st.session_state.renaming_session = collection_name
                     st.session_state.new_session_name = session_name
 
+  
                 if st.session_state.renaming_session == collection_name:
                     new_name = st.text_input("Enter new name for the session:", value=st.session_state.new_session_name, key="new_session_name_input")
                     if st.button("Save New Name", key="save_new_name_button"):
@@ -2755,15 +2960,15 @@ def get_response(user_question: str, mobile=False) -> str:
             response_text = response.content
 
         if mobile:
-            response_placeholder.write("EMMA has analyzed this Pt encounter. You may record more information for this encounter by hitting record again. To start an additional Pt encounter reload the page or hit the button below.")
+            response_placeholder.write("EMMA has analyzed this Pt encounter. You may update more information for this encounter by hitting record again, or wait for suggested follow up Questions. To start an additional Pt encounter hit the button below.")
             # response_placeholder.write("To refresh the page, swipe down and release.")
             st.link_button("🔃New Patient Encounter", "https://emmahealth.ai", help="Will create a new session in a new tab", use_container_width=True)
+            
             
         else:
             response_placeholder.markdown(response_text)
         
         return response_text
-
 def admin_mode():
     # New power-up check for admins
     if st.session_state.username == "sunny":
@@ -2851,8 +3056,6 @@ def authenticated_user():
                     display_pt_headline()
                     st.divider()
                     display_ddx()
-                    st.divider()
-                    display_critical_tasks()
                     st.divider()
                     display_follow_up_tasks()
         else:
@@ -3154,9 +3357,43 @@ def is_mobile():
     return False
 
 def mobile_user():
+    # Existing header code
+    st.markdown(
+        f"""
+        <div style="text-align: center;">
+            <h1>
+                <span style="color:deepskyblue;"> </span>                    
+                <img src="https://i.ibb.co/LnrQp8p/Designer-17.jpg" alt="Avatar" style="width:50px;height:50px;border-radius:20%;">
+                EMMA
+            </h1>
+        </div>
+        """, 
+        unsafe_allow_html=True)
+    
+    display_sessions_mobile()
+    
+    if 'load_session' in st.session_state and st.session_state.load_session:
+        print(f'DEBUG MOBILE USER: {st.session_state.load_session}')
+        st.session_state.collection_name = st.session_state.load_session
+        mobile_load_session_history(st.session_state.collection_name)
+        st.session_state.load_session = ""  # Clear the flag after loading
+        # st.rerun()  # Rerun to update the display after loading a session
+    
+    st.toast("Load a previous pt encounter or start a new one by hitting record")
+
+    
+    
+
+    # Render mobile input
     text = render_mobile()
+    print(f'DEBUG MOBILE USER text: {text}')
+    # Process user input if available
     if text is not None:
+        print(f'DEBUG MOBILE USER after if text is not NONE: {text}')
         process_user_question(text, st.session_state.specialist, mobile=True)
+
+    display_mobile_ddx_follow_up()
+    
 
 ############################################# Main Function #############################################
 
