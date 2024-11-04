@@ -66,23 +66,23 @@ def admin_dashboard():
     elif page == "Feedback Management":
         feedback_management()
     
-    if st.sidebar.button("Delete Old Sessions"):
-        if st.session_state.get('confirm_delete_old', False):
-            delete_old_sessions()
-            st.session_state.confirm_delete_old = False
-        else:
-            st.session_state.confirm_delete_old = True
-            st.warning("Are you sure you want to delete all sessions older than 2 weeks? This action cannot be undone.")
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("Confirm Delete Old Sessions"):
-                    delete_old_sessions()
-                    st.session_state.confirm_delete_old = False
-            with col2:
-                if st.button("Cancel Delete Old Sessions"):
-                    st.session_state.confirm_delete_old = False
-            time.sleep(1)  # Give user time to see the message
-            st.rerun()
+    if st.sidebar.button("Delete Old Sessions", key="trigger_delete_old"):
+        st.session_state.confirm_delete_old = True
+    
+    # Handle confirmation state
+    if st.session_state.get('confirm_delete_old', False):
+        st.warning("Are you sure you want to delete all sessions older than 2 weeks? This action cannot be undone.")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Confirm Delete Old Sessions", key="confirm_delete_old_btn"):
+                delete_old_sessions()
+                st.session_state.confirm_delete_old = False
+                st.success("Sessions deleted successfully!")
+                st.rerun()
+        with col2:
+            if st.button("Cancel Delete Old Sessions", key="cancel_delete_old_btn"):
+                st.session_state.confirm_delete_old = False
+                st.rerun()
 
 
     if st.sidebar.button("Exit Admin Mode", key="exit_admin_mode"):
@@ -366,7 +366,7 @@ def delete_old_sessions(weeks=1):
     
     if eligible_sessions:
         st.warning(f"The following sessions are eligible for deletion: {', '.join(eligible_sessions)}")
-        if st.button("Confirm Delete Old Sessions"):
+        if st.button("Confirm Delete Old Sessions", key="confirm_delete_old_sessions_final"):
             deleted_sessions = []
             failed_deletions = []
             for collection_name in eligible_sessions:
@@ -383,9 +383,10 @@ def delete_old_sessions(weeks=1):
             if failed_deletions:
                 st.error(f"Failed to delete {len(failed_deletions)} old sessions.")
             
-            st.rerun()
+            return True
     else:
         st.info("No sessions eligible for deletion.")
+        return False
 
 def delete_small_old_sessions(days=5, min_docs=5):
     cutoff_date = datetime.datetime.now() - datetime.timedelta(days=days)

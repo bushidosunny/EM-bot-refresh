@@ -3394,26 +3394,78 @@ def mobile_user():
 
     display_mobile_ddx_follow_up()
     
+def auto_cleanup_sessions(username: str, threshold: int = 450):
+    """
+    Automatically cleans up old sessions when approaching the limit
+    Only runs for admin users
+    """
+    # Check if user is an admin
+    if username not in ["sunny", "joshuacullen"]:
+        return
+        
+    collections = db.list_collection_names()
+    user_sessions = [col for col in collections if col.startswith('user_')]
+    
+    if len(user_sessions) > threshold:
+        # Get sessions sorted by last activity
+        session_details = []
+        for collection_name in user_sessions:
+            try:
+                latest_doc = db[collection_name].find_one(sort=[("timestamp", -1)])
+                if latest_doc:
+                    session_details.append({
+                        'collection_name': collection_name,
+                        'last_activity': latest_doc.get('timestamp', datetime.datetime.min),
+                        'message_count': db[collection_name].count_documents({})
+                    })
+            except Exception as e:
+                logger.error(f"Error processing session {collection_name}: {str(e)}")
+        
+        # Sort by last activity
+        sorted_sessions = sorted(session_details, 
+                               key=lambda x: x['last_activity'], 
+                               reverse=True)
+        
+        # Keep the 400 most recent sessions, delete the rest
+        sessions_to_keep =300
+        sessions_to_delete = sorted_sessions[sessions_to_keep:]
+        
+        deleted_count = 0
+        for session in sessions_to_delete:
+            try:
+                collection_name = session['collection_name']
+                # Archive session before deletion if it has important data
+                if session['message_count'] > 5:
+                    archive_collection_name = f"archive_{collection_name}"
+                    db[archive_collection_name].insert_many(db[collection_name].find())
+                
+                db.drop_collection(collection_name)
+                deleted_count += 1
+                logger.info(f"Admin cleanup: Deleted old session: {collection_name}")
+            except Exception as e:
+                logger.error(f"Error cleaning up session {collection_name}: {str(e)}")
+        
+        if deleted_count > 0:
+            logger.info(f"Admin {username} cleaned up {deleted_count} old sessions")
 
 ############################################# Main Function #############################################
 
 def main():
-    
     initialize_session_state()
     
     # Add a small delay to allow cookie to be read
     time.sleep(.3)
     
-
-
-
     # Check if user is already authenticated
     if authenticator.authenticate():
+        # Run cleanup check for admin users
+        if st.session_state.username in ["sunny", "joshuacullen"]:
+            auto_cleanup_sessions(st.session_state.username)
+            
         if is_mobile():
             mobile_user()
         else:
             authenticated_user()
-
     else:
         if st.session_state.show_registration:
             authenticator.register_page()
@@ -3431,3 +3483,4 @@ if __name__ == '__main__':
     except Exception as e:
         sentry_sdk.capture_exception(e)
         raise e
+
