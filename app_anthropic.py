@@ -3406,9 +3406,11 @@ def auto_cleanup_sessions(username: str, threshold: int = 450):
         
     collections = db.list_collection_names()
     user_sessions = [col for col in collections if col.startswith('user_')]
+
     
     if len(user_sessions) > threshold:
         # Get sessions sorted by last activity
+        st.info(f"len of user_suessions {len(user_sessions)} > threshold {threshold} ")
         session_details = []
         for collection_name in user_sessions:
             try:
