@@ -3396,59 +3396,137 @@ def mobile_user():
     
 def auto_cleanup_sessions(username: str, threshold: int = 450):
     """
-    Automatically cleans up old sessions when approaching the limit
-    Only runs for admin users
-    """
-    st.info("auto cleanup started")
-    # Check if user is an admin
-    if username not in ["sunny", "joshuacullen"]:
-        st.warning("user not admin")
-        return
-        
-    collections = db.list_collection_names()
-    user_sessions = [col for col in collections if col.startswith('user_')]
-
+    Automatically cleans up old sessions when approaching the limit.
+    Only runs for admin users.
     
-    if len(user_sessions) > threshold:
-        # Get sessions sorted by last activity
-        st.info(f"len of user_suessions {len(user_sessions)} > threshold {threshold} ")
+    Args:
+        username (str): Current username
+        threshold (int): Maximum number of sessions before cleanup triggers
+    """
+    try:
+        # Create a placeholder for status messages
+        status_placeholder = st.empty()
+        status_placeholder.info("📊 Starting auto cleanup check...")
+        
+        # Check if user is an admin
+        if username not in ["sunny", "joshuacullen"]:
+            status_placeholder.warning("⚠️ Cleanup restricted: User not authorized")
+            return
+        
+        # Get all collections and filter user sessions
+        collections = db.list_collection_names()
+        user_sessions = [col for col in collections if col.startswith('user_')]
+        total_sessions = len(user_sessions)
+        
+        status_placeholder.info(f"Found {total_sessions} total user sessions")
+        
+        if total_sessions <= threshold:
+            status_placeholder.success(f"✅ No cleanup needed. Sessions: {total_sessions}/{threshold}")
+            return
+            
+        # Calculate how many sessions need to be deleted
+        sessions_to_keep = 300  # Define target number of sessions to keep
+        need_to_delete = total_sessions - sessions_to_keep
+        
+        status_placeholder.warning(f"🗑️ Need to clean up {need_to_delete} sessions")
+        
+        # Get session details with progress bar
+        progress_text = "Analyzing session details..."
+        my_bar = st.progress(0, text=progress_text)
         session_details = []
-        for collection_name in user_sessions:
+        
+        for idx, collection_name in enumerate(user_sessions):
             try:
+                # Update progress
+                progress = (idx + 1) / total_sessions
+                my_bar.progress(progress, text=f"{progress_text} ({idx + 1}/{total_sessions})")
+                
+                # Get latest activity and message count
                 latest_doc = db[collection_name].find_one(sort=[("timestamp", -1)])
                 if latest_doc:
                     session_details.append({
                         'collection_name': collection_name,
                         'last_activity': latest_doc.get('timestamp', datetime.datetime.min),
-                        'message_count': db[collection_name].count_documents({})
+                        'message_count': db[collection_name].count_documents({}),
+                        'username': collection_name.split('_')[1] if '_' in collection_name else 'unknown'
                     })
             except Exception as e:
-                logger.error(f"Error processing session {collection_name}: {str(e)}")
+                st.error(f"Error processing session {collection_name}: {str(e)}")
+                continue
         
-        # Sort by last activity
+        my_bar.empty()
+        
+        if not session_details:
+            status_placeholder.error("❌ No valid sessions found to analyze")
+            return
+            
+        # Sort sessions by last activity
         sorted_sessions = sorted(session_details, 
                                key=lambda x: x['last_activity'], 
                                reverse=True)
         
-        st.info(f"sorted_sessions sorted")
-        # Keep the 400 most recent sessions, delete the rest
-        sessions_to_keep =300
+        # Keep the most recent sessions, delete the rest
         sessions_to_delete = sorted_sessions[sessions_to_keep:]
         
+        if not sessions_to_delete:
+            status_placeholder.success("✅ No sessions require deletion after analysis")
+            return
+        
+        # Create deletion progress bar
+        deletion_progress = st.progress(0)
         deleted_count = 0
+        deletion_errors = []
+        
+        # Group sessions by username for more organized deletion
+        sessions_by_user = {}
         for session in sessions_to_delete:
-            try:
-                collection_name = session['collection_name']
-                                
-                db.drop_collection(collection_name)
-                deleted_count += 1
-                logger.info(f"Admin cleanup: Deleted old session: {collection_name}")
-                st.success(f"Deleted old sessions {collection_name}")
-            except Exception as e:
-                logger.error(f"Error cleaning up session {collection_name}: {str(e)}")
+            username = session['username']
+            if username not in sessions_by_user:
+                sessions_by_user[username] = []
+            sessions_by_user[username].append(session)
+        
+        # Delete sessions with progress tracking
+        total_to_delete = len(sessions_to_delete)
+        deletion_text = st.empty()
+        
+        for user, user_sessions in sessions_by_user.items():
+            deletion_text.text(f"Processing sessions for user: {user}")
+            for idx, session in enumerate(user_sessions):
+                try:
+                    collection_name = session['collection_name']
+                    # Update progress
+                    progress = (deleted_count + 1) / total_to_delete
+                    deletion_progress.progress(progress)
+                    
+                    # Perform deletion
+                    db.drop_collection(collection_name)
+                    deleted_count += 1
+                    
+                    # Log success
+                    st.write(f"🗑️ Deleted: {collection_name}")
+                    
+                except Exception as e:
+                    error_msg = f"Error deleting {session['collection_name']}: {str(e)}"
+                    deletion_errors.append(error_msg)
+                    st.error(error_msg)
+                    continue
+        
+        # Final status update
+        deletion_progress.empty()
+        deletion_text.empty()
         
         if deleted_count > 0:
-            logger.info(f"Admin {username} cleaned up {deleted_count} old sessions")
+            status_placeholder.success(f"✅ Successfully cleaned up {deleted_count} old sessions")
+            if deletion_errors:
+                with st.expander("Show Deletion Errors"):
+                    for error in deletion_errors:
+                        st.error(error)
+        else:
+            status_placeholder.warning("⚠️ No sessions were deleted during cleanup")
+        
+    except Exception as e:
+        st.error(f"❌ Critical error during cleanup process: {str(e)}")
+        raise
 
 ############################################# Main Function #############################################
 
