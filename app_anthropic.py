@@ -3540,7 +3540,7 @@ def main():
     if authenticator.authenticate():
         # Run cleanup check for admin users
         if st.session_state.username in ["sunny", "joshuacullen"]:
-            auto_cleanup_sessions(st.session_state.username, 420)
+            auto_cleanup_sessions(st.session_state.username, 300)
             
         if is_mobile():
             mobile_user()
