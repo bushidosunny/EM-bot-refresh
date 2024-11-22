@@ -3399,6 +3399,7 @@ def auto_cleanup_sessions(username: str, threshold: int = 450):
     Automatically cleans up old sessions when approaching the limit
     Only runs for admin users
     """
+    st.success("auto cleanup started")
     # Check if user is an admin
     if username not in ["sunny", "joshuacullen"]:
         return
@@ -3442,6 +3443,7 @@ def auto_cleanup_sessions(username: str, threshold: int = 450):
                 db.drop_collection(collection_name)
                 deleted_count += 1
                 logger.info(f"Admin cleanup: Deleted old session: {collection_name}")
+                st.success(f"Deleted old sessions {collection_name}")
             except Exception as e:
                 logger.error(f"Error cleaning up session {collection_name}: {str(e)}")
         
