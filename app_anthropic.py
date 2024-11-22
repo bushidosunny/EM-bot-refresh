@@ -3399,7 +3399,7 @@ def auto_cleanup_sessions(username: str, threshold: int = 450):
     Automatically cleans up old sessions when approaching the limit
     Only runs for admin users
     """
-    st.success("auto cleanup started")
+    st.info("auto cleanup started")
     # Check if user is an admin
     if username not in ["sunny", "joshuacullen"]:
         return
