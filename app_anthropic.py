@@ -3429,6 +3429,7 @@ def auto_cleanup_sessions(username: str, threshold: int = 450):
                                key=lambda x: x['last_activity'], 
                                reverse=True)
         
+        st.info(f"sorted_sessions sorted")
         # Keep the 400 most recent sessions, delete the rest
         sessions_to_keep =300
         sessions_to_delete = sorted_sessions[sessions_to_keep:]
@@ -3437,11 +3438,7 @@ def auto_cleanup_sessions(username: str, threshold: int = 450):
         for session in sessions_to_delete:
             try:
                 collection_name = session['collection_name']
-                # Archive session before deletion if it has important data
-                if session['message_count'] > 5:
-                    archive_collection_name = f"archive_{collection_name}"
-                    db[archive_collection_name].insert_many(db[collection_name].find())
-                
+                                
                 db.drop_collection(collection_name)
                 deleted_count += 1
                 logger.info(f"Admin cleanup: Deleted old session: {collection_name}")
