@@ -3402,6 +3402,7 @@ def auto_cleanup_sessions(username: str, threshold: int = 450):
     st.info("auto cleanup started")
     # Check if user is an admin
     if username not in ["sunny", "joshuacullen"]:
+        st.warning("user not admin")
         return
         
     collections = db.list_collection_names()
