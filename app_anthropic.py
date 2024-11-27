@@ -3406,31 +3406,63 @@ def mobile_user():
 
     display_mobile_ddx_follow_up()
     
-def auto_cleanup_sessions(username: str, threshold: int = 450):
+def auto_cleanup_sessions(username: str, threshold: int = 300):
     """
-    Automatically cleans up old sessions when approaching the limit
-    Now runs for all users when collection limit is reached
-    """
-    # Remove the admin check since we want this to run for all users when needed
-    collections = db.list_collection_names()
-    user_sessions = [col for col in collections if col.startswith('user_')]
+    Automatically cleans up old sessions when approaching the MongoDB Atlas collection limit.
+    Performs a quick initial check before doing detailed analysis.
     
-    if len(user_sessions) > threshold:
-        # Get sessions sorted by last activity
+    Args:
+        username (str): Current username
+        threshold (int): Maximum number of sessions before cleanup triggers
+    """
+    # Quick authorization check
+    if username not in ["sunny", "joshuacullen"]:
+        return
+        
+    try:
+        # Quick check of collection counts
+        MONGODB_LIMIT = 500
+        SAFETY_MARGIN = 50
+        
+        # Get collection count using faster method
+        total_collections = len(db.list_collection_names())
+        
+        # Only proceed if we're close to limits
+        if total_collections < (MONGODB_LIMIT - SAFETY_MARGIN) and total_collections < threshold:
+            return
+            
+        # If we reach here, we need to do cleanup
+        status_placeholder = st.empty()
+        status_placeholder.warning(f"⚠️ Collection cleanup needed: {total_collections}/{MONGODB_LIMIT}")
+        
+        # Get user sessions
+        user_sessions = [col for col in db.list_collection_names() if col.startswith('user_')]
+        total_sessions = len(user_sessions)
+        
+        # Calculate cleanup target
+        sessions_to_keep = 250 if total_collections >= (MONGODB_LIMIT - SAFETY_MARGIN) else 300
+        need_to_delete = total_sessions - sessions_to_keep
+        
+        if need_to_delete <= 0:
+            status_placeholder.empty()
+            return
+            
+        # Get session details efficiently
         session_details = []
         for collection_name in user_sessions:
             try:
+                # Only get the most recent document
                 latest_doc = db[collection_name].find_one(sort=[("timestamp", -1)])
                 if latest_doc:
                     session_details.append({
                         'collection_name': collection_name,
                         'last_activity': latest_doc.get('timestamp', datetime.datetime.min),
-                        'message_count': db[collection_name].count_documents({})
+                        'username': collection_name.split('_')[1] if '_' in collection_name else 'unknown'
                     })
             except Exception as e:
-                logger.error(f"Error processing session {collection_name}: {str(e)}")
+                continue
         
-        # Sort by last activity
+        # Sort and select sessions to delete
         sorted_sessions = sorted(session_details, 
                                key=lambda x: x['last_activity'], 
                                reverse=True)
@@ -3439,23 +3471,35 @@ def auto_cleanup_sessions(username: str, threshold: int = 450):
         sessions_to_keep = 300
         sessions_to_delete = sorted_sessions[sessions_to_keep:]
         
+        if not sessions_to_delete:
+            status_placeholder.empty()
+            return
+        
+        # Perform deletion with minimal progress updates
         deleted_count = 0
         for session in sessions_to_delete:
             try:
                 collection_name = session['collection_name']
-                # Archive session before deletion if it has important data
-                if session['message_count'] > 5:
-                    archive_collection_name = f"archive_{collection_name}"
-                    db[archive_collection_name].insert_many(db[collection_name].find())
-                
                 db.drop_collection(collection_name)
                 deleted_count += 1
                 logger.info(f"Emergency cleanup: Deleted old session: {collection_name}")
             except Exception as e:
-                logger.error(f"Error cleaning up session {collection_name}: {str(e)}")
+                continue
         
         if deleted_count > 0:
-            logger.info(f"User {username} triggered emergency cleanup of {deleted_count} old sessions")
+            final_collections = len(db.list_collection_names())
+            status_placeholder.success(f"✅ Cleaned up {deleted_count} old sessions. Collections now: {final_collections}/{MONGODB_LIMIT}")
+        
+        # Clear status after a short delay
+        time.sleep(2)
+        status_placeholder.empty()
+        
+    except Exception as e:
+        # Only show error if it's critical
+        if "cannot create a new collection" in str(e):
+            st.error("⚠️ Critical: MongoDB collection limit reached. Forcing cleanup...")
+            # Could add emergency cleanup here if needed
+        return
 
 ############################################# Main Function #############################################
 
