@@ -147,7 +147,7 @@ specialist_data = {
     "assistant_id": "perplexity_api",
     "caption": "🔍Perplexity AI with web search and citations",
     "avatar": "https://play-lh.googleusercontent.com/6STp0lYx2ctvQ-JZpXA1LeAAZIlq6qN9gpy7swLPlRhmp-hfvZePcBxqwVkqN2BH1g",
-    "system_instructions": perplixity_system
+    "system_instructions": perplexity_system
   },
   "Clinical Decision Tools": {
     "assistant_id": "asst_Pau6T5mMH3cZBnEePso5kFuJ",
@@ -2848,7 +2848,7 @@ def delete_template(user):
 ############################################# User input processing #############################################
 
 def process_user_question(user_question, specialist, mobile=False):
-    if user_question:
+    try:
         if not "collection_name" in st.session_state:
             create_new_session()
         
@@ -2893,6 +2893,20 @@ def process_user_question(user_question, specialist, mobile=False):
         
         # Debug output
         # print("DEBUG: Session State after processing user question")
+
+    except Exception as e:
+        # Check if it's the MongoDB collection limit error
+        if "already using 500 collections" in str(e):
+            # Run cleanup and try again
+            auto_cleanup_sessions(st.session_state.username, threshold=450)
+            # Retry creating new session and processing question
+            if not "collection_name" in st.session_state:
+                create_new_session()
+            # Recursively call process_user_question once more
+            process_user_question(user_question, specialist, mobile)
+        else:
+            # If it's a different error, raise it
+            raise e
 
 def get_response(user_question: str, mobile=False) -> str:
     loading_message = "Waiting for EMMA's response..."
@@ -2969,6 +2983,7 @@ def get_response(user_question: str, mobile=False) -> str:
             response_placeholder.markdown(response_text)
         
         return response_text
+
 def admin_mode():
     # New power-up check for admins
     if st.session_state.username == "sunny":
@@ -3335,9 +3350,6 @@ def get_perplexity_response(user_question: str) -> str:
         "max_tokens": 0,
         "temperature": 0.5,
         "top_p": 0.9,
-        "return_citations": True,
-        "return_images": False,
-        "return_related_questions": True,
         "top_k": 0,
         "stream": False,
         "presence_penalty": 0,
@@ -3397,12 +3409,9 @@ def mobile_user():
 def auto_cleanup_sessions(username: str, threshold: int = 450):
     """
     Automatically cleans up old sessions when approaching the limit
-    Only runs for admin users
+    Now runs for all users when collection limit is reached
     """
-    # Check if user is an admin
-    if username not in ["sunny", "joshuacullen"]:
-        return
-        
+    # Remove the admin check since we want this to run for all users when needed
     collections = db.list_collection_names()
     user_sessions = [col for col in collections if col.startswith('user_')]
     
@@ -3426,8 +3435,8 @@ def auto_cleanup_sessions(username: str, threshold: int = 450):
                                key=lambda x: x['last_activity'], 
                                reverse=True)
         
-        # Keep the 400 most recent sessions, delete the rest
-        sessions_to_keep =300
+        # Keep the 300 most recent sessions, delete the rest
+        sessions_to_keep = 300
         sessions_to_delete = sorted_sessions[sessions_to_keep:]
         
         deleted_count = 0
@@ -3441,12 +3450,12 @@ def auto_cleanup_sessions(username: str, threshold: int = 450):
                 
                 db.drop_collection(collection_name)
                 deleted_count += 1
-                logger.info(f"Admin cleanup: Deleted old session: {collection_name}")
+                logger.info(f"Emergency cleanup: Deleted old session: {collection_name}")
             except Exception as e:
                 logger.error(f"Error cleaning up session {collection_name}: {str(e)}")
         
         if deleted_count > 0:
-            logger.info(f"Admin {username} cleaned up {deleted_count} old sessions")
+            logger.info(f"User {username} triggered emergency cleanup of {deleted_count} old sessions")
 
 ############################################# Main Function #############################################
 

@@ -22,7 +22,7 @@ PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions"
 
 
 # system_instructions = ddx_emma_v2
-system_instructions = emma_system
+system_instructions = perplexity_system
 chat_history = ""
 
 PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions"
@@ -44,7 +44,7 @@ while True:
     
     if user_prompt:
         payload = {
-            "model": "llama-3.1-sonar-large-128k-online",
+            "model": "llama-3.1-sonar-large-128k-chat",
             "messages": [
                 {
                     "role": "system",
@@ -58,9 +58,6 @@ while True:
             "max_tokens": 0,
             "temperature": 0.2,
             "top_p": 0.9,
-            "return_citations": True,
-            "return_images": False,
-            "return_related_questions": True,
             "top_k": 0,
             "stream": False,
             "presence_penalty": 0,
