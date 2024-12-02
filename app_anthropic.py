@@ -3423,12 +3423,14 @@ def auto_cleanup_sessions(username: str, threshold: int = 300):
         # Quick check of collection counts
         MONGODB_LIMIT = 500
         SAFETY_MARGIN = 50
+        TARGET_COUNT = 300  # Lower target to ensure we get well below the limit
         
         # Get collection count using faster method
         total_collections = len(db.list_collection_names())
+        print(f'DEBUG AUTO CLEANUP total_collections: {total_collections}')
         
         # Only proceed if we're close to limits
-        if total_collections < (MONGODB_LIMIT - SAFETY_MARGIN) and total_collections < threshold:
+        if total_collections < threshold:
             return
             
         # If we reach here, we need to do cleanup
@@ -3439,9 +3441,8 @@ def auto_cleanup_sessions(username: str, threshold: int = 300):
         user_sessions = [col for col in db.list_collection_names() if col.startswith('user_')]
         total_sessions = len(user_sessions)
         
-        # Calculate cleanup target
-        sessions_to_keep = 250 if total_collections >= (MONGODB_LIMIT - SAFETY_MARGIN) else 300
-        need_to_delete = total_sessions - sessions_to_keep
+        # Calculate how many sessions we need to delete to reach target
+        need_to_delete = total_collections - TARGET_COUNT
         
         if need_to_delete <= 0:
             status_placeholder.empty()
@@ -3462,14 +3463,12 @@ def auto_cleanup_sessions(username: str, threshold: int = 300):
             except Exception as e:
                 continue
         
-        # Sort and select sessions to delete
+        # Sort sessions by last activity (oldest first)
         sorted_sessions = sorted(session_details, 
-                               key=lambda x: x['last_activity'], 
-                               reverse=True)
+                               key=lambda x: x['last_activity'])
         
-        # Keep the 300 most recent sessions, delete the rest
-        sessions_to_keep = 300
-        sessions_to_delete = sorted_sessions[sessions_to_keep:]
+        # Select sessions to delete based on need_to_delete
+        sessions_to_delete = sorted_sessions[:need_to_delete]
         
         if not sessions_to_delete:
             status_placeholder.empty()
