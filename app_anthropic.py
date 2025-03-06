@@ -3500,10 +3500,36 @@ def auto_cleanup_sessions(username: str, threshold: int = 300):
             # Could add emergency cleanup here if needed
         return
 
+def check_session_timeout(timeout_seconds=7200):  # Default to 2 hours
+    """
+    Check if the session has been inactive for too long and clear it if so.
+    Update last activity timestamp on each interaction.
+    """
+    current_time = time.time()
+    
+    # Initialize last_activity if not present
+    if 'last_activity' not in st.session_state:
+        st.session_state.last_activity = current_time
+    
+    # Calculate elapsed time since last activity
+    elapsed = current_time - st.session_state.last_activity
+    
+    # If inactive for longer than timeout, clear the session
+    if elapsed > timeout_seconds:
+        st.session_state.clear()
+        initialize_session_state()
+        st.warning("Session timed out due to inactivity. Starting fresh.")
+        st.rerun()
+    
+    # Update last activity timestamp
+    st.session_state.last_activity = current_time
 ############################################# Main Function #############################################
 
 def main():
     initialize_session_state()
+    
+    # Add timeout check at the start of every run
+    check_session_timeout(timeout_seconds=7200)  # 2 hours
     
     # Add a small delay to allow cookie to be read
     time.sleep(.3)
