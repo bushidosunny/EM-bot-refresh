@@ -663,21 +663,21 @@ class MongoAuthenticator:
                 else:
                     st.error("Incorrect username or password")
 
-            # New buttons for forgot username and change password
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button("Register Here", key="register_btn"):
-                    st.session_state.show_registration = True
-                    st.rerun()
+            # # New buttons for forgot username and change password
+            # col1, col2, col3 = st.columns(3)
+            # with col1:
+            #     if st.button("Register Here", key="register_btn"):
+            #         st.session_state.show_registration = True
+            #         st.rerun()
                 
-            with col2:
-                if st.button("Change Password", key="change_password_btn"):
-                    st.session_state.show_change_password = True
-                    st.rerun()
-            with col3:
-                if st.button("Forgot Username", key="forgot_username_btn"):
-                    st.session_state.show_forgot_username = True
-                    st.rerun()
+            # with col2:
+            #     if st.button("Change Password", key="change_password_btn"):
+            #         st.session_state.show_change_password = True
+            #         st.rerun()
+            # with col3:
+            #     if st.button("Forgot Username", key="forgot_username_btn"):
+            #         st.session_state.show_forgot_username = True
+            #         st.rerun()
 
             # Handle forgot username
             if st.session_state.get('show_forgot_username', False):
